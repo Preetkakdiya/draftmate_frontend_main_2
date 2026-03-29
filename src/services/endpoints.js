@@ -123,5 +123,14 @@ export const API_CONFIG = {
             DELETE: (notificationId) => `/notifications/${notificationId}`,
             DELETE_ALL: (userId) => `/notifications/${userId}/all`,
         }
+    },
+
+    // Service: backend/Case_search (Port 8006)
+    CASE_SEARCH: {
+        BASE_URL: `${BASE_URL}/case_search`,
+        ENDPOINTS: {
+            SEARCH: '/search', // GET
+            DOC: (docId) => `/doc/${docId}`, // GET
+        }
     }
 };

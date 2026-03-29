@@ -263,6 +263,12 @@ const Tools = () => {
                                         onClick={() => navigate('/dashboard/research')}
                                     />
                                     <ToolCard
+                                        icon="gavel"
+                                        title="Case Search"
+                                        description="Search Indian Kanoon database for legal cases and precedence."
+                                        onClick={() => navigate('/dashboard/case-search')}
+                                    />
+                                    <ToolCard
                                         icon="picture_as_pdf"
                                         title="Chat with PDF"
                                         description="Upload a PDF and ask questions, summarize, or analyze it."
