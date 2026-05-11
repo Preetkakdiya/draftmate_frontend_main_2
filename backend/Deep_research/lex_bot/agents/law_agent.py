@@ -24,7 +24,7 @@ class LawAgent(BaseAgent):
         try:
             print(f"⚖️ Law Agent Task: {instruction[:80]}...")
             
-            # 1. Enhance Query
+            # 1. Enhance Query (improves keyword matching for DB/web search)
             enhanced_query = self.enhance_query(instruction, "law")
             print(f"   Enhanced: {enhanced_query[:80]}...")
             

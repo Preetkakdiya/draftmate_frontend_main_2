@@ -25,6 +25,12 @@ class WebSearchTool:
                 self.firecrawl = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
             except:
                 logger.warning("Could not initialize Firecrawl.")
+                
+        import threading
+        self._search_lock = threading.Lock()
+        self._search_cache = {}
+        self._scrape_lock = threading.Lock()
+        self._scrape_cache = {}
 
     def _ddgs_search(self, query: str, max_results: int, domains: List[str] = None) -> List[Dict]:
         try:
@@ -63,14 +69,17 @@ class WebSearchTool:
                 query=safe_query,
                 search_depth="advanced",
                 max_results=max_results,
-                include_domains=target_domains
+                include_domains=target_domains,
+                include_raw_content=True
             )
             res = []
             for r in response.get('results', []):
+                # If raw_content is available, use it as the snippet/content to bypass scraping
+                content = r.get('raw_content') or r.get('content', '')
                 res.append({
                     "title": r.get('title', 'Unknown'),
                     "url": r.get('url', ''),
-                    "snippet": r.get('content', '')
+                    "snippet": content
                 })
             return res
         except Exception as e:
@@ -149,17 +158,15 @@ class WebSearchTool:
         from lex_bot.config import WEB_CACHE_TTL_SECONDS
         
         # --- SCRAPE CACHE ---
-        if not hasattr(self, '_scrape_cache'):
-            self._scrape_cache = {}
-        
         cache_key = url.strip().lower()
-        if cache_key in self._scrape_cache:
-            timestamp, cached_content = self._scrape_cache[cache_key]
-            if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
-                logger.info(f"⚡ Scrape Cache HIT: {url[:50]}...")
-                return cached_content
-            else:
-                del self._scrape_cache[cache_key]
+        with self._scrape_lock:
+            if cache_key in self._scrape_cache:
+                timestamp, cached_content = self._scrape_cache[cache_key]
+                if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
+                    logger.info(f"⚡ Scrape Cache HIT: {url[:50]}...")
+                    return cached_content
+                else:
+                    del self._scrape_cache[cache_key]
         # --------------------
         
         content = ""
@@ -186,7 +193,8 @@ class WebSearchTool:
         
         # --- SAVE TO CACHE ---
         if content:
-            self._scrape_cache[cache_key] = (time.time(), content)
+            with self._scrape_lock:
+                self._scrape_cache[cache_key] = (time.time(), content)
         
         return content
 
@@ -211,18 +219,16 @@ class WebSearchTool:
         from lex_bot.config import WEB_CACHE_TTL_SECONDS
 
         # --- CACHE LOOKUP ---
-        if not hasattr(self, '_search_cache'):
-            self._search_cache = {}
-
         cache_key = f"{query.strip().lower()}:{','.join(sorted(domains)) if domains else 'all'}"
         
-        if cache_key in self._search_cache:
-            timestamp, cached_context, cached_results = self._search_cache[cache_key]
-            if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
-                logger.info(f"⚡ Cache HIT for query: '{query}'")
-                return cached_context, cached_results
-            else:
-                del self._search_cache[cache_key]
+        with self._search_lock:
+            if cache_key in self._search_cache:
+                timestamp, cached_context, cached_results = self._search_cache[cache_key]
+                if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
+                    logger.info(f"⚡ Cache HIT for query: '{query}'")
+                    return cached_context, cached_results
+                else:
+                    del self._search_cache[cache_key]
         # --------------------
 
         all_results = []
@@ -276,15 +282,40 @@ class WebSearchTool:
                 results = self._google_serp_search(query, WEB_SEARCH_MAX_RESULTS, domains)
             unique_results = results
 
-        # Extract URLs for scraping
-        # Limit scraping to avoiding timeout on too many results
-        scrape_candidates = [r['url'] for r in unique_results if r.get('url')][:7] 
+        # === Smart Scraping (Step 9a): Tavily-first, scrape-only-if-insufficient ===
+        # Classify results by content richness
+        # Tavily advanced often returns 500+ chars of content — use it directly
+        RICH_CONTENT_THRESHOLD = 500  # chars
+        rich_results = []
+        thin_results = []
         
-        # Scrape
-        full_context = self.scrape_urls(scrape_candidates)
+        for r in unique_results:
+            content = r.get('snippet', '') or r.get('content', '') or ''
+            if len(content) >= RICH_CONTENT_THRESHOLD:
+                # Promote snippet to full text — content is rich enough
+                r['text'] = content
+                rich_results.append(r)
+            else:
+                thin_results.append(r)
+        
+        if rich_results:
+            logger.info(f"📊 Smart scrape: {len(rich_results)} rich results (skip scraping), {len(thin_results)} thin (will scrape)")
+        
+        # Build context from rich results first (no scraping needed)
+        rich_context = "\n\n".join([r.get('text', r.get('snippet', '')) for r in rich_results])
+        
+        # Scrape ONLY thin results that need more content (preserves fallback scraping)
+        scraped_context = ""
+        if thin_results:
+            scrape_urls = [r['url'] for r in thin_results if r.get('url')][:5]  # Max 5 thin URLs
+            if scrape_urls:
+                scraped_context = self.scrape_urls(scrape_urls)
+        
+        full_context = rich_context + scraped_context
         
         # --- SAVE TO CACHE ---
-        self._search_cache[cache_key] = (time.time(), full_context, unique_results)
+        with self._search_lock:
+            self._search_cache[cache_key] = (time.time(), full_context, unique_results)
         
         return full_context, unique_results
 

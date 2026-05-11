@@ -37,20 +37,21 @@ class SessionCache:
         self._faiss = None
         self._initialized = False
         
+        from lex_bot.core.embeddings import get_embedding_model
+        
         self._init_dependencies()
         
         self._file_paths: Dict[str, List[str]] = {}
         self._file_chunks: Dict[str, List[str]] = {}
     
     def _init_dependencies(self):
-        """Lazy load FAISS and embedding model."""
+        """Lazy load FAISS and check embedding model."""
         try:
             import faiss
-            from sentence_transformers import SentenceTransformer
+            from lex_bot.core.embeddings import get_embedding_model
             
             self._faiss = faiss
-            logger.info(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
-            self._model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+            # We don't eagerly load the model here, we just use the global singleton when needed
             self._initialized = True
             logger.info("✅ SessionCache initialized")
         except ImportError as e:
@@ -108,8 +109,11 @@ class SessionCache:
             logger.warning("SessionCache not initialized")
             return 0
         
+        from lex_bot.core.embeddings import get_embedding_model
+        model = get_embedding_model()
+        
         # Extra safety check - ensure model is actually usable
-        if self._model is None or not hasattr(self._model, 'encode'):
+        if model is None or not hasattr(model, 'encode'):
             logger.warning("Embedding model not properly loaded, skipping document caching")
             return 0
         
@@ -139,7 +143,7 @@ class SessionCache:
         
         # Generate embeddings and add to index
         try:
-            embeddings = self._model.encode(new_texts, normalize_embeddings=True)
+            embeddings = model.encode(new_texts, normalize_embeddings=True)
             session["index"].add(np.array(embeddings, dtype=np.float32))
             session["documents"].extend(new_docs)
             logger.info(f"Added {added_count} documents to session {session_id}")
@@ -177,7 +181,12 @@ class SessionCache:
             return []
         
         # Encode query
-        query_embedding = self._model.encode([query], normalize_embeddings=True)
+        from lex_bot.core.embeddings import get_embedding_model
+        model = get_embedding_model()
+        if not model:
+            return []
+            
+        query_embedding = model.encode([query], normalize_embeddings=True)
         
         # Search
         k = min(top_k, len(session["documents"]))

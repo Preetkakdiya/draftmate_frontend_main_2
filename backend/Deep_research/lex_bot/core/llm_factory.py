@@ -11,6 +11,7 @@ Features:
 """
 
 import logging
+import functools
 from typing import Literal, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
@@ -32,6 +33,24 @@ logger = logging.getLogger(__name__)
 # Track if Gemini is currently rate limited
 _gemini_quota_exhausted = False
 
+@functools.lru_cache(maxsize=16)
+def _get_cached_llm(model_name: str, provider: str, temperature: float) -> BaseChatModel:
+    """Instantiate and cache the actual LangChain client based on exact parameters."""
+    if provider == "gemini":
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            google_api_key=GOOGLE_API_KEY,
+            temperature=temperature,
+        )
+    elif provider == "openai":
+        return ChatOpenAI(
+            model=model_name,
+            api_key=OPENAI_API_KEY,
+            temperature=temperature,
+        )
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+
 
 class LLMFactory:
     """
@@ -49,7 +68,7 @@ class LLMFactory:
         temperature: float = 0.0,
     ) -> BaseChatModel:
         """
-        Create an LLM instance with automatic fallback.
+        Create an LLM instance with automatic fallback and caching.
         
         Args:
             mode: "fast" or "reasoning". Defaults to config.LLM_MODE
@@ -68,37 +87,28 @@ class LLMFactory:
         if provider == "gemini" and _gemini_quota_exhausted and OPENAI_API_KEY:
             logger.warning("⚠️ Gemini quota exhausted, falling back to OpenAI")
             provider = "openai"
-        
-        # Select model based on mode and provider
+            
+        # Resolve provider fallbacks based on missing API keys
+        if provider == "gemini" and not GOOGLE_API_KEY:
+            if OPENAI_API_KEY:
+                logger.warning("GOOGLE_API_KEY not set, falling back to OpenAI")
+                provider = "openai"
+            else:
+                raise ValueError("GOOGLE_API_KEY not set. Cannot use Gemini provider.")
+                
+        if provider == "openai" and not OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY not set. Cannot use OpenAI provider.")
+            
+        # Resolve deterministic model name
         if provider == "gemini":
             model_name = GEMINI_REASONING_MODEL if mode == "reasoning" else GEMINI_FAST_MODEL
-            
-            if not GOOGLE_API_KEY:
-                if OPENAI_API_KEY:
-                    logger.warning("GOOGLE_API_KEY not set, falling back to OpenAI")
-                    provider = "openai"
-                else:
-                    raise ValueError("GOOGLE_API_KEY not set. Cannot use Gemini provider.")
-            else:
-                return ChatGoogleGenerativeAI(
-                    model=model_name,
-                    google_api_key=GOOGLE_API_KEY,
-                    temperature=temperature,
-                )
-        
-        if provider == "openai":
+        elif provider == "openai":
             model_name = OPENAI_REASONING_MODEL if mode == "reasoning" else OPENAI_FAST_MODEL
+        else:
+            raise ValueError(f"Unknown provider: {provider}. Use 'gemini' or 'openai'.")
             
-            if not OPENAI_API_KEY:
-                raise ValueError("OPENAI_API_KEY not set. Cannot use OpenAI provider.")
-            
-            return ChatOpenAI(
-                model=model_name,
-                api_key=OPENAI_API_KEY,
-                temperature=temperature,
-            )
-        
-        raise ValueError(f"Unknown provider: {provider}. Use 'gemini' or 'openai'.")
+        # Return the strictly cached instance (Step 17)
+        return _get_cached_llm(model_name, provider, temperature)
     
     @staticmethod
     def mark_gemini_quota_exhausted():

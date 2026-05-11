@@ -24,7 +24,7 @@ class CaseAgent(BaseAgent):
         try:
             print(f"🏛️ Case Agent Task: {instruction[:80]}...")
             
-            # 1. Enhance Query
+            # 1. Enhance Query (improves keyword matching for web search)
             enhanced_query = self.enhance_query(instruction, "case")
             print(f"   Enhanced: {enhanced_query[:80]}...")
             

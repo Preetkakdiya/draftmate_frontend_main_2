@@ -96,10 +96,25 @@ class LegalStrategyAgent(BaseAgent):
         law_query = f"legal provisions sections act {query}"
         case_query = f"case law precedent judgment {query}"
         
+        # Check if state already has sufficient context (hybrid architecture)
+        existing_law = state.get("law_context", [])
+        existing_case = state.get("case_context", [])
+        
         # Get law context
-        _, law_results = search_tool.run(law_query)
+        if existing_law:
+            logger.info(" StrategyAgent: Using existing law_context from state")
+            law_results = existing_law
+        else:
+            logger.info(" StrategyAgent: Performing supplemental law search")
+            _, law_results = search_tool.run(law_query)
+            
         # Get case context
-        _, case_results = search_tool.run(case_query)
+        if existing_case:
+            logger.info(" StrategyAgent: Using existing case_context from state")
+            case_results = existing_case
+        else:
+            logger.info(" StrategyAgent: Performing supplemental case search")
+            _, case_results = search_tool.run(case_query)
         
         # Combine and rerank
         all_results = (law_results or []) + (case_results or [])
