@@ -40,8 +40,8 @@ OPENAI_REASONING_MODEL = "gpt-4o"
 LLM_MODEL_NAME = GEMINI_FAST_MODEL
 
 # --- EMBEDDING MODEL ---
-EMBEDDING_MODEL_NAME = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-RERANK_MODEL = os.getenv("RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+EMBEDDING_MODEL_NAME = os.getenv("EMBED_MODEL") or "sentence-transformers/all-MiniLM-L6-v2"
+RERANK_MODEL = os.getenv("RERANK_MODEL") or "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # --- SEARCH CONFIG ---
 DB_SEARCH_LIMIT_PRE = 150  # Reduced from 200 for faster reranking (Step 10b)

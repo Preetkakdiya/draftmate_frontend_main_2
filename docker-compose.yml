@@ -29,6 +29,11 @@ services:
       timeout: 5s
       retries: 5
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
+
   backend:
     build:
       context: .
@@ -97,8 +102,11 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - CASHFREE_APP_ID=${CASHFREE_APP_ID}
       - CASHFREE_SECRET_KEY=${CASHFREE_SECRET_KEY}
+      - QDRANT_HOST=qdrant
     depends_on:
       - db
+      - qdrant
 
 volumes:
   postgres_data:
+  qdrant_data:

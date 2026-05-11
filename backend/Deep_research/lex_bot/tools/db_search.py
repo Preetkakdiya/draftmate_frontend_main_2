@@ -73,7 +73,7 @@ class SearchTool:
 
         try:
             with Session(self.engine) as ses:
-                rows = ses.execute(query_sql, {'qtext': query, 'qemb': q_emb, 'pre_k': DB_SEARCH_LIMIT_PRE}).mappings().all()
+                rows = ses.execute(query_sql, {'qtext': query, 'qemb': str(q_emb), 'pre_k': DB_SEARCH_LIMIT_PRE}).mappings().all()
 
             if not rows:
                 return []

@@ -47,7 +47,30 @@ class UserMemoryManager:
         """Initialize mem0 Memory instance."""
         try:
             from mem0 import Memory
-            self.memory = Memory()
+            import os
+            
+            config = {
+                "llm": {
+                    "provider": "openai",
+                    "config": {
+                        "model": "gpt-4o-mini"
+                    }
+                }
+            }
+            
+            qdrant_host = os.getenv("QDRANT_HOST")
+            if qdrant_host:
+                config["vector_store"] = {
+                    "provider": "qdrant",
+                    "config": {
+                        "host": qdrant_host,
+                        "port": 6333
+                    }
+                }
+                self.memory = Memory.from_config(config)
+            else:
+                self.memory = Memory.from_config(config)
+                
             logger.info(f"✅ Memory initialized for user: {self.user_id}")
         except ImportError:
             logger.warning("⚠️ mem0 not installed. Run: pip install mem0ai")
