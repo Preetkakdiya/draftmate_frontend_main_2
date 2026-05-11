@@ -53,13 +53,16 @@ class IndianKanoonScraper:
         })
     
     def _rate_limit(self):
-        """Enforce rate limiting between requests."""
-        elapsed = time.time() - self.last_request_time
-        if elapsed < self.delay:
-            sleep_time = self.delay - elapsed
-            logger.debug(f"Rate limiting: sleeping {sleep_time:.2f}s")
-            time.sleep(sleep_time)
-        self.last_request_time = time.time()
+        """Enforce rate limiting using global domain limiter."""
+        from lex_bot.core.rate_limiter import domain_limiter
+        
+        # Request permission for indiankanoon.org
+        # timeout=10s so we don't pile up deadlocked threads if traffic spikes
+        acquired = domain_limiter.acquire("indiankanoon.org", self.delay, timeout=10.0)
+        
+        if not acquired:
+            logger.error("IndianKanoon rate limit timeout exceeded. Failing fast.")
+            raise TimeoutError("Rate limit wait too long, aborting request to avoid thread exhaustion.")
     
     def _fetch_page(self, url: str) -> Optional[str]:
         """Fetch a page with rate limiting and caching."""

@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from ..config import DATABASE_URL, EMBEDDING_MODEL_NAME, DB_SEARCH_LIMIT_PRE
 from .web_search import web_search_tool
+from ..core.embeddings import get_embedding_model
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -27,23 +28,17 @@ class SearchTool:
             except Exception as e:
                 logger.error(f"❌ DB Init Failed: {e}")
         
-        # 2. Embedding Model
-        try:
-            from sentence_transformers import SentenceTransformer
-            print(f"🔍 Loading Embedding Model: {EMBEDDING_MODEL_NAME}...")
-            self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-        except ImportError:
-            logger.error("SentenceTransformers not installed.")
-        except Exception as e:
-            logger.error(f"❌ Model Loading Failed: {e}")
+        # 2. Embedding Model (Removed - lazy loaded on demand via get_embedding_model)
+        pass
 
     def _get_embedding(self, query: str) -> List[float]:
-        if not self.model:
+        model = get_embedding_model()
+        if not model:
             return []
-        return self.model.encode([query], normalize_embeddings=True)[0].tolist()
+        return model.encode([query], normalize_embeddings=True)[0].tolist()
 
     def _hybrid_db_search(self, query: str) -> List[Dict]:
-        if not self.engine or not self.model:
+        if not self.engine:
              # Explicitly raising or returning empty to trigger fallback
             return []
 
@@ -101,8 +96,7 @@ class SearchTool:
         logger.info(f"🔎 SearchTool called for: {query}")
         
         # 1. Try DB Search
-        # db_results = self._hybrid_db_search(query)
-        db_results = [] # Force empty to skip local DB as it is currently empty
+        db_results = self._hybrid_db_search(query)
         
         if db_results:
             logger.info(f"✅ DB Search returned {len(db_results)} results.")

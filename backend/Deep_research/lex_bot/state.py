@@ -21,7 +21,6 @@ class AgentState(TypedDict):
     # --- New v2 fields ---
     # User and session tracking
     user_id: Optional[str]
-    user_id: Optional[str]
     session_id: Optional[str]
     uploaded_file_paths: Optional[List[str]]
     
@@ -58,6 +57,9 @@ class AgentState(TypedDict):
     
     # Memory context retrieved for this user
     memory_context: Optional[List[Dict]]
+    
+    # Clarification flag (set by router, used by graph routing)
+    needs_clarification: Optional[bool]
     
     # Final answer
     final_answer: Optional[str]

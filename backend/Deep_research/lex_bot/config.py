@@ -44,13 +44,13 @@ EMBEDDING_MODEL_NAME = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniL
 RERANK_MODEL = os.getenv("RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 # --- SEARCH CONFIG ---
-DB_SEARCH_LIMIT_PRE = 200
+DB_SEARCH_LIMIT_PRE = 150  # Reduced from 200 for faster reranking (Step 10b)
 DB_SEARCH_LIMIT_FINAL = 20
 WEB_SEARCH_MAX_RESULTS = 5
 WEB_CACHE_TTL_SECONDS = 3600  # 1 hour
 
 # --- RATE LIMITING ---
-SCRAPE_DELAY_SECONDS = float(os.getenv("SCRAPE_DELAY", 2.5))
+SCRAPE_DELAY_SECONDS = float(os.getenv("SCRAPE_DELAY", 2.0))  # Reduced from 2.5s (Step 9b)
 
 # --- MEMORY (mem0) ---
 MEM0_ENABLED = os.getenv("MEM0_ENABLED", "true").lower() == "true"

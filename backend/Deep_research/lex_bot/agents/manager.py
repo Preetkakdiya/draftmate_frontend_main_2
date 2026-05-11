@@ -11,8 +11,13 @@ from ..core.fallback import router_cache  # Fast-path classification
 class ManagerAgent(BaseAgent):
     def classify_and_route(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        First-stage router: Classifies query and assigns specific tasks to agents.
+        First-stage router: Classifies query, checks clarification, and assigns tasks.
         Uses fast-path cache for common patterns to skip LLM call (~500ms savings).
+        
+        Optimizations (Steps 5+6):
+        - Dynamic prompt: only includes non-empty context sections
+        - Merged clarification: router JSON includes needs_clarification field
+          (eliminates separate check_needs_clarification LLM call)
         
         Returns:
             State update with complexity, agent_tasks, synthesis_instruction, etc.
@@ -31,28 +36,35 @@ class ManagerAgent(BaseAgent):
                 "selected_agents": selected_agents,
                 "agent_tasks": {},
                 "synthesis_instruction": "Provide helpful response",
-                "synthesis_strategy": "equal_weight"
+                "synthesis_strategy": "equal_weight",
+                "needs_clarification": False
             }
         
-        # Format Document Context
+        # === Dynamic Context Assembly (Step 5) ===
+        # Only include sections that have actual data — saves ~200 tokens
+        context_parts = []
+
         doc_ctx = state.get("document_context", [])
-        doc_str = "No document uploaded."
         if doc_ctx:
             doc_str = "\n\n".join([f"[Chunk]: {c['text']}" for c in doc_ctx])
+            context_parts.append(f"DOCUMENT CONTEXT:\n{doc_str}")
 
-        # Format Law Context
         law_ctx = state.get("law_context", [])
-        law_str = "\n\n".join([f"Section {l['section']} ({l['act']}): {l['text']}" for l in law_ctx]) if law_ctx else "No specific statutes found."
-        
-        # Format Case Context
+        if law_ctx:
+            law_str = "\n\n".join([f"Section {l['section']} ({l['act']}): {l['text']}" for l in law_ctx])
+            context_parts.append(f"LAW CONTEXT:\n{law_str}")
+
         case_ctx = state.get("case_context", [])
-        case_str = "\n\n".join([f"Case: {c['title']}\nSummary: {c['summary']}" for c in case_ctx]) if case_ctx else "No specific cases found."
+        if case_ctx:
+            case_str = "\n\n".join([f"Case: {c['title']}\nSummary: {c['summary']}" for c in case_ctx])
+            context_parts.append(f"CASE CONTEXT:\n{case_str}")
+
+        context_sections = "\n\n".join(context_parts) if context_parts else ""
 
         # Format Chat History
         chat_history = state.get("messages", [])
         history_str = ""
         if chat_history:
-            # Get last 3 turns
             recent = chat_history[-6:] 
             history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in recent])
 
@@ -63,10 +75,29 @@ class ManagerAgent(BaseAgent):
             result = chain.invoke({
                 "query": original_query,
                 "chat_history": history_str,
-                "document_context": doc_str,
-                "law_context": law_str,
-                "case_context": case_str
+                "context_sections": context_sections
             })
+            
+            # === Handle Clarification (Step 6) ===
+            # Router now includes needs_clarification in its JSON response
+            if result.get("needs_clarification", False):
+                questions = result.get("clarifying_questions", [])
+                if questions:
+                    clarification_msg = "I need a bit more information to provide the best answer:\n\n"
+                    for i, q in enumerate(questions[:3], 1):  # Max 3 questions
+                        clarification_msg += f"{i}. {q}\n"
+                    
+                    print(f"   ❓ Clarification needed: {len(questions)} questions")
+                    return {
+                        "complexity": result.get("complexity", "complex"),
+                        "needs_clarification": True,
+                        "final_answer": clarification_msg,
+                        "selected_agents": [],
+                        "agent_tasks": {},
+                        "synthesis_instruction": "",
+                        "synthesis_strategy": "equal_weight"
+                    }
+
             complexity = result.get("complexity", "simple")
             
             # Extract agent_tasks (new format with task_id, instruction, expected_output, dependencies)
@@ -109,6 +140,7 @@ class ManagerAgent(BaseAgent):
                 "agent_tasks": agent_tasks,
                 "synthesis_instruction": result.get("synthesis_instruction", "Combine all agent outputs into cohesive response"),
                 "synthesis_strategy": result.get("synthesis_strategy", "equal_weight"),
+                "needs_clarification": False,
                 "router_metadata": {
                     "reasoning": result.get("reasoning"),
                     "domain_tags": result.get("domain_tags", [])
@@ -121,7 +153,8 @@ class ManagerAgent(BaseAgent):
                 "selected_agents": [], 
                 "agent_tasks": {},
                 "synthesis_instruction": "Provide helpful response",
-                "synthesis_strategy": "equal_weight"
+                "synthesis_strategy": "equal_weight",
+                "needs_clarification": False
             }
 
 
@@ -500,7 +533,7 @@ class ManagerAgent(BaseAgent):
         result = {
             "final_answer": answer,
             "sources": enriched_sources,
-            "suggested_followups": self._generate_followups(state["original_query"], answer)
+            "suggested_followups": []  # Generated post-stream in app.py (Step 8)
         }
         if llm_mode == "reasoning":
             result["reasoning_trace"] = answer  # Full CoT is the reasoning trace

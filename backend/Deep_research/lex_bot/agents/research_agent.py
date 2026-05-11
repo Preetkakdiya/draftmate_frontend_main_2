@@ -96,8 +96,8 @@ class ResearchAgent(BaseAgent):
             except Exception as e:
                 logger.warning(f"Memory retrieval failed: {e}")
         
-        # 2. Enhance query
-        enhanced_query = self.enhance_query(query, agent_type="law")
+        # 2. Use query directly (already optimized by query_rewriter + router)
+        enhanced_query = query
         logger.info(f"Enhanced query: {enhanced_query}")
         
         # 3. Search (DB or Web)
@@ -183,7 +183,7 @@ class ResearchAgent(BaseAgent):
         # Only return final_answer if we are the sole agent (simple mode)
         if complexity != "complex":
             result["final_answer"] = answer
-            result["suggested_followups"] = self._generate_followups(query, answer)
+            result["suggested_followups"] = []  # Generated post-stream in app.py (Step 8)
         else:
             # In complex mode, return answer as a tool result for the manager to aggregate
             result["tool_results"] = [{

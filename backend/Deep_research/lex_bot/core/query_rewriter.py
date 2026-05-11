@@ -1,23 +1,21 @@
 """
 Query Rewriter - Smart query rewriting with conversation context
 
-Flow:
-1. Rule-based check (abbreviations, pronouns, short queries)
-2. If rules say rewrite needed → get mem0 context → LLM rewrite
-3. If rules say OK → return original (0ms overhead)
+Flow (Optimized - Single LLM pass):
+1. Rule-based abbreviation expansion (~0ms)
+2. If user has conversation context → single LLM call to classify + rewrite (~300ms)
+3. If no context → return expanded query directly (~0ms)
 
 Latency:
-- No rewrite needed: ~0ms
-- Rewrite needed: ~300-500ms (mem0 search + LLM call)
+- No context / clear query: ~0ms
+- Has context, needs rewrite: ~300ms (single LLM call)
 """
 
 import re
 import logging
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List, Dict
 
 logger = logging.getLogger(__name__)
-
-# ============ Legal Abbreviation Map ============
 LEGAL_ABBREVIATIONS = {
     'ipc': 'Indian Penal Code',
     'crpc': 'Code of Criminal Procedure',
@@ -46,67 +44,6 @@ LEGAL_ABBREVIATIONS = {
     'tada': 'Terrorist and Disruptive Activities',
 }
 
-# Follow-up markers indicating reference to previous conversation
-FOLLOW_UP_MARKERS = [
-    # Pronouns/references
-    'that', 'this', 'it', 'its', 'them', 'those', 'above', 'these',
-    'same', 'said', 'such', 'mentioned', 'previous', 'the case',
-    'earlier', 'before', 'again', 'more about', 'the act', 'the section',
-    # Continuation patterns
-    'what about', 'how about', 'and what', 'also tell', 'tell me more',
-    'explain more', 'elaborate', 'in detail', 'regarding', 'concerning',
-    'related to', 'in relation', 'with respect', 'pertaining to',
-    # Follow-up question patterns
-    'what if', 'but what', 'and if', 'however', 'although',
-    'punishment for', 'penalty for', 'exception to', 'procedure for',
-    # Clarification
-    'meaning of', 'definition of', 'difference between', 'comparison',
-]
-
-# ============ Rule-Based Detection ============
-def needs_rewriting(query: str) -> Tuple[bool, str, list]:
-    """
-    Rule-based check if query needs rewriting.
-    
-    Returns:
-        (needs_rewrite, reason, matched_items)
-    """
-    query_lower = query.lower().strip()
-    words = query_lower.split()
-    
-    # 1. Check for abbreviations
-    found_abbrs = []
-    for word in words:
-        # Remove punctuation for matching
-        clean_word = re.sub(r'[^\w]', '', word)
-        if clean_word in LEGAL_ABBREVIATIONS:
-            found_abbrs.append(clean_word)
-    
-    if found_abbrs:
-        return True, "abbreviation", found_abbrs
-    
-    # 2. Check for follow-up markers (context needed)
-    for marker in FOLLOW_UP_MARKERS:
-        if re.search(rf'\b{marker}\b', query_lower):
-            return True, "follow-up", [marker]
-    
-    # 3. Check for very short/vague queries
-    if len(query_lower) < 15:
-        return True, "short", []
-    
-    # 4. Check for vague patterns
-    vague_patterns = [
-        r'^(what|how|tell|explain)\s+(about|is|are)?\s*$',
-        r'^(and|but|so|then|also)\s+',
-        r'^more\s*$',
-    ]
-    for pattern in vague_patterns:
-        if re.match(pattern, query_lower):
-            return True, "vague", []
-    
-    # Query seems complete - no rewrite needed
-    return False, "", []
-
 
 # ============ Simple Abbreviation Expansion (No LLM) ============
 def expand_abbreviations(query: str) -> str:
@@ -127,21 +64,42 @@ def expand_abbreviations(query: str) -> str:
     return result
 
 
-# ============ Get Context from mem0 ============
-def get_conversation_context(user_id: str, query: str, session_id: str = None) -> str:
+def _build_context_string(
+    user_id: str,
+    query: str,
+    session_id: str = None,
+    chat_history: Optional[List[Dict]] = None,
+) -> str:
     """
-    Get relevant context from ChatStore (recent history) or mem0.
+    Build conversation context from pre-fetched history or fallback sources.
+
+    Args:
+        user_id: User identifier
+        query: Current query (for mem0 search)
+        session_id: Session identifier
+        chat_history: Pre-fetched chat history (avoids duplicate DB reads)
+
+    Returns:
+        Formatted context string, or "" if none available
     """
     context_parts = []
-    
-    # 1. Try ChatStore (Immediate Session History)
-    if user_id and session_id:
+
+    # 1. Use pre-fetched history if available (from graph.py — no extra DB call)
+    if chat_history:
+        context_parts.append("CONVERSATION HISTORY:")
+        for msg in chat_history[-6:]:  # Last 3 turns
+            role = msg.get("role", "user").upper()
+            content = msg.get("content", "")
+            context_parts.append(f"- {role}: {content}")
+        context_parts.append("")
+    elif user_id and session_id:
+        # Fallback: fetch from ChatStore (only if no pre-fetched history)
         try:
             from lex_bot.memory.chat_store import ChatStore
             store = ChatStore()
             history = store.get_session_history(user_id, session_id, limit=6)
             if history:
-                context_parts.append("IMMEDIATE CONVERSATION HISTORY:")
+                context_parts.append("CONVERSATION HISTORY:")
                 for msg in history:
                     context_parts.append(f"- {msg['role'].upper()}: {msg['content']}")
                 context_parts.append("")
@@ -173,173 +131,110 @@ def get_conversation_context(user_id: str, query: str, session_id: str = None) -
     return "\n".join(context_parts) if context_parts else ""
 
 
-# ============ LLM-Based Rewriting ============
-def rewrite_with_llm(query: str, context: str, reason: str) -> str:
+CLASSIFY_AND_REWRITE_PROMPT = """You are a legal query optimizer for an Indian law research system.
+
+{context_section}CURRENT QUERY: {query}
+
+TASK: Determine if this query needs rewriting to be clear and standalone, then output the final query.
+
+A query needs rewriting if:
+- It references previous conversation ("that case", "its punishment", "the above", "same section")
+- It contains unresolved pronouns ("it", "this", "that", "they") referring to earlier topics
+- It is too vague or short to search effectively on its own
+
+If the query IS already clear and standalone, return it unchanged.
+If the query NEEDS rewriting, resolve all references using the context and return the improved query.
+
+RULES:
+- Keep it natural language (not keywords)
+- Preserve legal precision and specific section/article numbers
+- Output ONLY the final query — no explanations, no quotes, no prefixes
+
+FINAL QUERY:"""
+
+
+def _classify_and_rewrite(query: str, context: str) -> str:
     """
-    Rewrite query using LLM with context.
-    Only called when rules determine rewrite is needed.
+    Single LLM call that classifies whether rewriting is needed
+    and rewrites in the same pass if so.
     
-    Latency: ~300-400ms
+    Latency: ~300ms (one cheap LLM call)
     """
     context_section = ""
     if context:
-        context_section = f"""
-RECENT CONTEXT:
+        context_section = f"""CONVERSATION CONTEXT:
 {context}
 ---
 """
     
-    rewrite_prompt = f"""Rewrite this legal query to be clear and standalone.
-
-{context_section}QUERY: {query}
-
-RULES:
-1. If it references previous context ("that case", "its punishment"), resolve using context above
-2. Expand any remaining abbreviations
-3. Keep it natural (not just keywords)
-4. If already clear, return as-is
-5. Output ONLY the rewritten query
-
-REWRITTEN:"""
+    prompt_text = CLASSIFY_AND_REWRITE_PROMPT.format(
+        context_section=context_section,
+        query=query
+    )
 
     try:
         from lex_bot.core.llm_factory import get_llm
         llm = get_llm(mode="fast")
         
-        response = llm.invoke(rewrite_prompt)
-        rewritten = response.content.strip().strip('"').strip()
-        
-        if rewritten and len(rewritten) > 5:
-            return rewritten
-    
-    except Exception as e:
-        logger.warning(f"LLM rewrite failed: {e}")
-    
-    return query  # Fallback
-
-
-# ============ LLM Check for Edge Cases ============
-def llm_needs_rewriting(query: str, context: str) -> Tuple[bool, str]:
-    """
-    LLM-based check if query needs rewriting.
-    Called when rules pass but we have conversation context.
-    
-    Returns:
-        (needs_rewrite, rewritten_query if needed)
-    """
-    if not context:
-        return False, query
-    
-    check_prompt = f"""You are a legal query optimizer.
-
-CONVERSATION CONTEXT:
-{context}
-
-CURRENT QUERY: {query}
-
-TASK: Does this query need rewriting to be clear and standalone?
-
-If YES (query references context like "that", "it", "the case mentioned", etc.):
-- Return the rewritten query that resolves the reference
-
-If NO (query is already clear and standalone):
-- Return exactly: NO_REWRITE
-
-OUTPUT (either rewritten query OR "NO_REWRITE"):"""
-
-    try:
-        from lex_bot.core.llm_factory import get_llm
-        llm = get_llm(mode="fast")
-        
-        response = llm.invoke(check_prompt)
+        response = llm.invoke(prompt_text)
         result = response.content.strip().strip('"').strip()
         
-        if result == "NO_REWRITE" or result.upper() == "NO_REWRITE":
-            return False, query
-        elif result and len(result) > 10:
-            return True, result
+        if result and len(result) > 5:
+            return result
     
     except Exception as e:
-        logger.warning(f"LLM check failed: {e}")
+        logger.warning(f"Classify-and-rewrite LLM call failed: {e}")
     
-    return False, query
+    return query  # Fallback to original
 
 
 # ============ Main Entry Point ============
 def rewrite_query(
     query: str,
     user_id: str = None,
-    session_id: str = None
+    session_id: str = None,
+    chat_history: Optional[List[Dict]] = None,
 ) -> str:
     """
-    Main query rewriting function with rule-based + LLM fallback.
+    Main query rewriting function — single-pass LLM approach.
     
     Flow:
-    1. Rule-based check (abbreviations, pronouns, short queries)
-    2. If abbreviations only → expand without LLM (~0ms)
-    3. If follow-up/vague → get mem0 context + LLM rewrite (~300-500ms)
-    4. If rules pass but user has context → LLM checks for edge cases (~200-300ms)
-    5. If clear and no context → return original (~0ms)
+    1. Expand abbreviations (rule-based, ~0ms)
+    2. If user has conversation context → single LLM call to classify + rewrite (~300ms)
+    3. If no context → return expanded query directly (~0ms)
     
     Args:
         query: Original user query
         user_id: For mem0 context
-        session_id: For future session context
+        session_id: For session context
+        chat_history: Pre-fetched chat history (avoids duplicate DB reads)
         
     Returns:
         Rewritten query or original
     """
     original = query.strip()
     
-    # 1. Rule-based check
-    needs_it, reason, matched = needs_rewriting(original)
+    # 1. Abbreviation expansion (rule-based, always runs, ~0ms)
+    expanded = expand_abbreviations(original)
+    if expanded != original:
+        logger.info(f"🔄 Expanded abbreviations: {expanded[:60]}...")
     
-    # 2. If only abbreviations, just expand (no LLM)
-    if needs_it and reason == "abbreviation":
-        expanded = expand_abbreviations(original)
-        if expanded != original:
-            logger.info(f"🔄 Expanded abbreviations: {expanded[:60]}...")
-            return expanded
-        return original
+    # Use the expanded version going forward
+    working_query = expanded
     
-    # 3. For follow-ups, vague, or short queries → need LLM with context
-    if needs_it:
-        logger.info(f"🔄 Rewriting query ({reason}): {original[:50]}...")
-        context = get_conversation_context(user_id, original, session_id)
-        rewritten = rewrite_with_llm(original, context, reason)
-        
-        if rewritten != original:
-            logger.info(f"   ✓ Rewritten: {rewritten[:60]}...")
-        return rewritten
-    
-    # 4. Rules passed - but if user has context, do LLM check for edge cases
-    # This ensures conversation flow even when rules don't catch references
+    # 2. If user has context, do single-pass classify + rewrite
     if user_id or session_id:
-        context = get_conversation_context(user_id, original, session_id)
+        context = _build_context_string(user_id, working_query, session_id, chat_history)
         if context:
-            logger.debug(f"🔍 LLM checking for edge cases...")
-            needs_llm_rewrite, rewritten = llm_needs_rewriting(original, context)
-            if needs_llm_rewrite:
-                logger.info(f"🔄 LLM detected needed rewrite: {rewritten[:60]}...")
-                return rewritten
+            logger.info(f"🔄 Single-pass classify+rewrite: {working_query[:50]}...")
+            rewritten = _classify_and_rewrite(working_query, context)
+            
+            if rewritten != working_query:
+                logger.info(f"   ✓ Rewritten: {rewritten[:60]}...")
+            return rewritten
     
-    # 5. Query is clear - no rewrite needed
+    # 3. No context available — return expanded query as-is
     logger.debug(f"⚡ Query OK, no rewrite needed")
-    return original
+    return working_query
 
 
-# ============ Latency Summary ============
-"""
-LATENCY IMPACT:
-
-| Scenario                    | Overhead    |
-|-----------------------------|-------------|
-| Query is clear              | ~0ms        |
-| Abbreviations only          | ~0-5ms      |
-| Follow-up (needs context)   | ~300-500ms  |
-| Short/vague query           | ~300-400ms  |
-
-WORST CASE: ~500ms (follow-up query with mem0 search + LLM)
-BEST CASE: ~0ms (clear, complete query)
-AVERAGE: ~100-150ms (most queries are clear or just need abbr expansion)
-"""
