@@ -18,10 +18,14 @@ class SearchTool:
 
     def _init_resources(self):
         # 1. DB Engine
-        if DATABASE_URL:
+        from ..config import POSTGRES_DSN, DATABASE_URL
+        db_url = POSTGRES_DSN or DATABASE_URL
+        if db_url:
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql://")
             try:
                 from sqlalchemy import create_engine
-                self.engine = create_engine(DATABASE_URL)
+                self.engine = create_engine(db_url)
                 # Test connection logic could be here
             except ImportError:
                 logger.error("SQLAlchemy not installed.")
@@ -47,6 +51,9 @@ class SearchTool:
             return []
 
         q_emb = self._get_embedding(query)
+        if not q_emb:
+            logger.warning("No embedding generated, falling back to web search")
+            return []
         
         query_sql = sql("""
         WITH q AS (

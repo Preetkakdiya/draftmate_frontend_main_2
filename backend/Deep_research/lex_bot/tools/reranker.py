@@ -24,7 +24,7 @@ def get_reranker():
         try:
             print(f"[RERANK] Loading Reranker: {RERANK_MODEL}...")
             # FORCE CPU to avoid OOM on weak GPUs / limited VRAM envs
-            _reranker = CrossEncoder(RERANK_MODEL, trust_remote_code=True, device='cpu')
+            _reranker = CrossEncoder(RERANK_MODEL, device='cpu', max_length=512)
         except Exception as e:
             print(f"[ERROR] Failed to load Reranker model: {e}")
             return None

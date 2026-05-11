@@ -619,6 +619,9 @@ async def _stream_chat(request: ChatRequest, user_id: str):
         if suggested_followups:
             yield f"data: {json.dumps({'event': 'followups', 'questions': suggested_followups})}\n\n"
 
+        if "latency" in result:
+            yield f"data: {json.dumps({'event': 'latency', 'latency': result['latency']})}\n\n"
+
         yield f"data: {json.dumps({'event': 'done', 'message': 'Complete'})}\n\n"
         
         # Store assistant response

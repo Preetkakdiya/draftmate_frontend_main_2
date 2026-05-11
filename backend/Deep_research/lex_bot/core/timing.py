@@ -15,7 +15,7 @@ import logging
 from contextlib import contextmanager
 from typing import Dict, Any
 
-logger = logging.getLogger("lex_bot.timing")
+logger = logging.getLogger("lex_bot.api")
 
 
 class LatencyTracker:
@@ -58,6 +58,6 @@ class LatencyTracker:
             lines.append(f"   {name:<30s} {ms:>8.1f}ms")
         lines.append(f"   {'TOTAL':<30s} {self.total_ms:>8.1f}ms")
         msg = "\n".join(lines)
-        logger.info(msg)
-        print(msg)  # Also print for dev visibility
+        logger.info("\n" + msg)
+        print("\n" + msg, flush=True)  # Also print for dev visibility
         return msg
