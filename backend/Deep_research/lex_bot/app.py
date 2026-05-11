@@ -178,7 +178,7 @@ app = FastAPI(
 )
 
 # Global HTTP Client
-http_client = httpx.AsyncClient()
+http_client = httpx.AsyncClient(timeout=30.0)
 
 # CORS middleware
 app.add_middleware(
@@ -394,14 +394,27 @@ async def verify_token(request: Request):
 
     try:
         url = f"{AUTH_SERVICE_URL}/verify_session/{session_id}"
-        resp = await http_client.get(url)
-        if resp.status_code != 200:
-            logger.warning(f"Auth check failed for {session_id}: {resp.status_code} {resp.text}")
-            raise HTTPException(status_code=401, detail="Invalid session")
-        return resp.json().get("user_id")
-    except httpx.RequestError as e:
-        logger.error(f"Auth service connection failed to {url}: {repr(e)}")
-        raise HTTPException(status_code=500, detail="Auth service unavailable")
+        
+        # Add retries for intermittent timeouts
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = await http_client.get(url, timeout=10.0)
+                if resp.status_code != 200:
+                    logger.warning(f"Auth check failed for {session_id}: {resp.status_code} {resp.text}")
+                    raise HTTPException(status_code=401, detail="Invalid session")
+                return resp.json().get("user_id")
+            except httpx.ReadTimeout as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"Auth service connection failed to {url} after {max_retries} attempts: {repr(e)}")
+                    raise HTTPException(status_code=500, detail="Auth service unavailable")
+                logger.warning(f"Auth service timeout (attempt {attempt+1}/{max_retries}), retrying...")
+                await asyncio.sleep(1)
+            except httpx.RequestError as e:
+                logger.error(f"Auth service connection failed to {url}: {repr(e)}")
+                raise HTTPException(status_code=500, detail="Auth service unavailable")
+    except HTTPException:
+        raise
 
 
 @app.get("/")
@@ -611,9 +624,9 @@ async def _stream_chat(request: ChatRequest, user_id: str):
         )
         
         try:
-            suggested_followups = await asyncio.wait_for(followup_future, timeout=5.0)
+            suggested_followups = await asyncio.wait_for(followup_future, timeout=15.0)
         except asyncio.TimeoutError:
-            logger.warning("Follow-up generation timed out (5s)")
+            logger.warning("Follow-up generation timed out (15s)")
             suggested_followups = []
 
         if suggested_followups:

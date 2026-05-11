@@ -53,8 +53,11 @@ ALGORITHM = "HS256"
 # Global tunnel reference to keep it alive
 _tunnel = None
 
+from psycopg2 import pool
+_db_pool = None
+
 def get_db_connection():
-    global _tunnel
+    global _tunnel, _db_pool
     try:
         # Check if we need to use SSH tunnel
         if BASTION_IP and SSH_KEY_PATH and RDS_ENDPOINT:
@@ -75,43 +78,49 @@ def get_db_connection():
                     print(f"❌ Tunnel connection failed: {e}")
                     raise
 
-            # Connect to local forwarded port
-            conn = psycopg2.connect(
-                host='127.0.0.1',
-                port=_tunnel.local_bind_port,
-                user=os.getenv("POSTGRES_USER", "lawuser"),
-                password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
-                dbname=os.getenv("POSTGRES_DB", "postgres"),
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=10,
-                keepalives_count=5
-            )
-            return conn
+            if _db_pool is None:
+                _db_pool = psycopg2.pool.SimpleConnectionPool(1, 20,
+                    host='127.0.0.1',
+                    port=_tunnel.local_bind_port,
+                    user=os.getenv("POSTGRES_USER", "lawuser"),
+                    password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
+                    dbname=os.getenv("POSTGRES_DB", "postgres"),
+                    keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5
+                )
         else:
-            # Direct connection
-            dsn = os.getenv("POSTGRES_DSN")
-            if dsn:
-                conn = psycopg2.connect(
-                    dsn,
-                    keepalives=1,
-                    keepalives_idle=30,
-                    keepalives_interval=10,
-                    keepalives_count=5
-                )
-            else:
-                conn = psycopg2.connect(
-                    host=os.getenv("POSTGRES_HOST", "db"),
-                    dbname=os.getenv("POSTGRES_DB", "lex_bot_db"),
-                    user=os.getenv("POSTGRES_USER", "postgres"),
-                    password=os.getenv("POSTGRES_PASSWORD", "password"),
-                    port=os.getenv("POSTGRES_PORT", "5432"),
-                    keepalives=1,
-                    keepalives_idle=30,
-                    keepalives_interval=10,
-                    keepalives_count=5
-                )
-            return conn
+            if _db_pool is None:
+                # Direct connection
+                dsn = os.getenv("POSTGRES_DSN")
+                if dsn:
+                    _db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, dsn,
+                        keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5)
+                else:
+                    _db_pool = psycopg2.pool.SimpleConnectionPool(1, 20,
+                        host=os.getenv("POSTGRES_HOST", "db"),
+                        dbname=os.getenv("POSTGRES_DB", "lex_bot_db"),
+                        user=os.getenv("POSTGRES_USER", "postgres"),
+                        password=os.getenv("POSTGRES_PASSWORD", "password"),
+                        port=os.getenv("POSTGRES_PORT", "5432"),
+                        keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5
+                    )
+                    
+        conn = _db_pool.getconn()
+        
+        class PooledConnectionProxy:
+            def __init__(self, c, p):
+                self.conn = c
+                self.pool = p
+            def cursor(self, *args, **kwargs):
+                return self.conn.cursor(*args, **kwargs)
+            def commit(self):
+                self.conn.commit()
+            def rollback(self):
+                self.conn.rollback()
+            def close(self):
+                self.pool.putconn(self.conn)
+                
+        return PooledConnectionProxy(conn, _db_pool)
+
     except Exception as e:
         print(f"Database connection error: {e}")
         raise HTTPException(status_code=500, detail="Database connection failed")
