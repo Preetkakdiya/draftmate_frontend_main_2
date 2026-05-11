@@ -161,6 +161,4 @@ class LegalStrategyAgent(BaseAgent):
         
         return "\n\n---\n\n".join(parts)
 
-
-# Singleton
 strategy_agent = LegalStrategyAgent()

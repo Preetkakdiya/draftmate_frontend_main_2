@@ -1,10 +1,12 @@
 import numpy as np
 import math
+import threading
 from typing import List, Dict, Optional
 from ..config import RERANK_MODEL
 
 # Safe Import
 _reranker = None
+_inference_lock = threading.Lock()
 HAS_SENTENCE_TRANSFORMERS = False
 
 try:
@@ -59,8 +61,10 @@ def rerank_documents(query: str, candidates: List[Dict], top_n: int = 10, thresh
         # Prepare pairs for cross-encoder
         pairs = [(query, _build_text_for_rerank(c)) for c in candidates]
         
-        # Predict
-        raw_scores = rr.predict(pairs)
+        # Predict with a global lock to prevent PyTorch OpenMP thread thrashing
+        # When LangGraph runs 4 agents in parallel, concurrent CPU inference destroys performance
+        with _inference_lock:
+            raw_scores = rr.predict(pairs)
         
         # Handle single/list output
         if not isinstance(raw_scores, (list, np.ndarray)):

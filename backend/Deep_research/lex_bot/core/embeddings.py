@@ -1,10 +1,12 @@
 import logging
-from typing import Any
+import threading
+from typing import Any, List
 from lex_bot.config import EMBEDDING_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 
 _embedding_model = None
+_inference_lock = threading.Lock()
 
 def get_embedding_model() -> Any:
     """
@@ -26,3 +28,12 @@ def get_embedding_model() -> Any:
             logger.error(f"❌ Global Model Loading Failed: {e}")
             
     return _embedding_model
+
+def get_query_embedding(query: str) -> List[float]:
+    """Thread-safe CPU inference wrapper for the embedding model."""
+    model = get_embedding_model()
+    if not model:
+        return []
+        
+    with _inference_lock:
+        return model.encode([query], normalize_embeddings=True)[0].tolist()

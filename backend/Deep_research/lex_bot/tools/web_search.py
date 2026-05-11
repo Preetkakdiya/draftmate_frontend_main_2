@@ -40,7 +40,7 @@ class WebSearchTool:
             full_query = f"{query} ({domain_filter})"
             
             res = []
-            with DDGS() as ddgs:
+            with DDGS(timeout=10) as ddgs:
                 results = ddgs.text(full_query, max_results=max_results)
                 for r in results:
                     res.append({

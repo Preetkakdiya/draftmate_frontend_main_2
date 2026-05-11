@@ -143,7 +143,9 @@ class SessionCache:
         
         # Generate embeddings and add to index
         try:
-            embeddings = model.encode(new_texts, normalize_embeddings=True)
+            from lex_bot.core.embeddings import _inference_lock
+            with _inference_lock:
+                embeddings = model.encode(new_texts, normalize_embeddings=True)
             session["index"].add(np.array(embeddings, dtype=np.float32))
             session["documents"].extend(new_docs)
             logger.info(f"Added {added_count} documents to session {session_id}")

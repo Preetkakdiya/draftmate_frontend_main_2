@@ -32,10 +32,8 @@ class SearchTool:
         pass
 
     def _get_embedding(self, query: str) -> List[float]:
-        model = get_embedding_model()
-        if not model:
-            return []
-        return model.encode([query], normalize_embeddings=True)[0].tolist()
+        from lex_bot.core.embeddings import get_query_embedding
+        return get_query_embedding(query)
 
     def _hybrid_db_search(self, query: str) -> List[Dict]:
         if not self.engine:
