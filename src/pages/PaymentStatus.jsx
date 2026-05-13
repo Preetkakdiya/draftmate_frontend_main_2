@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { verifyPayment } from '../services/CashfreeService';
+import { verifyPayment } from '../services/RazorpayService';
 import { toast } from 'sonner';
 
 export default function PaymentStatus() {
