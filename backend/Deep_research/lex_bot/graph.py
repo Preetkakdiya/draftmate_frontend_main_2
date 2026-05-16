@@ -216,22 +216,21 @@ def define_graph():
     # Fan-out: router routes to selected agents for complex queries
     def route_to_agents(state: AgentState) -> List[str]:
         """Route to selected agents based on router's assignment."""
-        # If clarification needed, go straight to END (response is already in state)
         if state.get("needs_clarification", False):
             return ["__end__"]
-        
+
+        # complexity is the ground truth — if the LLM says SIMPLE, honour it
+        # regardless of which agents it listed (the LLM often assigns agents
+        # for simple queries when it shouldn't; that causes 3-agent overhead
+        # on a question research_agent can answer alone in ~20s).
+        complexity = state.get("complexity", "complex")
+        if complexity == "simple":
+            return ["research_agent"]
+
         selected = state.get("selected_agents", [])
-        
-        # Validate only
-        valid = ["research_agent", "explainer_agent", "law_agent", "case_agent", "citation_agent", "strategy_agent"]
+        valid = {"explainer_agent", "law_agent", "case_agent", "citation_agent", "strategy_agent"}
         routes = [a for a in selected if a in valid]
-
-        if not routes:
-            # Use complexity to pick the right fallback — don't assume complex when it's simple
-            complexity = state.get("complexity", "complex")
-            return ["research_agent"] if complexity == "simple" else ["law_agent", "case_agent"]
-
-        return routes
+        return routes if routes else ["law_agent", "case_agent"]
     
     workflow.add_conditional_edges(
         "router",

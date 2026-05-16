@@ -1,39 +1,31 @@
 from typing import Dict, Any
 from .base_agent import BaseAgent
-from ..tools.web_search import web_search_tool
-from ..config import TARGET_CASE_SITE
+from ..tools import indian_kanoon_api as ik
 
 class CaseAgent(BaseAgent):
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Executes the Case Agent workflow.
-        Retrieves case law context based on assigned task.
+        Retrieves case law from Indian Kanoon API (replaced HTML scraping).
         """
-        # Get specific instruction from router's agent_tasks
         task = state.get("agent_tasks", {}).get("case_agent", {})
-        instruction = task.get("instruction", "")
-        
-        if not instruction:
-            # Fallback to original query if no specific task
-            instruction = state.get("original_query", "")
-        
+        instruction = task.get("instruction", "") or state.get("original_query", "")
+
         if not instruction:
             return {"case_context": []}
-            
+
         try:
             print(f"🏛️ Case Agent Task: {instruction[:80]}...")
-            
-            # 1. Enhance Query (improves keyword matching for web search)
+
             enhanced_query = self.enhance_query(instruction, "case")
             print(f"   Enhanced: {enhanced_query[:80]}...")
-            
-            # 2. Define Domains - prioritize Indian Kanoon
-            domains = [TARGET_CASE_SITE]
-            
-            # 3. Web Search
-            context_str, results = web_search_tool.run(enhanced_query, domains)
-            
-            # Return results — manager_aggregate reranks across all agents globally
+
+            results = ik.search(enhanced_query, max_results=10)
+
+            # Fallback to web search if IK API returned nothing
+            if not results:
+                from ..tools.web_search import web_search_tool
+                _, results = web_search_tool.run(enhanced_query)
+
             return {"case_context": results[:15]}
         except Exception as e:
             print(f"❌ Case Agent Failed: {e}")
