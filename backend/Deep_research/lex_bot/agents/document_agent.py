@@ -168,17 +168,23 @@ class DocumentAgent(BaseAgent):
                 logger.error(f"Document processing failed: {e}")
                 doc_context_str = f"Error processing documents: {e}"
 
-        # 2. Web Search (for supplemental context)
-        web_context_str = "No web search performed."
+        # 2. Web Search (only when document coverage is thin)
+        # Skip if the document already has >= 5 chunks and >= 600 chars of relevant text.
+        # Avoids adding noisy/conflicting web results when the uploaded doc is sufficient.
+        doc_text_len = sum(len(c.get("text", "")) for c in doc_chunks)
+        run_web_search = (not file_paths) or (len(doc_chunks) < 5) or (doc_text_len < 600)
+
+        web_context_str = "Document provides sufficient context — no supplemental web search needed."
         web_results = []
-        try:
-            enhanced_query = f"{query} legal context"
-            web_ctx, web_res = web_search_tool.run(enhanced_query)
-            web_results = web_res
-            if web_ctx:
-                web_context_str = web_ctx[:2000]
-        except Exception as e:
-            logger.error(f"Web search failed: {e}")
+        if run_web_search:
+            try:
+                enhanced_query = f"{query} legal context"
+                web_ctx, web_res = web_search_tool.run(enhanced_query)
+                web_results = web_res
+                if web_ctx:
+                    web_context_str = web_ctx[:2000]
+            except Exception as e:
+                logger.error(f"Web search failed: {e}")
 
         # 3. Generate Answer
         prompt_template = DOC_AGENT_COT_PROMPT if llm_mode == "reasoning" else DOC_AGENT_PROMPT

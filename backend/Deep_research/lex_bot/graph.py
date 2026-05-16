@@ -64,12 +64,20 @@ from .config import MEM0_ENABLED
 
 
 import time as _time
+from cachetools import TTLCache
 
 # ============ Cached UserMemoryManager ============
 # Avoids re-initializing mem0's embedding model on every request.
 # TTL ensures stale managers are eventually garbage collected.
 _user_memory_cache: Dict[str, tuple] = {}  # user_id -> (UserMemoryManager, timestamp)
 _MEMORY_CACHE_TTL = 300  # 5 minutes
+
+# ============ Memory Results Cache ============
+# Caches mem0 search results per user for 3 minutes.
+# Eliminates repeated 3-8s mem0 searches for every message in a session.
+# Quality impact is minimal: long-term memories (profession, style, specialization)
+# are stable across query topics within a session.
+_memory_results_cache: TTLCache = TTLCache(maxsize=500, ttl=180)
 
 
 def _get_memory_manager(user_id: str) -> "UserMemoryManager":
@@ -104,13 +112,21 @@ def memory_recall_node(state: Dict[str, Any]) -> Dict[str, Any]:
         return {"memory_context": []}
     
     try:
+        # Cache hit: skip mem0 entirely for messages after the first in a session
+        if user_id in _memory_results_cache:
+            cached = _memory_results_cache[user_id]
+            print(f"⚡ Memory cache HIT for user {user_id} ({len(cached)} memories, skipping mem0)")
+            return {"memory_context": cached}
+
         memory_manager = _get_memory_manager(user_id)
         query = state.get("original_query", "")
         memories = memory_manager.search(query, limit=5)
-        
+
         if memories:
             print(f"📚 Retrieved {len(memories)} relevant memories for user {user_id}")
-        
+
+        # Cache results so subsequent messages skip the 3-8s mem0 call
+        _memory_results_cache[user_id] = memories or []
         return {"memory_context": memories}
     except Exception as e:
         print(f"⚠️ Memory recall failed: {e}")
@@ -209,11 +225,12 @@ def define_graph():
         # Validate only
         valid = ["research_agent", "explainer_agent", "law_agent", "case_agent", "citation_agent", "strategy_agent"]
         routes = [a for a in selected if a in valid]
-        
-        # Fallback
+
         if not routes:
-            return ["law_agent", "case_agent"]
-        
+            # Use complexity to pick the right fallback — don't assume complex when it's simple
+            complexity = state.get("complexity", "complex")
+            return ["research_agent"] if complexity == "simple" else ["law_agent", "case_agent"]
+
         return routes
     
     workflow.add_conditional_edges(

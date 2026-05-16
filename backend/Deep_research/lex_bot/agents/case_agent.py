@@ -1,7 +1,6 @@
 from typing import Dict, Any
 from .base_agent import BaseAgent
 from ..tools.web_search import web_search_tool
-from ..tools.reranker import rerank_documents
 from ..config import TARGET_CASE_SITE
 
 class CaseAgent(BaseAgent):
@@ -34,11 +33,8 @@ class CaseAgent(BaseAgent):
             # 3. Web Search
             context_str, results = web_search_tool.run(enhanced_query, domains)
             
-            # 4. Rerank against original instruction
-            reranked = rerank_documents(instruction, results, top_n=10)
-            
-            # 5. Return update
-            return {"case_context": reranked}
+            # Return results — manager_aggregate reranks across all agents globally
+            return {"case_context": results[:15]}
         except Exception as e:
             print(f"❌ Case Agent Failed: {e}")
             return {"case_context": [], "errors": [f"Case Agent failed: {str(e)}"]}
