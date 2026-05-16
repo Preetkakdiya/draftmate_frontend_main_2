@@ -311,9 +311,9 @@ const Landing = () => {
                             <Link to="/login" className="flex min-w-[140px] cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-all shadow-lg shadow-primary/30">
                                 Start Drafting
                             </Link>
-                            <button className="flex min-w-[140px] cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-white border border-[#dbdfe6] text-[#111318] text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#f8faff] transition-colors">
+                            <a href="mailto:admin@draftmate.in?subject=Requesting a Demo of DraftMate" className="flex min-w-[140px] cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-white border border-[#dbdfe6] text-[#111318] text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#f8faff] transition-colors">
                                 Book a Demo
-                            </button>
+                            </a>
                         </div>
                     </div>
 
