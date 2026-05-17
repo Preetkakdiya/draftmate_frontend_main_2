@@ -25,12 +25,7 @@ const Dashboard = () => {
     React.useEffect(() => {
         document.title = 'Dashboard | DraftMate';
 
-        // Check if we should show the subscription popup
-        const hasSeenPopup = sessionStorage.getItem('has_seen_subscription_popup_this_session');
-        if (!hasSeenPopup) {
-            setIsSubscriptionModalOpen(true);
-            sessionStorage.setItem('has_seen_subscription_popup_this_session', 'true');
-        }
+
 
         const handleProfileUpdate = () => {
             const saved = localStorage.getItem('user_profile');

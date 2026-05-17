@@ -502,6 +502,37 @@ def enhance_content(selected_text: str, user_context: str) -> str:
             f.write(f"Enhance Content Error: {str(e)}\n")
         return f"Error: {e}"
 
+
+def summarise_context(date: str, context: str) -> str:
+    """
+    Summarises the context around a date into 2-3 clear sentences using Gemini.
+    Returns a plain-text summary explaining what happened around that date.
+    """
+    if not GEMINI_API_KEY:
+        return context[:250]  # Fallback: raw truncated context
+
+    system_instruction = """You are a concise legal document analyst.
+Given a date and the surrounding text from a legal document, write a 2-3 sentence summary explaining what event or action occurred on or around that date.
+Be factual, clear, and specific. Output ONLY the summary sentences — no preamble, no labels, no markdown."""
+
+    prompt = f"Date: {date}\n\nSurrounding context:\n{context}"
+
+    try:
+        model = genai.GenerativeModel(
+            model_name=LLM_MODEL,
+            system_instruction=system_instruction
+        )
+        response = model.generate_content(
+            contents=[prompt],
+            generation_config={"temperature": 0.2, "max_output_tokens": 150},
+            request_options={"timeout": 20}
+        )
+        return response.text.strip()
+    except Exception as e:
+        logger.error(f"summarise_context error: {e}")
+        return context[:250]
+
+
 from bs4 import BeautifulSoup
 
 def create_placeholders(html_content: str) -> str:

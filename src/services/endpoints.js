@@ -47,7 +47,6 @@ export const API_CONFIG = {
         }
     },
 
-    // Service: backend/Enhance_bot (Port 8002)
     ENHANCE_BOT: {
         // Direct local address to avoid Nginx requirement for dev
         BASE_URL: `${BASE_URL}/enhance`,
@@ -55,6 +54,7 @@ export const API_CONFIG = {
             ENHANCE_CONTENT: '/enhance_content', // POST
             ENHANCE_CLAUSE: '/enhance_clause', // POST
             CREATE_PLACEHOLDERS: '/create_placeholders', // POST
+            SUMMARISE_CONTEXT: '/summarise_context', // POST
         }
     },
 

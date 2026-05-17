@@ -1461,6 +1461,9 @@ const Editor = () => {
         // Determine status: if argument is a string uses it, otherwise default to 'In progress'
         const saveStatus = (typeof status === 'string') ? status : 'In progress';
 
+        const existingDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
+        const existingDraft = existingDrafts.find(d => d.id === draftId);
+
         const draftData = {
             id: draftId,
             name: draftName || 'Untitled Draft',
@@ -1468,10 +1471,10 @@ const Editor = () => {
             placeholders: placeholders,
             settings: editorSettings,
             status: saveStatus,
-            lastModified: new Date().toISOString()
+            lastModified: new Date().toISOString(),
+            folderId: existingDraft?.folderId ?? null  // ← preserve folder membership
         };
 
-        const existingDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
         const otherDrafts = existingDrafts.filter(d => d.id !== draftId);
         const updatedDrafts = [...otherDrafts, draftData];
 
