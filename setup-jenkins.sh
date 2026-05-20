@@ -6,6 +6,19 @@ set -e
 
 echo "🚀 Starting DraftMate Jenkins Server Bootstrap..."
 
+# 0. Create 4GB Swap File for Free Tier Memory Limits
+echo "💽 Creating 4GB Virtual Swap File to prevent Out-Of-Memory crashes on Free Tier..."
+if [ ! -f /swapfile ]; then
+    sudo fallocate -l 4G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    echo "✅ Swap file created successfully!"
+else
+    echo "✅ Swap file already exists."
+fi
+
 # 1. Update system and install Java
 echo "☕ Installing Java (OpenJDK 17)..."
 sudo apt-get update -y
