@@ -97,6 +97,10 @@ else
 fi
 
 # Build Images
+echo "🧹 Cleaning up old Docker caches to free up disk space (Critical for 30GB Free Tier limits)..."
+sudo docker system prune -f
+sudo docker builder prune -f
+
 echo "🐳 Building Docker images (this may take a few minutes)..."
 sudo docker build -t draftmate_frontend_main_2-backend:latest -f Dockerfile .
 sudo docker build --build-arg VITE_CLIENT_ID="$VITE_CLIENT_ID" --build-arg VITE_API_BASE_URL='/api' -t draftmate_frontend_main_2-frontend:prod -f Dockerfile.frontend.prod .
