@@ -168,3 +168,4 @@ resources:
   requests:
     cpu: 200m
     memory: 2Gi
+# Live Demo for  Testing automated CI/CD Pipeline!
