@@ -10,6 +10,7 @@ frontend:
     targetPort: 5173
   env:
     VITE_CLIENT_ID: "YOUR_GOOGLE_CLIENT_ID"
+    VITE_API_BASE_URL: "http://54.221.83.201:8080"
     # CHANGE_THIS_FOR_AWS: Update URLs to match your production domain
     FRONTEND_URL_DEV: "http://localhost:8080"
     FRONTEND_URL_PROD: "https://www.draftmate.in"
