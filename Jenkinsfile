@@ -82,7 +82,7 @@ pipeline {
                         cd /home/ubuntu/draftmate_frontend_main_2
                         git stash
                         git pull origin preet/k8s-setup
-                        # Deploy using the ubuntu user's default kubeconfig for Kind
+                        # Deploy using the ubuntu users default kubeconfig for Kind
                         /usr/local/bin/helm upgrade --install draftmate ./draftmate-chart \\
                             -f ./draftmate-chart/values.yaml \\
                             -f ./draftmate-chart/values-secrets.yaml \\
