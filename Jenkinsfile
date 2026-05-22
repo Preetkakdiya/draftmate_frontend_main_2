@@ -77,11 +77,16 @@ pipeline {
         stage('Helm: Deploy to Kubernetes') {
             steps {
                 sh """
-                    ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/k8s.pem ubuntu@54.221.83.201 '
+                    # WARNING: Change the IP below to your company's actual Kubernetes EC2 Public IP!
+                    ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/k8s.pem ubuntu@REPLACE_WITH_COMPANY_K8S_EC2_IP '
                         cd /home/ubuntu/draftmate_frontend_main_2
                         git stash
                         git pull origin preet/k8s-setup
-                        helm upgrade --install draftmate ./draftmate-chart --namespace default --create-namespace
+                        # Deploy using sudo and pointing to the root kubeconfig for Kind
+                        sudo KUBECONFIG=/root/.kube/config /usr/local/bin/helm upgrade --install draftmate ./draftmate-chart \\
+                            -f ./draftmate-chart/values.yaml \\
+                            -f ./draftmate-chart/values-secrets.yaml \\
+                            --namespace default --create-namespace
                     '
                 """
             }
