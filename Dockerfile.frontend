@@ -4,6 +4,15 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+
+# Accept build arguments and set them as environment variables for Vite
+ARG VITE_CLIENT_ID
+ARG VITE_API_BASE_URL
+ARG VITE_CASHFREE_MODE
+ENV VITE_CLIENT_ID=$VITE_CLIENT_ID
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_CASHFREE_MODE=$VITE_CASHFREE_MODE
+
 RUN npm run build
 
 # Stage 2: Serve the static files using NGINX
