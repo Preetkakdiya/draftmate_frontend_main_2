@@ -78,7 +78,7 @@ pipeline {
             steps {
                 sh """
                     # WARNING: Change the IP below to your company's actual Kubernetes EC2 Public IP!
-                    ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/k8s.pem ubuntu@REPLACE_WITH_COMPANY_K8S_EC2_IP '
+                    ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/k8s.pem ubuntu@54.221.83.201 '
                         cd /home/ubuntu/draftmate_frontend_main_2
                         git stash
                         git pull origin preet/k8s-setup
