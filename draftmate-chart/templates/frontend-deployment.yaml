@@ -20,7 +20,7 @@ spec:
         image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         ports:
-        - containerPort: 3000
+        - containerPort: 80
         env:
         {{- range $key, $value := .Values.frontend.env }}
         - name: {{ $key }}
