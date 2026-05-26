@@ -1,16 +1,4 @@
-# Stage 1: Build Frontend
-FROM node:20-slim AS frontend-builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY index.html vite.config.js eslint.config.js ./
-COPY src/ src/
-COPY public/ public/
-ARG VITE_CLIENT_ID
-ENV VITE_CLIENT_ID=$VITE_CLIENT_ID
-RUN VITE_BASE_PATH=/ VITE_API_BASE_URL=/ VITE_CLIENT_ID=$VITE_CLIENT_ID npm run build
-
-# Stage 2: Backend & Runtime
+# Stage: Backend & Runtime
 FROM python:3.11-slim-bookworm
 
 # Set environment variables
@@ -78,8 +66,6 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Copy Frontend Build Artifacts from Stage 1
-COPY --from=frontend-builder /app/dist /var/www/html
 
 # Create directory for uploads (used by lex_bot)
 RUN mkdir -p backend/Deep_research/lex_bot/data/uploads
