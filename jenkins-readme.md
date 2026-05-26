@@ -17,6 +17,9 @@ This server handles testing, code quality checks, security scanning, and buildin
 2. Copy the contents of `setup-cicd-server.sh` and run `bash setup-cicd-server.sh`.
 3. This installs Java 21, Jenkins, Docker, SonarQube, and Trivy automatically.
 
+4. **Install NodeJS (Required for SonarQube JS scanning):**
+   - Run: `sudo apt-get update && sudo apt-get install -y nodejs npm`
+
 ---
 
 ## ⚙️ 3. SonarQube: First-Time Setup (Port 9000)
@@ -27,6 +30,13 @@ This server handles testing, code quality checks, security scanning, and buildin
    - Click your profile icon (top right) -> **My Account** -> **Security**.
    - In the "Generate Tokens" box, type `jenkins-token` and click **Generate**.
    - **COPY THIS TOKEN NOW!** You will not be able to see it again. We will paste it into Jenkins later.
+
+5. **Create Jenkins Webhook (Required for Quality Gate):**
+   - Go to **Administration** (top menu) -> **Configuration** -> **Webhooks**.
+   - Click **Create**.
+   - Name: `jenkins`
+   - URL: `http://<JENKINS-EC2-PUBLIC-IP>:8080/sonarqube-webhook/`
+   - Click **Create**.
 
 ---
 
@@ -54,6 +64,7 @@ Unlike SonarQube, Jenkins does NOT use `admin/admin`. It uses a secure temporary
    - `SonarQube Scanner`
    - `OWASP Dependency-Check Plugin`
    - `Docker Pipeline`
+   - `Workspace Cleanup`
 4. Click **Install without restart**. Once finished, check the box to restart Jenkins.
 
 ---
@@ -67,11 +78,13 @@ This tells Jenkins exactly where to find the scanners. The names here **MUST** m
    - Click **Add SonarQube Scanner**.
    - Name: `sonar-scanner` *(Type this exactly!)*
    - Check the box for **"Install automatically"**.
+   - Click **Add Installer** and select **Install from Maven Central**.
 3. **Configure OWASP Dependency-Check:**
    - Scroll down to "Dependency-Check installations".
    - Click **Add Dependency-Check**.
    - Name: `DP-Check` *(Type this exactly!)*
    - Check the box for **"Install automatically"**.
+   - Click **Add Installer** and select **Install from github.com**.
 4. Click **Save** at the bottom.
 
 ---
@@ -146,3 +159,5 @@ This links GitHub and Jenkins so builds start automatically.
    - **Content type:** `application/json`.
    - **Events:** Just the `push` event.
    - Click **Add webhook**.
+
+<!-- Test webhook trigger -->
