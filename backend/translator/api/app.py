@@ -1,14 +1,20 @@
 """Minimal FastAPI app for translation job creation."""
 
+from pathlib import Path
 from typing import Generator
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from backend.translator.crud import create_translation_job as create_job_record
+from backend.translator.crud import (
+    create_translation_job as create_job_record,
+    delete_translation_job as delete_job_record,
+    get_translation_job,
+)
 from backend.translator.database import DATABASE_URL, SessionLocal, engine
 from backend.translator.models import Base
-from backend.translator.storage import get_original_upload_path
+from backend.translator.storage import delete_local_file, get_original_upload_path
 from backend.translator.tasks import process_translation_job
 
 app = FastAPI(title="Translator Service", version="0.1.0")
@@ -56,5 +62,50 @@ async def create_translation_job(
     return {
         "job_id": job.id,
         "status": job.status,
+        "stage": job.stage,
         "target_language": job.target_language,
     }
+
+
+@app.get("/translation-jobs/{job_id}")
+def get_translation_job_status(job_id: int, db: Session = Depends(get_db)) -> dict[str, str | int | None]:
+    job = get_translation_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Translation job not found")
+
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "progress": job.progress,
+        "stage": job.stage,
+        "target_language": job.target_language,
+    }
+
+
+@app.get("/translation-jobs/{job_id}/download")
+def download_translated_file(job_id: int, db: Session = Depends(get_db)):
+    job = get_translation_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Translation job not found")
+
+    if job.status != "completed" or not job.translated_file:
+        raise HTTPException(status_code=404, detail="processing")
+
+    translated_path = Path(job.translated_file)
+    if not translated_path.exists():
+        raise HTTPException(status_code=404, detail="Translated file not found")
+
+    return FileResponse(path=translated_path, filename=translated_path.name)
+
+
+@app.delete("/translation-jobs/{job_id}")
+def delete_translation_job(job_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
+    job = get_translation_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Translation job not found")
+
+    delete_local_file(job.source_file)
+    delete_local_file(job.translated_file)
+    delete_job_record(db, job_id)
+
+    return {"job_id": job_id, "status": "deleted"}

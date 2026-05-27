@@ -21,6 +21,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("user_id", sa.String(length=255), nullable=True),
         sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("stage", sa.String(length=50), nullable=False),
         sa.Column("progress", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("source_file", sa.Text(), nullable=False),
         sa.Column("translated_file", sa.Text(), nullable=True),

@@ -13,6 +13,7 @@ class TranslationJob(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(255), index=True, nullable=True)
     status = Column(String(50), nullable=False, default="queued")
+    stage = Column(String(50), nullable=False, default="queued")
     progress = Column(Integer, nullable=False, default=0)
     source_file = Column(Text, nullable=False)
     translated_file = Column(Text, nullable=True)
