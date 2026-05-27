@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '3', artifactNumToKeepStr: '3'))
+    }
+
     environment {
         // We will configure these credentials in Jenkins
         DOCKER_CREDENTIALS = credentials('docker-hub-creds')
