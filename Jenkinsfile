@@ -76,17 +76,17 @@ pipeline {
                         --build-arg VITE_CLIENT_ID=462761102428-dnm0f7tmt3dbv0l41aun71k4lj1c9hig.apps.googleusercontent.com \\
                         --build-arg VITE_API_BASE_URL=http://app.draftde.free.nf:8080 \\
                         --build-arg VITE_CASHFREE_MODE=sandbox \\
-                        -t ${FRONTEND_IMAGE}:latest -f Dockerfile.frontend .
+                        -t ${FRONTEND_IMAGE}:${BUILD_NUMBER} -f Dockerfile.frontend .
                 """
-                sh "docker build -t ${BACKEND_IMAGE}:latest -f Dockerfile ."
+                sh "docker build -t ${BACKEND_IMAGE}:${BUILD_NUMBER} -f Dockerfile ."
             }
         }
         
         stage('Docker: Push to DockerHub') {
             steps {
                 sh "echo \$DOCKER_CREDENTIALS_PSW | docker login -u \$DOCKER_CREDENTIALS_USR --password-stdin"
-                sh "docker push ${FRONTEND_IMAGE}:latest"
-                sh "docker push ${BACKEND_IMAGE}:latest"
+                sh "docker push ${FRONTEND_IMAGE}:${BUILD_NUMBER}"
+                sh "docker push ${BACKEND_IMAGE}:${BUILD_NUMBER}"
             }
         }
         
@@ -102,10 +102,9 @@ pipeline {
                         /usr/local/bin/helm upgrade --install draftmate ./draftmate-chart \\
                             -f ./draftmate-chart/values.yaml \\
                             -f ./draftmate-chart/values-secrets.yaml \\
+                            --set frontend.image.tag=${BUILD_NUMBER} \\
+                            --set backend.image.tag=${BUILD_NUMBER} \\
                             --namespace default --create-namespace
-                        
-                        # Force Kubernetes to pull the newly built latest image
-                        /usr/local/bin/kubectl rollout restart deployment frontend backend --namespace default
                     '
                 """
             }
