@@ -40,7 +40,7 @@ pipeline {
                     tool 'DP-Check'
                 }
                 // Requires OWASP plugin installed in Jenkins
-                dependencyCheck additionalArguments: '--scan ./ --noupdate --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
