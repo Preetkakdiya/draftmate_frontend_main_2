@@ -113,6 +113,15 @@ pipeline {
     
     post {
         always {
+            sh """
+                # Delete the specific images from 3 builds ago to save space, but preserve the global layer cache!
+                docker rmi ${FRONTEND_IMAGE}:\$((${BUILD_NUMBER} - 3)) || true
+                docker rmi ${BACKEND_IMAGE}:\$((${BUILD_NUMBER} - 3)) || true
+                
+                # Delete any dangling invisible layers
+                docker image prune -f
+            """
+            cleanWs()
             echo "Pipeline complete! Check the UI for status."
         }
     }
