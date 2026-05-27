@@ -34,6 +34,11 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   backend:
     build:
       context: .
@@ -65,6 +70,8 @@ services:
       - S3_BUCKET=${S3_BUCKET}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
       - PSQL_PASSWD=${PSQL_PASSWD}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - LLM_MODE=${LLM_MODE}
       - LLM_PROVIDER=${LLM_PROVIDER}
       - EMBED_MODEL=${EMBED_MODEL}
@@ -106,6 +113,26 @@ services:
     depends_on:
       - db
       - qdrant
+      - redis
+
+  translator-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_CLIENT_ID=${VITE_CLIENT_ID}
+    command: ["python", "-m", "backend.translator.workers.worker"]
+    environment:
+      - TRANSLATOR_DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-lex_bot_db}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-lex_bot_db}
+      - POSTGRES_DSN=${POSTGRES_DSN}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - db
+      - redis
 
 volumes:
   postgres_data:

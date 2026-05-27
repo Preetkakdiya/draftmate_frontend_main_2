@@ -19,6 +19,12 @@ celery_app = Celery(
     backend=_get_result_backend(),
 )
 
+celery_app.conf.update(
+    worker_hijack_root_logger=False,
+    worker_redirect_stdouts=True,
+    worker_redirect_stdouts_level="INFO",
+)
+
 
 @celery_app.task(name="backend.translator.tasks.process_translation_job")
 def process_translation_job(job_id: int, source_file: str, target_language: str) -> dict[str, str | int]:
@@ -28,3 +34,4 @@ def process_translation_job(job_id: int, source_file: str, target_language: str)
         "target_language": target_language,
         "status": "queued",
     }
+

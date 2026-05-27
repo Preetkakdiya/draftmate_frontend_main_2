@@ -5,6 +5,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+
 def _get_database_url() -> str:
     return (
         os.getenv("TRANSLATOR_DATABASE_URL")
@@ -44,3 +45,4 @@ def init_engine():
 
 
 init_engine()
+
