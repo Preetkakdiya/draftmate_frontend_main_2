@@ -24,6 +24,76 @@ spec:
   {{- range .Values.ingress.hosts }}
   - http:
       paths:
+      - path: /auth/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /converter/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /query/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /enhance/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /drafter/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /lexbot/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /pdf/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /notification/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /subscriptions/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
+      - path: /case_search/
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: {{ $.Values.backend.service.port }}
       {{- range .paths }}
       - path: {{ .path }}
         pathType: {{ .pathType }}
