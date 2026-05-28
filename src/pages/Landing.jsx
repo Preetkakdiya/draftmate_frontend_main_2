@@ -1,4 +1,3 @@
-// Test comment to trigger Jenkins pipeline
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import fullLogo from '../assets/FULL_LOGO.svg';

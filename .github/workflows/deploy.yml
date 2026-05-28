@@ -82,12 +82,6 @@ jobs:
           format: 'table'
           exit-code: '0'
           severity: 'HIGH,CRITICAL'
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           
       - name: Deploy to Kubernetes Server via SSH
         uses: appleboy/ssh-action@v1.0.0
