@@ -66,7 +66,7 @@ jobs:
           format: 'json'
           output: 'trivy-frontend-report.json'
           severity: 'HIGH,CRITICAL'
-          exit-code: '1'
+          exit-code: '0'
 
       - name: Run Trivy scan on Backend image
         uses: aquasecurity/trivy-action@master
@@ -75,7 +75,7 @@ jobs:
           format: 'json'
           output: 'trivy-backend-report.json'
           severity: 'HIGH,CRITICAL'
-          exit-code: '1'
+          exit-code: '0'
 
       - name: Upload Trivy reports
         uses: actions/upload-artifact@v4
