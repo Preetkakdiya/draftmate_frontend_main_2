@@ -13,6 +13,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")  # Fallback search
 GOOGLE_SERP_API_KEY = os.getenv("GOOGLE_SERP_API_KEY")  # Fallback search
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
+INDIAN_KANOON_API_KEY = os.getenv("IKApi", "").strip()
 # Database Config
 POSTGRES_DSN = os.getenv("POSTGRES_DSN")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -59,10 +60,9 @@ MEM0_ENABLED = os.getenv("MEM0_ENABLED", "true").lower() == "true"
 SESSION_CACHE_TTL_MINUTES = int(os.getenv("SESSION_CACHE_TTL", 30))
 
 # --- TARGET WEBSITES ---
-TARGET_CASE_SITE = "indiankanoon.org"
-
+# Indian Kanoon is now accessed via API (indian_kanoon_api.py), not web scraping.
+# Removed from PREFERRED_DOMAINS so Tavily doesn't waste a search slot on it.
 PREFERRED_DOMAINS = [
-    "indiankanoon.org",
     "legalserviceindia.com",
     "scconline.com",
     "livelaw.in",

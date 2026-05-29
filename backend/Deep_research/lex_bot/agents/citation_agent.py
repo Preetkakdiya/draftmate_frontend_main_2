@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from lex_bot.agents.base_agent import BaseAgent
-from lex_bot.tools.indian_kanoon import IndianKanoonScraper
+from lex_bot.tools import indian_kanoon_api as ik
 from lex_bot.tools.penal_code_lookup import PenalCodeLookup
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,6 @@ class CitationAgent(BaseAgent):
     def __init__(self, mode: str = "fast"):
         """Initialize with fast mode for cost efficiency."""
         super().__init__(mode=mode)
-        self.kanoon = IndianKanoonScraper()
         self.statute_lookup = PenalCodeLookup()
     
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -97,13 +96,11 @@ class CitationAgent(BaseAgent):
         main_case_title = case_name
         
         if case_name and len(case_name) > 5:
-            # Search for cases citing the specific case
             citing_query = f'"{case_name}" cited'
-            citing_results = self.kanoon.search(citing_query, max_results=8)
+            citing_results = ik.search(citing_query, max_results=8)
         elif sections:
-            # Search for cases citing the statute
             sec_query = f'Section {sections[0]} cited'
-            citing_results = self.kanoon.search(sec_query, max_results=8)
+            citing_results = ik.search(sec_query, max_results=8)
             main_case_title = f"Statutes: {', '.join(sections)}"
         
         if not citing_results:

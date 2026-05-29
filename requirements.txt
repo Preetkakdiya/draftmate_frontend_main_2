@@ -98,5 +98,5 @@ watchdog
 opencv-python-headless
 PyJWT==2.8.0
 email-validator
-cashfree-pg
+razorpay
 fastembed

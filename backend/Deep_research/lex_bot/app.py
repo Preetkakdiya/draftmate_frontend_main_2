@@ -690,14 +690,16 @@ async def _process_chat(request: ChatRequest, user_id: str, reasoning_mode: bool
         
         answer = result.get("final_answer", "I apologize, but I couldn't generate a response.")
         include_cot = reasoning_mode
-        
-        # Generate followups post-pipeline (Step 8)
-        suggested_followups = _generate_followups_sync(
-            request.query, answer, 
-            "reasoning" if reasoning_mode else "fast"
+
+        # Start follow-up generation in background while we do DB saves
+        loop = asyncio.get_running_loop()
+        followup_future = loop.run_in_executor(
+            None, _generate_followups_sync,
+            request.query, answer, "reasoning" if reasoning_mode else "fast"
         )
-        
-        # Store assistant response
+        suggested_followups = []
+
+        # Store assistant response (runs concurrently with followup generation)
         if user_id:
             chat_store.add_message(
                 user_id=user_id,
@@ -708,12 +710,17 @@ async def _process_chat(request: ChatRequest, user_id: str, reasoning_mode: bool
                     "complexity": result.get("complexity"),
                     "agents": result.get("selected_agents"),
                     "sources": result.get("sources", []),
-                    "suggested_followups": suggested_followups
                 }
             )
-            
-            # (Step 16) Fire and forget mem0 storage (now uses safe bounded queue)
+
+            # (Step 16) Fire and forget mem0 storage
             _background_memory_store(user_id, request.query, answer)
+
+        # Collect followups — they've had time to generate during DB save above
+        try:
+            suggested_followups = await asyncio.wait_for(followup_future, timeout=3.0)
+        except asyncio.TimeoutError:
+            logger.info("Follow-up generation still running — returning without followups")
         
         processing_time = int((time.time() - start_time) * 1000)
         

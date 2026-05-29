@@ -101,44 +101,62 @@ class RouterCache:
     """
     
     # Pattern -> (complexity, suggested_agents)
+    # Keep this list SHORT and SPECIFIC — broad patterns misclassify complex queries.
+    # The LLM router handles everything else correctly; only bypass it when we're certain.
     PATTERNS = {
-        # Simple patterns - direct to research_agent (no LLM routing needed)
-        "what is section": ("simple", []),
-        "what is article": ("simple", []),
-        "what is rule": ("simple", []),
-        "define ": ("simple", []),
-        "meaning of": ("simple", []),
-        "definition of": ("simple", []),
-        "explain section": ("simple", []),
-        "explain article": ("simple", []),
-        "what are the grounds": ("simple", []),
-        "what are the rights": ("simple", []),
-        "what is the punishment": ("simple", []),
-        "what is the penalty": ("simple", []),
-        "who can file": ("simple", []),
-        "how to file": ("simple", []),
-        "procedure for": ("simple", []),
-        "what is ipc": ("simple", []),
-        "what is bns": ("simple", []),
-        "what is crpc": ("simple", []),
-        "what is cpc": ("simple", []),
+        # IPC sections (common)
         "section 302": ("simple", []),
-        "section 420": ("simple", []),
+        "section 304": ("simple", []),
+        "section 304b": ("simple", []),
+        "section 306": ("simple", []),
+        "section 307": ("simple", []),
+        "section 323": ("simple", []),
+        "section 325": ("simple", []),
+        "section 354": ("simple", []),
+        "section 363": ("simple", []),
         "section 376": ("simple", []),
+        "section 377": ("simple", []),
+        "section 379": ("simple", []),
+        "section 392": ("simple", []),
+        "section 395": ("simple", []),
+        "section 406": ("simple", []),
+        "section 409": ("simple", []),
+        "section 420": ("simple", []),
         "section 498a": ("simple", []),
+        "section 499": ("simple", []),
+        "section 506": ("simple", []),
+        "section 120b": ("simple", []),
+        # BNS sections (IPC replacements)
+        "section 103": ("simple", []),   # murder
+        "section 64": ("simple", []),    # rape
+        "section 316": ("simple", []),   # cheating
+        "section 85": ("simple", []),    # cruelty by husband
+        # CrPC / BNSS key sections
+        "section 41": ("simple", []),    # arrest without warrant
+        "section 154": ("simple", []),   # FIR
+        "section 161": ("simple", []),   # examination of witnesses
+        "section 164": ("simple", []),   # confession
+        "section 167": ("simple", []),   # remand
+        "section 438": ("simple", []),   # anticipatory bail
+        "section 439": ("simple", []),   # bail
+        "section 482": ("simple", []),   # inherent powers / BNSS bail
+        # Constitution articles
+        "article 14": ("simple", []),
+        "article 19": ("simple", []),
+        "article 21": ("simple", []),
+        "article 22": ("simple", []),
+        "article 32": ("simple", []),
+        "article 226": ("simple", []),
+        "article 136": ("simple", []),
+        # IPC section with common alternate spellings
         "section 144": ("simple", []),
-        "bail provisions": ("simple", []),
-        "tell me about": ("simple", []),
-        
-        # Complex patterns  
-        "compare ": ("complex", ["law_agent", "case_agent"]),
+
+        # Explicit complex-task signals — safe to fast-path to specialist agents
         "analyze strategy": ("complex", ["strategy_agent", "law_agent"]),
-        "citation": ("complex", ["citation_agent", "case_agent"]),
-        "how has": ("complex", ["citation_agent"]),
-        "arguments for": ("complex", ["strategy_agent"]),
         "legal strategy": ("complex", ["strategy_agent"]),
         "draft petition": ("complex", ["strategy_agent", "law_agent"]),
         "prepare argument": ("complex", ["strategy_agent", "case_agent"]),
+        "arguments for": ("complex", ["strategy_agent"]),
     }
     
     @classmethod

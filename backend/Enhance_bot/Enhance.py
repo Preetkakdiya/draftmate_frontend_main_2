@@ -8,7 +8,7 @@ import os
 # Ensure we can import from the current directory
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from bot import enhance_content, enhance_clause, create_placeholders, ENHANCEMENT_PRESETS
+from bot import enhance_content, enhance_clause, create_placeholders, ENHANCEMENT_PRESETS, summarise_context
 
 app = FastAPI()
 
@@ -104,6 +104,18 @@ async def enhance_clause_endpoint(request: EnhanceClauseRequest):
 async def get_presets():
     """Return available enhancement presets."""
     return {"presets": ENHANCEMENT_PRESETS}
+
+class SummariseContextRequest(BaseModel):
+    date: str
+    context: str
+
+@app.post("/summarise_context")
+async def summarise_context_endpoint(request: SummariseContextRequest):
+    try:
+        summary = summarise_context(request.date, request.context)
+        return {"summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/create_placeholders")
 async def create_placeholders_endpoint(request: CreatePlaceholdersRequest):

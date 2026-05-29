@@ -8,13 +8,20 @@ Supports:
 """
 
 import os
+import threading
 from typing import Literal
+from cachetools import LRUCache
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from lex_bot.core.llm_factory import LLMFactory, get_llm
 from lex_bot.config import LLM_PROVIDER
+
+# Cache enhanced queries: legal queries repeat heavily across users and sessions.
+# Key: (normalized_query, agent_type) — mode-independent since enhance_query uses fast LLM always.
+_enhance_cache: LRUCache = LRUCache(maxsize=500)
+_enhance_cache_lock = threading.Lock()
 
 
 class BaseAgent:
@@ -86,17 +93,23 @@ class BaseAgent:
             Input: A legal research query.
             Output: A single line of 5-8 search keywords. Just keywords, no formatting."""
         
+        cache_key = (query.strip().lower(), agent_type)
+        if cache_key in _enhance_cache:
+            return _enhance_cache[cache_key]
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
             ("user", "{query}")
         ])
-        
+
         chain = prompt | self.llm | StrOutputParser()
-        
+
         try:
-            return chain.invoke({"query": query})
+            result = chain.invoke({"query": query})
+            with _enhance_cache_lock:
+                _enhance_cache[cache_key] = result
+            return result
         except Exception as e:
-            # Fallback to original query
             return query
 
     def _generate_followups(self, query: str, answer: str) -> list[str]:

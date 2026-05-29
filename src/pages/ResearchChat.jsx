@@ -28,6 +28,8 @@ const LLM_OPTIONS = [
 const ResearchChat = () => {
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
+    const hasInitializedRef = useRef(false); // Prevents StrictMode double-init
+    const isStreamingRef = useRef(false);    // True while bot is responding
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [statusMessage, setStatusMessage] = useState(''); // Streaming status
@@ -76,6 +78,12 @@ const ResearchChat = () => {
 
     // Initialize
     useEffect(() => {
+        // hasInitializedRef prevents React StrictMode's double-invocation from
+        // calling loadSession after startNewChat already ran — which would race
+        // with the user's first message and wipe it from state.
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
+
         // Fetch current LLM config on mount
         const fetchLLMConfig = async () => {
             try {
@@ -162,18 +170,20 @@ const ResearchChat = () => {
         try {
             setSessionId(id);
             localStorage.setItem('last_chat_session_id', id);
-            // Update URL without reload
-            // window.history.replaceState({}, '', `/research?session_id=${id}`);
 
             const data = await api.getSessionHistory(id);
+
+            // Don't overwrite messages if the user has already sent a message
+            // and the bot is currently responding — that would wipe their message.
+            if (isStreamingRef.current) return;
+
             if (data.messages && data.messages.length > 0) {
                 // Map backend messages to frontend format
                 const formattedMessages = data.messages.map((msg, idx) => ({
                     id: msg.id || idx,
                     role: msg.role === 'assistant' ? 'ai' : msg.role,
                     content: msg.content,
-                    sources: msg.metadata?.sources, // Assuming backend stores sources in metadata
-                    // Add other fields if needed
+                    sources: msg.metadata?.sources,
                 }));
                 setMessages(formattedMessages);
             } else {
@@ -189,13 +199,15 @@ const ResearchChat = () => {
         } catch (error) {
             console.error("Failed to load session:", error);
             toast.error("Failed to load chat");
-            startNewChat();
+            if (!isStreamingRef.current) startNewChat();
         }
     };
 
     const handleSend = async () => {
         if (!input.trim() && selectedFiles.length === 0) return;
+        if (isStreamingRef.current) return; // Prevent concurrent sends
 
+        isStreamingRef.current = true;
         const currentInput = input;
         const userMsg = {
             id: Date.now(),
@@ -309,6 +321,7 @@ const ResearchChat = () => {
                 }]);
             }
         } finally {
+            isStreamingRef.current = false;
             setIsTyping(false);
             setStatusMessage('');
         }

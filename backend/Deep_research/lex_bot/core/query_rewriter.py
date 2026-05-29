@@ -106,28 +106,6 @@ def _build_context_string(
         except Exception as e:
             logger.warning(f"ChatStore context retrieval failed: {e}")
 
-    # 2. Try mem0 (Long-term Memory)
-    if user_id:
-        try:
-            from lex_bot.config import MEM0_ENABLED
-            if MEM0_ENABLED:
-                from lex_bot.memory import UserMemoryManager
-                memory_mgr = UserMemoryManager(user_id)
-                memories = memory_mgr.search(query, limit=3)
-                
-                if memories:
-                    context_parts.append("RELEVANT LONG-TERM MEMORIES:")
-                    for m in memories:
-                        if isinstance(m, dict):
-                            memory_text = m.get('memory', m.get('text', ''))
-                        else:
-                            memory_text = str(m)
-                        
-                        if memory_text:
-                            context_parts.append(f"- {memory_text[:250]}")
-        except Exception as e:
-            logger.warning(f"mem0 context retrieval failed: {e}")
-    
     return "\n".join(context_parts) if context_parts else ""
 
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DateTimelineModal from '../components/DateTimelineModal';
 
 const MyDrafts = () => {
     const navigate = useNavigate();
@@ -8,6 +9,7 @@ const MyDrafts = () => {
     const [currentFolder, setCurrentFolder] = useState(null); // null means root
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState('date'); // 'date' | 'alpha'
+    const [showTimeline, setShowTimeline] = useState(false);
 
     // Folder modal state
     const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -185,6 +187,7 @@ const MyDrafts = () => {
 
 
     return (
+        <>
         <div className="bg-background-light dark:bg-background-dark min-h-screen text-slate-900 dark:text-slate-100 font-display">
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header Section */}
@@ -247,6 +250,16 @@ const MyDrafts = () => {
                         )}
                     </div>
 
+                    {currentFolder && (
+                        <button
+                            onClick={() => setShowTimeline(true)}
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-700 rounded-lg transition-colors"
+                            title="View date timeline for all drafts in this folder"
+                        >
+                            <span className="material-symbols-outlined text-base">timeline</span>
+                            <span>Date Timeline</span>
+                        </button>
+                    )}
                     <button
                         onClick={() => setSortOrder(prev => prev === 'date' ? 'alpha' : 'date')}
                         className="hidden sm:flex items-center space-x-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm font-medium transition-colors cursor-pointer"
@@ -445,6 +458,17 @@ const MyDrafts = () => {
                 </div>
             )}
         </div>
+
+            {/* Date Timeline Modal */}
+            {showTimeline && currentFolder && (
+                <DateTimelineModal
+                    folderId={currentFolder}
+                    folderName={currentFolderName || 'Folder'}
+                    drafts={drafts.filter(d => d.folderId === currentFolder)}
+                    onClose={() => setShowTimeline(false)}
+                />
+            )}
+        </>
     );
 };
 

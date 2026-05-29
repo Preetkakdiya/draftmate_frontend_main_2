@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import MiniEditor from '../components/MiniEditor';
 import { API_CONFIG } from '../services/endpoints';
-import { initializeCashfree, createOrder, doPayment, verifyPayment, getSubscriptionStatus } from '../services/CashfreeService';
+import { createOrder, doPayment, getSubscriptionStatus } from '../services/RazorpayService';
 
 const PersonalSettings = () => {
     const [profile, setProfile] = useState({
@@ -696,9 +696,6 @@ const BillingSettings = () => {
     const [activePlan, setActivePlan] = useState(null);
 
     useEffect(() => {
-        // Initialize Cashfree SDK
-        initializeCashfree();
-
         // Check current subscription status
         const fetchStatus = async () => {
             const sessionId = localStorage.getItem('session_id'); // Assuming session_id is stored here
@@ -722,30 +719,40 @@ const BillingSettings = () => {
             const sessionId = localStorage.getItem('session_id');
             if (!sessionId) {
                 toast.error("Please log in again.");
+                setLoading(false);
                 return;
             }
 
             // 1. Create Order
             const order = await createOrder('PRO_MONTHLY', sessionId);
 
-            // 2. Redirect to Payment (Full Page)
-            if (!order.payment_session_id) {
-                toast.error("Invalid Order Session");
+            if (!order.order_id) {
+                toast.error("Failed to create order");
+                setLoading(false);
                 return;
             }
 
-            await doPayment(order.payment_session_id);
-            // User is redirected away. No further code execution expected.
+            // 2. Open Razorpay Checkout Modal
+            await doPayment(order, 
+                async (verifyResult) => {
+                    toast.success("Payment Successful! Subscription Active.");
+                    // Refresh subscription status
+                    const status = await getSubscriptionStatus(sessionId);
+                    if (status.active) {
+                        setActivePlan(status);
+                    }
+                    setLoading(false);
+                },
+                (error) => {
+                    console.error("Payment failed:", error);
+                    toast.error(error.message || "Payment failed or cancelled.");
+                    setLoading(false);
+                }
+            );
 
         } catch (error) {
             console.error("Upgrade flow error:", error);
-            // Cashfree SDK throws error if user closes popup/interaction fails
-            if (error.message && error.message.includes('closed')) {
-                toast.info("Payment cancelled.");
-            } else {
-                toast.error("Upgrade failed. Please try again.");
-            }
-        } finally {
+            toast.error("Upgrade failed. Please try again.");
             setLoading(false);
         }
     };
