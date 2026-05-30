@@ -25,6 +25,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      # OWASP Dependency Check (Compute is free on GitHub Actions!)
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'draftmate'
+          path: '.'
+          format: 'HTML'
+
+      # Upload OWASP Report so you can download it from GitHub Actions UI
+      - name: Upload OWASP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: OWASP-Report
+          path: reports/dependency-check-report.html
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@master
         env:
@@ -43,18 +58,45 @@ jobs:
             --build-arg VITE_CLIENT_ID=462761102428-dnm0f7tmt3dbv0l41aun71k4lj1c9hig.apps.googleusercontent.com \
             --build-arg VITE_API_BASE_URL=http://app.draftde.free.nf:8080 \
             --build-arg VITE_CASHFREE_MODE=sandbox \
-            -t $FRONTEND_IMAGE:${{ github.run_number }} \
-            -t $FRONTEND_IMAGE:latest -f Dockerfile.frontend .
+            -t $FRONTEND_IMAGE:${{ github.run_number }} -f Dockerfile.frontend .
           docker push $FRONTEND_IMAGE:${{ github.run_number }}
-          docker push $FRONTEND_IMAGE:latest
 
       - name: Build and Push Backend
         run: |
-          docker build -t $BACKEND_IMAGE:${{ github.run_number }} -t $BACKEND_IMAGE:latest -f Dockerfile .
+          docker build -t $BACKEND_IMAGE:${{ github.run_number }} -f Dockerfile .
           docker push $BACKEND_IMAGE:${{ github.run_number }}
-          docker push $BACKEND_IMAGE:latest
 
+      - name: Download Trivy HTML Template
+        run: wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
 
+      - name: Run Trivy scan on Frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.run_number }}
+          format: 'template'
+          template: '@html.tpl'
+          output: 'frontend-report.html'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+
+      - name: Run Trivy scan on Backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.run_number }}
+          format: 'template'
+          template: '@html.tpl'
+          output: 'backend-report.html'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+
+      - name: Upload Trivy HTML Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: Trivy-HTML-Reports
+          path: |
+            frontend-report.html
+            backend-report.html
+          
       - name: Deploy to Kubernetes Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
