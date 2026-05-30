@@ -8,20 +8,22 @@ Response parsing follows the Sarvam translate API docs:
 
 from __future__ import annotations
 
-import os
 from dataclasses import replace
 from typing import Iterable, Sequence
 
 import requests
-from dotenv import load_dotenv
 
 from backend.translator.extractors.models import Block
-
-load_dotenv()
+from backend.translator.settings import (
+    SARVAM_API_KEY as TRANSLATOR_SARVAM_API_KEY,
+    SARVAM_API_URL as TRANSLATOR_SARVAM_API_URL,
+    SARVAM_TRANSLATE_BATCH_SIZE as TRANSLATOR_SARVAM_TRANSLATE_BATCH_SIZE,
+    SARVAM_TRANSLATE_MODEL as TRANSLATOR_SARVAM_TRANSLATE_MODEL,
+    SARVAM_TRANSLATE_TIMEOUT_SECONDS as TRANSLATOR_SARVAM_TRANSLATE_TIMEOUT_SECONDS,
+)
 
 SARVAM_TRANSLATE_URL = "https://api.sarvam.ai/v1/translate"
 SARVAM_MAYURA_MODEL = "mayura:v1"
-SARVAM_TRANSLATE_MODEL = "sarvam-translate:v1"
 _SUPPORTED_MAYURA_LANGS = {
     "bn-IN",
     "en-IN",
@@ -78,23 +80,19 @@ _COMMON_LANGUAGE_MAP = {
 
 
 def _get_api_key() -> str:
-    return os.getenv("SARVAM_API_KEY", "").strip()
+    return TRANSLATOR_SARVAM_API_KEY
 
 
 def _get_api_url() -> str:
-    return os.getenv("SARVAM_API_URL", SARVAM_TRANSLATE_URL).strip()
+    return TRANSLATOR_SARVAM_API_URL or SARVAM_TRANSLATE_URL
 
 
 def _get_model() -> str:
-    return os.getenv("SARVAM_TRANSLATE_MODEL", SARVAM_TRANSLATE_MODEL).strip() or SARVAM_TRANSLATE_MODEL
+    return TRANSLATOR_SARVAM_TRANSLATE_MODEL or "sarvam-translate:v1"
 
 
 def _get_timeout_seconds() -> int:
-    raw_value = os.getenv("SARVAM_TRANSLATE_TIMEOUT_SECONDS", "30").strip()
-    try:
-        return max(1, int(raw_value))
-    except ValueError:
-        return 30
+    return max(1, TRANSLATOR_SARVAM_TRANSLATE_TIMEOUT_SECONDS)
 
 
 def _chunked(items: Sequence[Block], batch_size: int) -> Iterable[list[Block]]:
@@ -273,7 +271,7 @@ class SarvamTranslateClient:
     def translate_blocks(self, blocks: Sequence[Block], source_language: str, target_language: str) -> list[Block]:
         translated_blocks: list[Block] = []
 
-        for batch in _chunked(list(blocks), max(1, int(os.getenv("SARVAM_TRANSLATE_BATCH_SIZE", "10")))):
+        for batch in _chunked(list(blocks), max(1, TRANSLATOR_SARVAM_TRANSLATE_BATCH_SIZE)):
             translated_texts = self.translate_texts(
                 [block.text for block in batch],
                 source_language=source_language,
