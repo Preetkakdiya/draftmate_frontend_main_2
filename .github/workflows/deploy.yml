@@ -59,12 +59,16 @@ jobs:
           docker build -t $BACKEND_IMAGE:${{ github.run_number }} -f Dockerfile .
           docker push $BACKEND_IMAGE:${{ github.run_number }}
 
+      - name: Download Trivy HTML Template
+        run: wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
       - name: Run Trivy scan on Frontend image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.run_number }}
-          format: 'table'
-          output: 'frontend-trivy.txt'
+          format: 'template'
+          template: '@html.tpl'
+          output: 'frontend-report.html'
           severity: 'HIGH,CRITICAL'
           exit-code: '0'
 
@@ -72,28 +76,19 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.run_number }}
-          format: 'table'
-          output: 'backend-trivy.txt'
+          format: 'template'
+          template: '@html.tpl'
+          output: 'backend-report.html'
           severity: 'HIGH,CRITICAL'
           exit-code: '0'
 
-      - name: Combine Trivy Reports
-        run: |
-          echo "=========================================" > combined-trivy-report.txt
-          echo "      FRONTEND IMAGE VULNERABILITIES     " >> combined-trivy-report.txt
-          echo "=========================================" >> combined-trivy-report.txt
-          cat frontend-trivy.txt >> combined-trivy-report.txt
-          echo "" >> combined-trivy-report.txt
-          echo "=========================================" >> combined-trivy-report.txt
-          echo "      BACKEND IMAGE VULNERABILITIES      " >> combined-trivy-report.txt
-          echo "=========================================" >> combined-trivy-report.txt
-          cat backend-trivy.txt >> combined-trivy-report.txt
-
-      - name: Upload Combined Trivy Report
+      - name: Upload Trivy HTML Reports
         uses: actions/upload-artifact@v4
         with:
-          name: Trivy-Combined-Report
-          path: combined-trivy-report.txt
+          name: Trivy-HTML-Reports
+          path: |
+            frontend-report.html
+            backend-report.html
           
       - name: Deploy to Kubernetes Server via SSH
         uses: appleboy/ssh-action@v1.0.0
