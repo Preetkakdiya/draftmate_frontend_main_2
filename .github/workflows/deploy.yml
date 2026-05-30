@@ -3,6 +3,7 @@ name: DraftMate CI/CD Pipeline
 on:
   push:
     branches:
+      - main
       - preet/k8s-setup
 
 env:
