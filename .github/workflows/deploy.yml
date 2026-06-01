@@ -109,4 +109,4 @@ jobs:
                 --history-max 3
             
             # Prune old unused docker images to save disk space
-            sudo k3s crictl rmi --prune
+            sudo docker system prune -f
