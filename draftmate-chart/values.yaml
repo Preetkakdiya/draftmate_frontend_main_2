@@ -8,6 +8,13 @@ frontend:
     type: ClusterIP
     port: 80
     targetPort: 80
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
   env:
     VITE_CLIENT_ID: "YOUR_GOOGLE_CLIENT_ID"
     VITE_API_BASE_URL: "http://app.draftde.free.nf:8080"
@@ -80,6 +87,13 @@ backend:
     port: 8080
     targetPort: 8080
     nodePort: 30080
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
   env:
     VITE_CLIENT_ID: "YOUR_GOOGLE_CLIENT_ID"
     # CHANGE_THIS_FOR_AWS: Update URLs to match your production domain
@@ -163,11 +177,4 @@ ingress:
   #     secretName: draftmate-tls-secret
   tls: []
 
-resources:
-  limits:
-    cpu: 1000m
-    memory: 4Gi
-  requests:
-    cpu: 100m
-    memory: 1Gi
 # Live Demo for  Testing automated CI/CD Pipeline!

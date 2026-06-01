@@ -40,4 +40,4 @@ spec:
           value: "{{ $value }}"
         {{- end }}
         resources:
-          {{- toYaml .Values.resources | nindent 12 }}
+          {{- toYaml .Values.frontend.resources | nindent 12 }}
