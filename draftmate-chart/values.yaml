@@ -3,7 +3,7 @@ frontend:
   image:
     repository: preetkakdiya/draftmate-frontend
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 80
@@ -74,7 +74,7 @@ backend:
   image:
     repository: preetkakdiya/draftmate-backend
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   service:
     type: NodePort
     port: 8080
