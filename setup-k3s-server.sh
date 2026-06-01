@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==========================================
 # DraftMate Production Migration Script (Path B)
-# For Bootstrapping a BRAND NEW EC2 Instance (t3.xlarge)
+# For Bootstrapping a BRAND NEW EC2 Instance (Targeting t3.large with Swap Space)
 # Installs: Docker, Kubectl, Helm, K3s, NGINX Ingress, SonarQube
 # Deploys: Complete DraftMate Application using Helm
 # ==========================================
@@ -11,6 +11,17 @@ echo "🚀 Starting Full DraftMate Production Setup on new server..."
 
 echo "📦 1. Updating System Packages..."
 sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
+
+echo "💾 1.5. Configuring 8GB Swap Space to prevent OOM Crashes..."
+if [ ! -f /swapfile ]; then
+    sudo fallocate -l 8G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    sudo sh -c 'echo "/swapfile none swap sw 0 0" >> /etc/fstab'
+    sudo sh -c 'echo "vm.swappiness=10" >> /etc/sysctl.conf'
+    sudo sysctl -p
+fi
 
 echo "🐳 2. Installing Docker..."
 if ! command -v docker &> /dev/null; then
