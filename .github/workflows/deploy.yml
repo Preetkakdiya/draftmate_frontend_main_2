@@ -101,7 +101,7 @@ jobs:
             cd /home/ubuntu/draftmate_frontend_main_2
             git stash
             git pull origin preet/k8s-setup
-            /usr/local/bin/helm upgrade --install draftmate ./draftmate-chart \
+            KUBECONFIG=/home/ubuntu/.kube/config /usr/local/bin/helm upgrade --install draftmate ./draftmate-chart \
                 -f ./draftmate-chart/values.yaml \
                 -f ./draftmate-chart/values-secrets.yaml \
                 --set frontend.image.tag=${{ github.run_number }} \

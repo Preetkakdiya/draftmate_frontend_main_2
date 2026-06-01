@@ -54,15 +54,15 @@ sudo k3s kubectl wait --for=condition=Ready nodes --all --timeout=60s
 echo "🚦 7. Installing NGINX Ingress Controller..."
 sudo k3s kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
 
-echo "🔍 8. Setting up Self-Hosted SonarQube Server..."
+# echo "🔍 8. Setting up Self-Hosted SonarQube Server..."
 # SonarQube requires this specific system setting
-sudo sysctl -w vm.max_map_count=262144
-sudo sh -c 'echo "vm.max_map_count=262144" >> /etc/sysctl.conf'
+# sudo sysctl -w vm.max_map_count=262144
+# sudo sh -c 'echo "vm.max_map_count=262144" >> /etc/sysctl.conf'
 
 # Start SonarQube container if not running, with the CPU limit we applied earlier
-if ! sudo docker ps -a | grep -q sonarqube; then
-    sudo docker run -d --name sonarqube --cpus="1.0" -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 sonarqube:community
-fi
+# if ! sudo docker ps -a | grep -q sonarqube; then
+#     sudo docker run -d --name sonarqube --cpus="1.0" -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 sonarqube:community
+# fi
 
 echo "⏳ Waiting for Ingress Controller to be ready..."
 sleep 20
