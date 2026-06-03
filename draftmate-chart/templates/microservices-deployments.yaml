@@ -1,0 +1,46 @@
+{{- range $service := .Values.backend.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $service.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: {{ $service.name }}
+spec:
+  replicas: {{ $.Values.backend.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ $service.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $service.name }}
+    spec:
+      containers:
+      - name: {{ $service.name }}
+        image: "{{ $.Values.backend.image.repository }}:{{ $.Values.backend.image.tag }}"
+        imagePullPolicy: {{ $.Values.backend.image.pullPolicy }}
+        command: {{ $service.command | toJson }}
+        workingDir: {{ $service.directory }}
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        env:
+        {{- range $key, $value := $.Values.backend.env }}
+        - name: {{ $key }}
+          value: "{{ $value }}"
+        {{- end }}
+        resources:
+          {{- toYaml $service.resources | nindent 10 }}
+---
+{{- end }}
