@@ -1,20 +1,6 @@
 import os
-import time
 from sentence_transformers import SentenceTransformer, CrossEncoder
 import easyocr
-
-def retry_download(func, *args, max_retries=5, initial_delay=15, **kwargs):
-    delay = initial_delay
-    for attempt in range(1, max_retries + 1):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            print(f"⚠️ Attempt {attempt} failed with error: {e}")
-            if attempt == max_retries:
-                raise e
-            print(f"⏳ Sleeping for {delay} seconds before retrying...")
-            time.sleep(delay)
-            delay *= 2
 
 def download_models():
     # Define explicit paths
@@ -29,14 +15,14 @@ def download_models():
     # We use the hardcoded HF ID for downloading, but save to the path expected by the app
     source_embed_model = "sentence-transformers/all-MiniLM-L6-v2"
     print(f"⬇️ Downloading embedding model: {source_embed_model}")
-    model = retry_download(SentenceTransformer, source_embed_model)
+    model = SentenceTransformer(source_embed_model)
     model.save(embed_path)
     print(f"✅ Embedding model saved to: {embed_path}")
 
     # 2. Rerank Model
     source_rerank_model = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     print(f"⬇️ Downloading rerank model: {source_rerank_model}")
-    model = retry_download(CrossEncoder, source_rerank_model)
+    model = CrossEncoder(source_rerank_model)
     model.save(rerank_path)
     print(f"✅ Rerank model saved to: {rerank_path}")
 
@@ -44,7 +30,7 @@ def download_models():
     print(f"⬇️ Downloading EasyOCR models...")
     if not os.path.exists(easyocr_path):
         os.makedirs(easyocr_path, exist_ok=True)
-    retry_download(easyocr.Reader, ['en'], gpu=False, model_storage_directory=easyocr_path)
+    easyocr.Reader(['en'], gpu=False, model_storage_directory=easyocr_path)
     print(f"✅ EasyOCR models saved to: {easyocr_path}")
 
 if __name__ == "__main__":
