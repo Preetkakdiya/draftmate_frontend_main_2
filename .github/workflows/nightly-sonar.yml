@@ -15,7 +15,14 @@ jobs:
           username: ubuntu
           key: ${{ secrets.K8S_SSH_PRIVATE_KEY }}
           script: |
-            sudo docker start sonarqube || true
+            sudo sysctl -w vm.max_map_count=262144 || true
+            if sudo docker ps -a --format '{{.Names}}' | grep -Eq "^sonarqube$"; then
+                echo "Starting existing SonarQube container..."
+                sudo docker start sonarqube
+            else
+                echo "Creating and starting new SonarQube container..."
+                sudo docker run -d --name sonarqube --cpus="1.0" -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 sonarqube:community
+            fi
             echo "Waiting for SonarQube to boot up..."
             sleep 45
 
