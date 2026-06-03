@@ -1,11 +1,28 @@
-# 🏗️ DraftMate: CI/CD Jenkins Server Guide (jenkins-new)
+# 🏗️ DraftMate: CI/CD Pipeline Guide
 
-This is the official, highly-detailed documentation for the **Jenkins CI/CD Pipeline Server** (`jenkins-new` instance). 
-This server handles testing, code quality checks, security scanning, and building Docker images before deploying them.
+> [!WARNING]
+> **JENKINS PIPELINE DEPRECATION WARNING**
+> The Jenkins pipeline (`jenkins-new` instance) has been **DEPRECATED** and is no longer used for production deployments.
+> The active production CI/CD pipeline is now fully migrated to **GitHub Actions** and triggers automatically on every push to the `preet/k8s-setup` branch.
+>
+> Refer to the main [README.md](file:///d:/draftmate/draftmate_frontend_main_2/README.md) for workflow details and see below for GitHub Actions configuration.
 
 ---
 
-## 🖥️ 1. Server Architecture
+## 🔑 GitHub Actions Secrets Configuration
+
+To configure automatic deployments on GitHub, you must set the following Secrets in your GitHub Repository settings (**Settings** -> **Secrets and variables** -> **Actions**):
+
+| Secret Name | Type | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `DOCKERHUB_USERNAME` | Plaintext | Your Docker Hub registry username. | `preetkakdiya` |
+| `DOCKERHUB_TOKEN` | Secret Text | Personal Access Token (PAT) generated in Docker Hub settings. | `dckr_pat_...` |
+| `K8S_SERVER_IP` | Plaintext | The Public IPv4 address of the EC2 cluster host instance. | `54.221.83.201` |
+| `K8S_SSH_PRIVATE_KEY` | Secret Text | The entire private key content (`.pem`) used to SSH into the EC2 host. | `-----BEGIN RSA PRIVATE KEY----- ...` |
+
+---
+
+## 🖥️ Legacy Jenkins Server Architecture (For Reference Only)
 - **Jenkins:** CI/CD Automation (Port `8080`)
 - **SonarQube:** Code Quality & Bug Analysis (Port `9000`)
 - **Docker & Trivy:** Image Building & Vulnerability Scanning

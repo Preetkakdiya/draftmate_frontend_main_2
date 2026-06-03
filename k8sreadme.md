@@ -106,21 +106,73 @@ cd draftmate_frontend_main_2
 cat <<EOF > draftmate-chart/values-secrets.yaml
 frontend:
   env:
-    POSTGRES_PASSWORD: 'CompanyRealPassword'
-    POSTGRES_HOST: 'company-lawdb-useast1.rds.amazonaws.com'
-    POSTGRES_DSN: 'postgresql://lawuser:CompanyRealPassword@company-lawdb...:5432/postgres'
-    DATABASE_URL: 'postgresql://lawuser:CompanyRealPassword@company-lawdb...:5432/postgres'
-    GOOGLE_API_KEY: 'Company-Gemini-Key'
-    OPENAI_API_KEY: 'Company-OpenAI-Key'
+    # Database Credentials
+    POSTGRES_PASSWORD: "CompanyRealPassword"
+    PSQL_PASSWD: "CompanyRealPassword"
+    POSTGRES_HOST: "company-lawdb-useast1.rds.amazonaws.com"
+    POSTGRES_DSN: "postgresql://lawuser:CompanyRealPassword@company-lawdb-useast1.rds.amazonaws.com:5432/postgres"
+    DATABASE_URL: "postgresql://lawuser:CompanyRealPassword@company-lawdb-useast1.rds.amazonaws.com:5432/postgres"
+    
+    # AI & Search API Keys
+    GOOGLE_API_KEY: "Company-Gemini-Key"
+    GEMINI_API_KEY: "Company-Gemini-Key"
+    OPENAI_API_KEY: "Company-OpenAI-Key"
+    TAVILY_API_KEY: "Company-Tavily-Key"
+    FIRECRAWL_API_KEY: "Company-Firecrawl-Key"
+    FIRECRAWLER_API_KEY: "Company-Firecrawl-Key"
+    SERPER_API_KEY: "Company-Serper-Key"
+    GOOGLE_SERP_API_KEY: "Company-Serper-Key"
+    LANGSMITH_API_KEY: "Company-Langsmith-Key"
+    
+    # AWS S3 Integration
+    AWS_ACCESS_KEY_ID: "Company-AWS-Access-Key"
+    AWS_SECRET_ACCESS_KEY: "Company-AWS-Secret-Key"
+    
+    # Payments Integration (Cashfree)
+    CASHFREE_APP_ID: "Company-Cashfree-App-ID"
+    CASHFREE_SECRET_KEY: "Company-Cashfree-Secret-Key"
+    
+    # Google OAuth
+    GOOGLE_CLIENT_ID: "Company-Google-Client-ID"
+    GOOGLE_CLIENT_SECRET: "Company-Google-Client-Secret"
+    
+    # Email / SMTP Authentication
+    SMTP_PASSWORD: "gmail-app-password-for-sending-notifications"
 
 backend:
   env:
-    POSTGRES_PASSWORD: 'CompanyRealPassword'
-    POSTGRES_HOST: 'company-lawdb-useast1.rds.amazonaws.com'
-    POSTGRES_DSN: 'postgresql://lawuser:CompanyRealPassword@company-lawdb...:5432/postgres'
-    DATABASE_URL: 'postgresql://lawuser:CompanyRealPassword@company-lawdb...:5432/postgres'
-    GOOGLE_API_KEY: 'Company-Gemini-Key'
-    OPENAI_API_KEY: 'Company-OpenAI-Key'
+    # Database Credentials
+    POSTGRES_PASSWORD: "CompanyRealPassword"
+    PSQL_PASSWD: "CompanyRealPassword"
+    POSTGRES_HOST: "company-lawdb-useast1.rds.amazonaws.com"
+    POSTGRES_DSN: "postgresql://lawuser:CompanyRealPassword@company-lawdb-useast1.rds.amazonaws.com:5432/postgres"
+    DATABASE_URL: "postgresql://lawuser:CompanyRealPassword@company-lawdb-useast1.rds.amazonaws.com:5432/postgres"
+    
+    # AI & Search API Keys
+    GOOGLE_API_KEY: "Company-Gemini-Key"
+    GEMINI_API_KEY: "Company-Gemini-Key"
+    OPENAI_API_KEY: "Company-OpenAI-Key"
+    TAVILY_API_KEY: "Company-Tavily-Key"
+    FIRECRAWL_API_KEY: "Company-Firecrawl-Key"
+    FIRECRAWLER_API_KEY: "Company-Firecrawl-Key"
+    SERPER_API_KEY: "Company-Serper-Key"
+    GOOGLE_SERP_API_KEY: "Company-Serper-Key"
+    LANGSMITH_API_KEY: "Company-Langsmith-Key"
+    
+    # AWS S3 Integration
+    AWS_ACCESS_KEY_ID: "Company-AWS-Access-Key"
+    AWS_SECRET_ACCESS_KEY: "Company-AWS-Secret-Key"
+    
+    # Payments Integration (Cashfree)
+    CASHFREE_APP_ID: "Company-Cashfree-App-ID"
+    CASHFREE_SECRET_KEY: "Company-Cashfree-Secret-Key"
+    
+    # Google OAuth
+    GOOGLE_CLIENT_ID: "Company-Google-Client-ID"
+    GOOGLE_CLIENT_SECRET: "Company-Google-Client-Secret"
+    
+    # Email / SMTP Authentication
+    SMTP_PASSWORD: "gmail-app-password-for-sending-notifications"
 EOF
 ```
 
