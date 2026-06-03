@@ -34,10 +34,23 @@ spec:
             port: 80
           initialDelaySeconds: 10
           periodSeconds: 20
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 5"]
         env:
+        # Load non-sensitive configs
         {{- range $key, $value := .Values.frontend.env }}
         - name: {{ $key }}
           value: "{{ $value }}"
+        {{- end }}
+        # Load sensitive credentials from Secret
+        {{- range $key, $value := .Values.secrets }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              name: draftmate-secrets
+              key: {{ $key }}
         {{- end }}
         resources:
           {{- toYaml .Values.frontend.resources | nindent 12 }}
