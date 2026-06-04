@@ -5,6 +5,7 @@ import importlib
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -102,7 +103,55 @@ def test_translation_job_api_rejects_unsupported_languages(translator_app, sourc
                 target_language=target_language,
                 db=_FakeSession(),
             )
-        )
+    )
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == message
+
+
+def test_translation_job_status_includes_asset_urls(translator_app, tmp_path):
+    source_path = tmp_path / "source.pdf"
+    translated_path = tmp_path / "translated.html"
+    source_path.write_bytes(b"%PDF-1.7\nhello")
+    translated_path.write_text("<html><body>translated</body></html>", encoding="utf-8")
+    job = SimpleNamespace(
+        id=202,
+        source_file=str(source_path),
+        translated_file=str(translated_path),
+        status="completed",
+        stage="done",
+        progress=100,
+        source_language="hi-IN",
+        target_language="en-IN",
+        created_at=datetime.now(timezone.utc),
+    )
+    request = SimpleNamespace(
+        url_for=lambda route_name, job_id: f"http://testserver/{route_name}/{job_id}",
+    )
+
+    payload = translator_app._serialize_translation_job_detail(job, request)
+
+    assert payload["source_file_url"] == "http://testserver/download_translation_source_file/202"
+    assert payload["translated_file_url"] == "http://testserver/download_translated_file/202"
+
+
+def test_download_endpoints_serve_inline_and_mime_aware(translator_app, monkeypatch: pytest.MonkeyPatch, tmp_path):
+    source_path = tmp_path / "source.pdf"
+    translated_path = tmp_path / "translated.html"
+    source_path.write_bytes(b"%PDF-1.7\nhello")
+    translated_path.write_text("<html><body>translated</body></html>", encoding="utf-8")
+    job = SimpleNamespace(
+        id=303,
+        source_file=str(source_path),
+        translated_file=str(translated_path),
+        status="completed",
+    )
+    monkeypatch.setattr(translator_app, "get_translation_job", lambda _db, _job_id: job)
+
+    source_response = translator_app.download_source_file(303, db=_FakeSession())
+    translated_response = translator_app.download_translated_file(303, db=_FakeSession())
+
+    assert source_response.headers["content-disposition"].startswith("inline")
+    assert source_response.media_type == "application/pdf"
+    assert translated_response.headers["content-disposition"].startswith("inline")
+    assert translated_response.media_type == "text/html"

@@ -13,6 +13,7 @@ class TranslationJobNotFoundError(Exception):
 
 
 def serialize_translation_job(job: TranslationJob) -> dict[str, str | int | bool | None]:
+    translated_file_exists = bool(job.translated_file and Path(job.translated_file).exists())
     return {
         "job_id": job.id,
         "file_name": Path(job.source_file).name,
@@ -22,7 +23,7 @@ def serialize_translation_job(job: TranslationJob) -> dict[str, str | int | bool
         "source_language": job.source_language,
         "target_language": job.target_language,
         "created_at": job.created_at.isoformat() if job.created_at else None,
-        "download_available": job.status == "completed" and bool(job.translated_file),
+        "download_available": job.status == "completed" and translated_file_exists,
     }
 
 

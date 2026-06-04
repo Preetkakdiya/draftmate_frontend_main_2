@@ -1,11 +1,12 @@
 """Minimal FastAPI app for translation job creation."""
 
 import os
+import mimetypes
 from pathlib import Path
 from typing import Generator
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from backend.translator.crud import (
@@ -37,6 +38,17 @@ MAX_UPLOAD_BYTES = int(os.getenv("TRANSLATOR_MAX_UPLOAD_BYTES", str(25 * 1024 * 
 
 app = FastAPI(title="Translator Service", version="0.1.0")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 if engine is not None:
     Base.metadata.create_all(bind=engine)
 
@@ -50,6 +62,34 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def _build_asset_url(request: Request, *, route_name: str, job_id: int, file_path: str | None) -> str | None:
+    if not file_path:
+        return None
+
+    path = Path(file_path)
+    if not path.exists():
+        return None
+
+    return str(request.url_for(route_name, job_id=job_id))
+
+
+def _serialize_translation_job_detail(job, request: Request) -> dict[str, str | int | bool | None]:
+    payload = serialize_translation_job(job)
+    payload["source_file_url"] = _build_asset_url(
+        request,
+        route_name="download_translation_source_file",
+        job_id=job.id,
+        file_path=job.source_file,
+    )
+    payload["translated_file_url"] = _build_asset_url(
+        request,
+        route_name="download_translated_file",
+        job_id=job.id,
+        file_path=job.translated_file if job.status == "completed" else None,
+    )
+    return payload
 
 
 @app.get("/")
@@ -106,12 +146,16 @@ async def create_translation_job(
 
 
 @app.get("/translation-jobs/{job_id}")
-def get_translation_job_status(job_id: int, db: Session = Depends(get_db)) -> dict[str, str | int | None]:
+def get_translation_job_status(
+    job_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, str | int | bool | None]:
     job = get_translation_job(db, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Translation job not found")
 
-    return serialize_translation_job(job)
+    return _serialize_translation_job_detail(job, request)
 
 
 @app.get("/translation-jobs")
@@ -127,21 +171,50 @@ def list_translation_jobs_view(
     }
 
 
-@app.get("/translation-jobs/{job_id}/download")
+@app.get("/translation-jobs/{job_id}/source")
+def download_source_file(job_id: int, db: Session = Depends(get_db)):
+    job = get_translation_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Translation job not found")
+
+    if not job.source_file:
+        raise HTTPException(status_code=404, detail="Source file is not available in storage")
+
+    source_path = Path(job.source_file)
+    if not source_path.exists():
+        raise HTTPException(status_code=404, detail="Source file not found in storage")
+
+    response = build_download_response(source_path, download_name=source_path.name)
+    
+    # Ensure inline disposition and accurate Content-Type for split-view
+    content_type, _ = mimetypes.guess_type(source_path.name)
+    if content_type:
+        response.media_type = content_type
+    response.headers["Content-Disposition"] = f'inline; filename="{source_path.name}"'
+    return response
+
+@app.get("/translation-jobs/{job_id}/download", name="download_translated_file")
 def download_translated_file(job_id: int, db: Session = Depends(get_db)):
     job = get_translation_job(db, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Translation job not found")
 
     if job.status != "completed" or not job.translated_file:
-        raise HTTPException(status_code=404, detail="processing")
+        raise HTTPException(status_code=404, detail="Translation job is not completed")
 
     translated_path = Path(job.translated_file)
     if not translated_path.exists():
-        raise HTTPException(status_code=404, detail="Translated file not found")
+        raise HTTPException(status_code=404, detail="Translated file not found in storage")
 
     download_name = translated_path.name.removesuffix(".enc")
-    return build_download_response(translated_path, download_name=download_name)
+    response = build_download_response(translated_path, download_name=download_name)
+
+    # Ensure inline disposition and accurate Content-Type for split-view
+    content_type, _ = mimetypes.guess_type(download_name)
+    if content_type:
+        response.media_type = content_type
+    response.headers["Content-Disposition"] = f'inline; filename="{download_name}"'
+    return response
 
 
 @app.delete("/translation-jobs/{job_id}")
