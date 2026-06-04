@@ -17,6 +17,17 @@ import DraftingModal from '../components/DraftingModal';
 // Shared citation utilities
 import { processCitations, CitationLink } from '../utils/citationUtils';
 
+const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+};
+
 const LLM_OPTIONS = [
     { value: 'gemini-2.5-flash', label: 'Fast', description: 'High speed responses' },
     { value: 'gemini-2.5-pro', label: 'Advanced', description: 'Deep reasoning & analysis' },
@@ -161,7 +172,7 @@ const ResearchChat = () => {
     const sessionGroups = groupSessions(sessions);
 
     const startNewChat = () => {
-        const newId = crypto.randomUUID();
+        const newId = generateUUID();
         setSessionId(newId);
         setMessages([
             {
