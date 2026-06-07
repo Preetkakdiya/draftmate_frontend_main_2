@@ -1,7 +1,11 @@
 import logging
 import os
-from typing import Any, Dict, Optional, Set, Tuple
+import hashlib
+from typing import Any, Dict, List, Optional, Set, Tuple
+from urllib.parse import urlparse
 
+import httpx
+import jwt
 import uvicorn
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -9,7 +13,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Mm, Pt
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -28,9 +32,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth:8009")
+JWT_SECRET = "draftmate_jwt_production_signing_key_2026"
+JWT_ALGORITHM = "HS256"
+
+
+async def verify_token(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header.")
+    session_id = authorization.split(" ", 1)[1].strip()
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing session token.")
+
+    verify_url = f"{AUTH_SERVICE_URL.rstrip('/')}/verify_session/{session_id}"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(verify_url, timeout=10.0)
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Auth service unavailable.")
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid session.")
+
+    try:
+        data = resp.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Auth service returned invalid JSON.")
+
+    user_id = data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=502, detail="Auth service response missing user_id.")
+    return str(user_id)
+
+
+def _jwt_encode(payload: Dict[str, Any]) -> str:
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    if isinstance(token, bytes):
+        return token.decode("utf-8")
+    return token
+
+
+def _safe_basename_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    name = os.path.basename(parsed.path or "")
+    name = name.replace("\\", "/")
+    name = os.path.basename(name)
+    return name
 
 def create_content_control_run(paragraph, placeholder_tag: str, default_text: str):
     sdt = OxmlElement("w:sdt")
+
 
     sdt_pr = OxmlElement("w:sdtPr")
 
@@ -178,10 +229,15 @@ def build_docx_with_controls(ai_data: dict, file_target_name: str) -> str:
 
 
 class DraftCompileRequest(BaseModel):
-    case_context: str
+    case_context: Optional[str] = None
+    case_metadata_context: Optional[List[Dict[str, Any]]] = None
     legal_documents: Optional[str] = None
     document_type: str = "Legal Document"
     file_target_name: str = "draftmate_draft.docx"
+
+
+class ForceSaveRequest(BaseModel):
+    document_key: str
 
 
 @app.get("/")
@@ -190,20 +246,53 @@ def root():
 
 
 @app.post("/v2/draft/compile")
-def compile_draft(request: DraftCompileRequest):
+async def compile_draft(request: DraftCompileRequest, authorization: Optional[str] = Header(default=None)):
     try:
+        await verify_token(authorization)
+
+        context_parts: List[str] = []
+        if request.case_metadata_context:
+            for item in request.case_metadata_context:
+                if isinstance(item, dict):
+                    for k, v in item.items():
+                        context_parts.append(f"{k}: {v}")
+        if request.case_context:
+            context_parts.append(request.case_context)
+        case_context = "\n".join([p for p in context_parts if p]).strip()
+        if not case_context:
+            raise ValueError("case_context is required.")
+
         ai_data = generate_legal_draft(
-            case_context=request.case_context,
+            case_context=case_context,
             legal_documents=request.legal_documents,
             document_type=request.document_type,
         )
         output_path = build_docx_with_controls(ai_data=ai_data, file_target_name=request.file_target_name)
-        return {
-            "title": ai_data.get("title"),
-            "metadata": ai_data.get("metadata"),
-            "output_path": output_path,
-            "file_name": os.path.basename(output_path),
+        file_name = os.path.basename(output_path)
+        try:
+            with open(output_path, "rb") as f:
+                file_bytes = f.read()
+            document_key = hashlib.sha256(file_bytes).hexdigest()
+        except Exception:
+            document_key = hashlib.sha256(file_name.encode("utf-8")).hexdigest()
+
+        params: Dict[str, Any] = {
+            "document": {
+                "fileType": "docx",
+                "key": document_key,
+                "title": file_name,
+                "url": f"http://onlyoffice-server/Data/shared/{file_name}",
+                "permissions": {"edit": True, "download": True, "print": True},
+            },
+            "documentType": "word",
+            "editorConfig": {
+                "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
+                "mode": "edit",
+                "customization": {"forcesave": True, "chat": False},
+            },
         }
+        params["token"] = _jwt_encode(params)
+        return params
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -212,14 +301,70 @@ def compile_draft(request: DraftCompileRequest):
 
 
 @app.post("/v2/draft/forcesave")
-def onlyoffice_forcesave(event: Dict[str, Any]):
-    logger.info("OnlyOffice forcesave event received.")
-    return {"error": 0}
+async def onlyoffice_forcesave(request: ForceSaveRequest, authorization: Optional[str] = Header(default=None)):
+    await verify_token(authorization)
+
+    document_key = (request.document_key or "").strip()
+    if not document_key:
+        raise HTTPException(status_code=400, detail="document_key is required.")
+
+    payload = {"c": "forcesave", "key": document_key}
+    token = _jwt_encode(payload)
+    command_payload = {"c": "forcesave", "key": document_key, "token": token}
+    headers = {"Authorization": f"Bearer {token}"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "http://onlyoffice-server/coauthoring/CommandService.ashx",
+                json=command_payload,
+                headers=headers,
+                timeout=15.0,
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"OnlyOffice CommandService request failed: {e}")
+
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"OnlyOffice CommandService error: {resp.status_code}")
+
+    return {"ok": True}
 
 
 @app.post("/v2/draft/callback")
-def onlyoffice_callback(event: Dict[str, Any]):
-    logger.info("OnlyOffice callback received.")
+async def onlyoffice_callback(event: Dict[str, Any]):
+    try:
+        status = event.get("status")
+        if isinstance(status, str) and status.isdigit():
+            status = int(status)
+
+        if status in (2, 6):
+            url = event.get("url") or event.get("fileUrl") or event.get("downloadUrl")
+            if isinstance(url, dict):
+                url = url.get("url")
+            if not isinstance(url, str) or not url.strip():
+                return {"error": 0}
+
+            shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
+            if not shared_storage_path:
+                return {"error": 0}
+
+            file_name = _safe_basename_from_url(url)
+            if not file_name:
+                return {"error": 0}
+
+            target_path = os.path.join(shared_storage_path, file_name)
+            os.makedirs(shared_storage_path, exist_ok=True)
+
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                async with client.stream("GET", url, timeout=60.0) as resp:
+                    resp.raise_for_status()
+                    with open(target_path, "wb") as f:
+                        async for chunk in resp.aiter_bytes():
+                            if chunk:
+                                f.write(chunk)
+    except Exception:
+        logger.exception("OnlyOffice callback processing failed.")
+
     return {"error": 0}
 
 
