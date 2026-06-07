@@ -6,6 +6,16 @@ import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Loader2 } from 'lucide-react';
 // Placeholder for API call to fetch job details
 // In a real app, this would be in a services file or a dedicated API hook
 const fetchTranslationJobDetails = async (jobId) => {
+    if (jobId === 'mock') {
+        return {
+            job_id: 'MOCK_123',
+            id: '123',
+            source_language: 'English',
+            target_language: 'Hindi',
+            source_file_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+            translated_file_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+        };
+    }
     // This URL should match the backend endpoint for fetching job details
     const response = await fetch(`/api/translation-jobs/${jobId}`);
     if (!response.ok) {

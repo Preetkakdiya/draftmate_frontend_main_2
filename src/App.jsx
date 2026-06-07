@@ -11,8 +11,8 @@ import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
 import ChatWithPDF from './pages/ChatWithPDF';
 import CaseSearch from './pages/CaseSearch';
+import TranslateComparePage from '../backend/translator/api/TranslateComparePage';
 import TranslateDocumentPage from './pages/TranslateDocumentPage';
-import TranslateComparePage from './backend/translator/api/TranslateComparePage';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -99,6 +99,9 @@ function App() {
 
             <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
 
+            {/* Comparison view moved outside MainLayout for a full-screen experience */}
+            <Route path="/dashboard/translate/compare/:jobId" element={<RequireAuth><TranslateComparePage /></RequireAuth>} />
+
             <Route path="/dashboard" element={<RequireAuth><MainLayout /></RequireAuth>}>
               <Route path="home" element={<Dashboard />} />
               <Route path="editor" element={<Editor />} />
@@ -109,7 +112,7 @@ function App() {
               <Route path="chat-pdf" element={<ChatWithPDF />} />
               <Route path="case-search" element={<CaseSearch />} />
               <Route path="translate-document" element={<TranslateDocumentPage />} />
-              <Route path="translate/compare/:jobId" element={<TranslateComparePage />} />
+              
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
               <Route path="notifications" element={<Notifications />} />
