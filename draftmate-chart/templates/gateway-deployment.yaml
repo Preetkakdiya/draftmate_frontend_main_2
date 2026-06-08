@@ -16,6 +16,28 @@ spec:
       labels:
         app: draftmate-backend
     spec:
+      {{- if .Values.affinity.web.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ .Values.affinity.web.nodeLabelKey }}
+                operator: In
+                values:
+                - {{ .Values.affinity.web.nodeLabelValue | quote }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - draftmate-backend
+              topologyKey: "kubernetes.io/hostname"
+      {{- end }}
       containers:
       - name: gateway
         image: nginx:1.25-alpine
@@ -35,12 +57,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
-          limits:
-            cpu: 200m
-            memory: 64Mi
-          requests:
-            cpu: 10m
-            memory: 16Mi
+          {{- toYaml .Values.gateway.resources | nindent 10 }}
         volumeMounts:
         - name: config-volume
           mountPath: /etc/nginx/nginx.conf

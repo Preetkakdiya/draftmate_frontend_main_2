@@ -1,0 +1,69 @@
+{{- if .Values.backend.workers }}
+{{- range $worker := .Values.backend.workers }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $worker.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: {{ $worker.name }}
+spec:
+  replicas: {{ $worker.replicaCount | default $.Values.backend.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ $worker.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $worker.name }}
+    spec:
+      {{- if $.Values.affinity.ai.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ $.Values.affinity.ai.nodeLabelKey }}
+                operator: In
+                values:
+                - {{ $.Values.affinity.ai.nodeLabelValue | quote }}
+      tolerations:
+      - key: {{ $.Values.affinity.ai.nodeLabelKey }}
+        operator: Equal
+        value: {{ $.Values.affinity.ai.nodeLabelValue | quote }}
+        effect: NoSchedule
+      {{- end }}
+      containers:
+      - name: {{ $worker.name }}
+        image: "{{ $.Values.backend.image.repository }}:{{ $.Values.backend.image.tag }}"
+        imagePullPolicy: {{ $.Values.backend.image.pullPolicy }}
+        command: {{ $worker.command | toJson }}
+        workingDir: {{ $worker.directory }}
+        # Background workers do not need standard HTTP ingress ports, so no ports are exposed.
+        # Health checks check process status or Redis connection directly.
+        livenessProbe:
+          exec:
+            command: ["/bin/sh", "-c", "ps aux | grep -v grep | grep -E 'celery|rq|python'"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        resources:
+          {{- toYaml $worker.resources | nindent 10 }}
+        env:
+        # Load non-sensitive configs
+        {{- range $key, $value := $.Values.backend.env }}
+        - name: {{ $key }}
+          value: "{{ $value }}"
+        {{- end }}
+        # Load sensitive credentials from Secret
+        {{- range $key, $value := $.Values.secrets }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              name: draftmate-secrets
+              key: {{ $key }}
+        {{- end }}
+      terminationGracePeriodSeconds: 120
+---
+{{- end }}
+{{- end }}

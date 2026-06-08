@@ -7,7 +7,12 @@ metadata:
   labels:
     app: {{ $service.name }}
 spec:
+  # If autoscaling is enabled, let HPA control replica count. Otherwise use default backend replica count.
+  {{- if and $service.autoscaling $service.autoscaling.enabled }}
+  # replicas is managed by HPA
+  {{- else }}
   replicas: {{ $.Values.backend.replicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -17,6 +22,54 @@ spec:
       labels:
         app: {{ $service.name }}
     spec:
+      # Node group isolation
+      {{- $isAiService := or (eq $service.name "query") (eq $service.name "lexbot") }}
+      {{- if and $isAiService $.Values.affinity.ai.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ $.Values.affinity.ai.nodeLabelKey }}
+                operator: In
+                values:
+                - {{ $.Values.affinity.ai.nodeLabelValue | quote }}
+      tolerations:
+      - key: {{ $.Values.affinity.ai.nodeLabelKey }}
+        operator: Equal
+        value: {{ $.Values.affinity.ai.nodeLabelValue | quote }}
+        effect: NoSchedule
+      {{- else if and (not $isAiService) $.Values.affinity.web.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ $.Values.affinity.web.nodeLabelKey }}
+                operator: In
+                values:
+                - {{ $.Values.affinity.web.nodeLabelValue | quote }}
+        # Spread replicas of the same service across different hosts
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ $service.name }}
+              topologyKey: "kubernetes.io/hostname"
+      {{- end }}
+
+      # Security Context at Pod Level
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+
       containers:
       - name: {{ $service.name }}
         image: "{{ $.Values.backend.image.repository }}:{{ $.Values.backend.image.tag }}"
@@ -25,20 +78,39 @@ spec:
         workingDir: {{ $service.directory }}
         ports:
         - containerPort: 8080
+          name: http
+        
+        # Security Context at Container Level
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false # needs write access for downloaded files / uploads
+          capabilities:
+            drop:
+            - ALL
+
+        # HTTP health probes with custom service paths
         readinessProbe:
-          tcpSocket:
+          httpGet:
+            path: {{ if eq $service.name "pdf-editor" }}/docs{{ else if eq $service.name "enhance-bot" }}/presets{{ else if eq $service.name "notification-service" }}/health{{ else }}/{{ end }}
             port: 8080
-          initialDelaySeconds: 5
+          initialDelaySeconds: {{ if $isAiService }}25{{ else }}10{{ end }}
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: {{ if eq $service.name "pdf-editor" }}/docs{{ else if eq $service.name "enhance-bot" }}/presets{{ else if eq $service.name "notification-service" }}/health{{ else }}/{{ end }}
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: {{ if $isAiService }}40{{ else }}20{{ end }}
           periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 5
+
         lifecycle:
           preStop:
             exec:
-              command: ["/bin/sh", "-c", "sleep 10"]
+              command: ["/bin/sh", "-c", "sleep 15"]
+
         env:
         # Load non-sensitive configs
         {{- range $key, $value := $.Values.backend.env }}
@@ -53,7 +125,11 @@ spec:
               name: draftmate-secrets
               key: {{ $key }}
         {{- end }}
+        
         resources:
           {{- toYaml $service.resources | nindent 10 }}
+      
+      # Allow ample time for connection draining and cleanup
+      terminationGracePeriodSeconds: 45
 ---
 {{- end }}
