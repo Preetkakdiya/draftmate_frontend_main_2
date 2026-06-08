@@ -1,13 +1,10 @@
-{{- if .Values.qdrant.inCluster }}
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: qdrant
-  namespace: {{ .Release.Namespace }}
   labels:
     app: qdrant
 spec:
-  serviceName: qdrant
   replicas: 1
   selector:
     matchLabels:
@@ -17,56 +14,22 @@ spec:
       labels:
         app: qdrant
     spec:
-      {{- if $.Values.affinity.ai.enabled }}
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: {{ $.Values.affinity.ai.nodeLabelKey }}
-                operator: In
-                values:
-                - {{ $.Values.affinity.ai.nodeLabelValue | quote }}
-      tolerations:
-      - key: {{ $.Values.affinity.ai.nodeLabelKey }}
-        operator: Equal
-        value: {{ $.Values.affinity.ai.nodeLabelValue | quote }}
-        effect: NoSchedule
-      {{- end }}
       containers:
         - name: qdrant
-          image: "{{ .Values.qdrant.image.repository }}:{{ .Values.qdrant.image.tag }}"
-          imagePullPolicy: {{ .Values.qdrant.image.pullPolicy }}
+          image: qdrant/qdrant:latest
           ports:
             - containerPort: 6333
-              name: http
             - containerPort: 6334
-              name: grpc
-          livenessProbe:
-            tcpSocket:
-              port: 6333
-            initialDelaySeconds: 10
-            periodSeconds: 15
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 6333
-            initialDelaySeconds: 5
-            periodSeconds: 10
           resources:
-            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+            limits:
+              memory: 1Gi
+              cpu: 500m
+            requests:
+              memory: 512Mi
+              cpu: 100m
           volumeMounts:
             - name: qdrant-data
               mountPath: /qdrant/storage
-  volumeClaimTemplates:
-    - metadata:
-        name: qdrant-data
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        {{- if .Values.qdrant.persistence.storageClass }}
-        storageClassName: {{ .Values.qdrant.persistence.storageClass | quote }}
-        {{- end }}
-        resources:
-          requests:
-            storage: {{ .Values.qdrant.persistence.size }}
-{{- end }}
+      volumes:
+        - name: qdrant-data
+          emptyDir: {}

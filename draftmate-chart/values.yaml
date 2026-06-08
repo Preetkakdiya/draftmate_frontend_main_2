@@ -1,12 +1,8 @@
-# Default values for draftmate.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
 frontend:
-  replicaCount: 2
+  replicaCount: 1
   image:
     repository: preetkakdiya/draftmate-frontend
-    tag: "110"
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -17,8 +13,8 @@ frontend:
       cpu: 200m
       memory: 128Mi
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 10m
+      memory: 32Mi
   env:
     # Non-sensitive variables
     VITE_CLIENT_ID: "YOUR_GOOGLE_CLIENT_ID"
@@ -64,7 +60,7 @@ backend:
   replicaCount: 1
   image:
     repository: preetkakdiya/draftmate-backend
-    tag: "110"
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: NodePort
@@ -78,10 +74,10 @@ backend:
       port: 8000
       resources:
         limits:
-          cpu: 500m
-          memory: 512Mi
+          cpu: 200m
+          memory: 256Mi
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 128Mi
     - name: query
       directory: /app/backend/query
@@ -92,24 +88,23 @@ backend:
         minReplicas: 1
         maxReplicas: 3
         targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
       resources:
         limits:
-          cpu: 1000m
-          memory: 2Gi
-        requests:
-          cpu: 200m
+          cpu: 500m
           memory: 1Gi
+        requests:
+          cpu: 50m
+          memory: 512Mi
     - name: enhance-bot
       directory: /app/backend/Enhance_bot
       command: ["uvicorn", "Enhance:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--timeout-graceful-shutdown", "15"]
       port: 8002
       resources:
         limits:
-          cpu: 500m
-          memory: 512Mi
+          cpu: 200m
+          memory: 256Mi
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 128Mi
     - name: drafter
       directory: /app/backend/Drafter
@@ -117,10 +112,10 @@ backend:
       port: 8003
       resources:
         limits:
-          cpu: 500m
-          memory: 512Mi
+          cpu: 200m
+          memory: 256Mi
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 128Mi
     - name: lexbot
       directory: /app/backend/Deep_research
@@ -131,24 +126,23 @@ backend:
         minReplicas: 1
         maxReplicas: 3
         targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
       resources:
         limits:
           cpu: 1000m
-          memory: 2560Mi
+          memory: 1.5Gi
         requests:
-          cpu: 200m
-          memory: 1536Mi
+          cpu: 100m
+          memory: 1Gi
     - name: pdf-editor
       directory: /app/backend/PDF_Editor
       command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--timeout-graceful-shutdown", "15"]
       port: 8005
       resources:
         limits:
-          cpu: 500m
-          memory: 512Mi
+          cpu: 200m
+          memory: 256Mi
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 128Mi
     - name: auth
       directory: /app/backend/login_db
@@ -159,7 +153,7 @@ backend:
           cpu: 200m
           memory: 256Mi
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 128Mi
     - name: notification-service
       directory: /app/backend/Notification
@@ -170,7 +164,7 @@ backend:
           cpu: 100m
           memory: 128Mi
         requests:
-          cpu: 50m
+          cpu: 10m
           memory: 64Mi
     - name: subscriptions
       directory: /app/backend/subscriptions
@@ -181,7 +175,7 @@ backend:
           cpu: 100m
           memory: 128Mi
         requests:
-          cpu: 50m
+          cpu: 10m
           memory: 64Mi
     - name: case-search
       directory: /app/backend/Case_search
@@ -189,25 +183,11 @@ backend:
       port: 8006
       resources:
         limits:
-          cpu: 300m
+          cpu: 200m
           memory: 256Mi
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 128Mi
-
-  workers:
-    - name: lexbot-worker
-      directory: /app/backend/Deep_research
-      command: ["celery", "-A", "lex_bot.tasks", "worker", "--loglevel=info", "-c", "1"]
-      resources:
-        limits:
-          cpu: 2000m
-          memory: 4Gi
-        requests:
-          cpu: 500m
-          memory: 2560Mi
-      replicaCount: 1
-
   env:
     # Non-sensitive variables
     VITE_CLIENT_ID: "YOUR_GOOGLE_CLIENT_ID"
@@ -254,63 +234,6 @@ backend:
     # Connection Pooling Limits
     DB_POOL_SIZE: "5"
     DB_MAX_OVERFLOW: "2"
-
-    # Queue Config
-    REDIS_HOST: "redis"
-    REDIS_PORT: "6379"
-    REDIS_URL: "redis://redis:6379/0"
-    CELERY_BROKER_URL: "redis://redis:6379/0"
-    CELERY_RESULT_BACKEND: "redis://redis:6379/0"
-
-gateway:
-  resources:
-    limits:
-      cpu: 200m
-      memory: 64Mi
-    requests:
-      cpu: 50m
-      memory: 32Mi
-
-redis:
-  enabled: true
-  image:
-    repository: redis
-    tag: 7-alpine
-    pullPolicy: IfNotPresent
-  resources:
-    limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
-
-qdrant:
-  inCluster: true
-  image:
-    repository: qdrant/qdrant
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources:
-    limits:
-      cpu: 2000m
-      memory: 3Gi
-    requests:
-      cpu: 500m
-      memory: 1Gi
-  persistence:
-    storageClass: ""
-    size: 10Gi
-
-affinity:
-  ai:
-    enabled: false
-    nodeLabelKey: workload
-    nodeLabelValue: ai
-  web:
-    enabled: false
-    nodeLabelKey: workload
-    nodeLabelValue: web
 
 # Secrets - Sensitive environment variables (overridden by values-secrets.yaml)
 secrets:

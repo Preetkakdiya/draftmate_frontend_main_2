@@ -16,50 +16,12 @@ spec:
       labels:
         app: draftmate-frontend
     spec:
-      {{- if .Values.affinity.web.enabled }}
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: {{ .Values.affinity.web.nodeLabelKey }}
-                operator: In
-                values:
-                - {{ .Values.affinity.web.nodeLabelValue | quote }}
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - draftmate-frontend
-              topologyKey: "kubernetes.io/hostname"
-      {{- end }}
-      
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 3000
-        fsGroup: 2000
-
       containers:
       - name: frontend
         image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         ports:
         - containerPort: 80
-          name: http
-        
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false # Nginx container needs to write temp files/cache
-          capabilities:
-            drop:
-            - ALL
-
         readinessProbe:
           httpGet:
             path: /
@@ -75,7 +37,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: ["/bin/sh", "-c", "sleep 10"]
+              command: ["/bin/sh", "-c", "sleep 5"]
         env:
         # Load non-sensitive configs
         {{- range $key, $value := .Values.frontend.env }}
@@ -92,4 +54,3 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.frontend.resources | nindent 12 }}
-      terminationGracePeriodSeconds: 30

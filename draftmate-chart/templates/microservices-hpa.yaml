@@ -22,14 +22,6 @@ spec:
       target:
         type: Utilization
         averageUtilization: {{ $service.autoscaling.targetCPUUtilizationPercentage }}
-  {{- if $service.autoscaling.targetMemoryUtilizationPercentage }}
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: {{ $service.autoscaling.targetMemoryUtilizationPercentage }}
-  {{- end }}
 ---
 {{- end }}
 {{- end }}
