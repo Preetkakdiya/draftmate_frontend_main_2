@@ -103,34 +103,3 @@ jobs:
           path: |
             frontend-report.html
             backend-report.html
-          
-      - name: Deploy to Kubernetes Server via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.K8S_SERVER_IP }}
-          username: ubuntu
-          key: ${{ secrets.K8S_SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/ubuntu/draftmate_frontend_main_2
-            git stash
-            git pull origin preet/k8s-setup
-            # --- PRE-DEPLOY CLEANUP: Free up disk space before pulling new images ---
-            echo "🧹 Running pre-deploy cleanup..."
-            sudo docker system prune -af
-            sudo journalctl --vacuum-time=1d
-            sudo apt-get clean
-            python3 prune_images.py
-            
-            # --- DEPLOYMENT ---
-            echo "🚀 Upgrading Helm release..."
-            KUBECONFIG=/home/ubuntu/.kube/config /usr/local/bin/helm upgrade --install draftmate ./draftmate-chart \
-                -f ./draftmate-chart/values.yaml \
-                -f ./draftmate-chart/values-secrets.yaml \
-                --set frontend.image.tag=${{ github.run_number }} \
-                --set backend.image.tag=${{ github.run_number }} \
-                --history-max 3
-            
-            # --- POST-DEPLOY CLEANUP: Clean up the old version that is now replaced ---
-            echo "🧹 Running post-deploy cleanup..."
-            sudo docker system prune -f
-            python3 prune_images.py
