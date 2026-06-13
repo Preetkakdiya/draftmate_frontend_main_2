@@ -58,7 +58,9 @@ jobs:
             VITE_CLIENT_ID=462761102428-dnm0f7tmt3dbv0l41aun71k4lj1c9hig.apps.googleusercontent.com
             VITE_CASHFREE_MODE=sandbox
           push: true
-          tags: ${{ env.FRONTEND_IMAGE }}:${{ github.run_number }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.run_number }}
+            ${{ env.FRONTEND_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -68,7 +70,9 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ env.BACKEND_IMAGE }}:${{ github.run_number }}
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ github.run_number }}
+            ${{ env.BACKEND_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
