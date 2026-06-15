@@ -11,7 +11,7 @@ import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
 import ChatWithPDF from './pages/ChatWithPDF';
 import CaseSearch from './pages/CaseSearch';
-import TranslateComparePage from '../backend/translator/api/TranslateComparePage';
+import TranslateComparePage from './pages/TranslateComparePage';
 import TranslateDocumentPage from './pages/TranslateDocumentPage';
 
 import Settings from './pages/Settings';
