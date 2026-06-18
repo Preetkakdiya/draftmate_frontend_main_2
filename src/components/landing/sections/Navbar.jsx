@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { Menu, X, Zap, GraduationCap } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 // ── Navigation links ─────────────────────────────────────────────────────────
+// Note: We've removed Law Jurist and FAQs from this array as they require special routing logic handled below.
 const NAV_LINKS = [
-  { label: "Law Jurist",   href: "#lawjurist" },
   { label: "Features",     href: "#features"  },
   { label: "Blogs",        href: "#blogs"     },
-  { label: "About",        href: "#about"     },
-  { label: "Pricing",      href: "#pricing"   },
-  { label: "FAQs",         href: "#faq"       },
+  // { label: "About",        href: "#about"     },
+  // { label: "Pricing",      href: "#pricing"   },
   { label: "How it Works", href: "#steps"     },
 ];
 
@@ -29,12 +28,33 @@ const ACADEMY_MOBILE_STYLE = {
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen]         = useState(false);
+  
+  // React Router hooks for programmatic navigation
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  // Custom handler for FAQ scrolling across different pages
+  const handleFaqClick = (e) => {
+    e.preventDefault();
+    setOpen(false);
+    
+    if (location.pathname !== "/") {
+      // If not on the home page, navigate to home with the hash
+      navigate("/#faq");
+    } else {
+      // If already on the home page, smoothly scroll to the element
+      const element = document.getElementById("faq");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
   return (
     <nav
@@ -48,9 +68,6 @@ export default function Navbar() {
 
         {/* ══════════════════════════════════════════════════════════
             Desktop — TRUE 3-COLUMN GRID
-            Col 1 (fixed 220px) : Logo
-            Col 2 (1fr)         : Nav links — justify-center
-            Col 3 (auto)        : CTA buttons
         ══════════════════════════════════════════════════════════ */}
         <div
           className="hidden lg:grid items-center h-[70px]"
@@ -69,7 +86,6 @@ export default function Navbar() {
                 alt="DraftMate"
                 className="w-7 h-7 object-contain relative z-10"
               />
-              {/* Live pulse dot */}
               <span
                 className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-cyan-400"
                 style={{ animation: "pulseRing 2.5s ease-out infinite" }}
@@ -85,23 +101,55 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* ── ② Nav links — centered in remaining space ───────── */}
+          {/* ── ② Nav links ─────────────────────────────────────── */}
           <div className="flex items-center justify-center gap-0 px-2">
+            
+            {/* External Law Jurist Link using <a> tag */}
+            <a
+              href="https://lawjurist.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-50/80 transition-all duration-200 whitespace-nowrap"
+            >
+              Law Jurist
+            </a>
+
+            {/* Internal Landing Page Links */}
             {NAV_LINKS.map((l) => (
               <Link
                 key={l.label}
                 to={l.href}
-                className="px-2.5 py-2 text-[12.5px] font-medium text-slate-500
-                           hover:text-slate-900 rounded-lg hover:bg-slate-50/80
-                           transition-all duration-200 whitespace-nowrap"
+                className="px-2.5 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-50/80 transition-all duration-200 whitespace-nowrap"
               >
                 {l.label}
               </Link>
             ))}
 
+            <button
+              onClick={()=>navigate('/about')}
+              className="px-2.5 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-50/80 transition-all duration-200 whitespace-nowrap"
+            >
+              About
+            </button>
+
+            <button
+              onClick={()=>navigate('/pricing')}
+              className="px-2.5 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-50/80 transition-all duration-200 whitespace-nowrap"
+            >
+              Pricing
+            </button>
+
+            {/* Special FAQ routing handler */}
+            <button
+              onClick={handleFaqClick}
+              className="px-2.5 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-50/80 transition-all duration-200 whitespace-nowrap"
+            >
+              FAQs
+            </button>
+
             {/* Academy pill */}
             <Link
-              to="#academy"
+              to="/academy"
               style={ACADEMY_STYLE}
               className="ml-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-full
                          text-[12px] font-semibold whitespace-nowrap
@@ -124,6 +172,7 @@ export default function Navbar() {
             </button>
 
             <button
+              onClick={() => navigate('/login')}
               className="h-[38px] px-4 text-[13px] font-semibold rounded-xl
                          flex items-center gap-1.5 text-white whitespace-nowrap
                          transition-all duration-200 hover:opacity-90 hover:scale-[1.02]"
@@ -178,6 +227,17 @@ export default function Navbar() {
                     ${open ? "max-h-[640px] opacity-100" : "max-h-0 opacity-0"}`}
       >
         <div className="bg-white/98 backdrop-blur-xl border-t border-slate-100 px-5 py-4 space-y-1">
+          
+          <a
+            href="https://lawjurist.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block px-4 py-3 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all text-sm font-medium"
+            onClick={() => setOpen(false)}
+          >
+            Law Jurist
+          </a>
+
           {NAV_LINKS.map((l) => (
             <Link
               key={l.label}
@@ -190,9 +250,16 @@ export default function Navbar() {
             </Link>
           ))}
 
+          <button
+            onClick={handleFaqClick}
+            className="block w-full text-left px-4 py-3 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all text-sm font-medium"
+          >
+            FAQs
+          </button>
+
           {/* Academy in drawer */}
           <Link
-            to="#academy"
+            to="/academy"
             style={ACADEMY_MOBILE_STYLE}
             className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all"
             onClick={() => setOpen(false)}
@@ -204,6 +271,7 @@ export default function Navbar() {
           {/* Mobile CTA row */}
           <div className="grid grid-cols-2 gap-2 pt-3">
             <button
+              onClick={() => { setOpen(false); navigate('/login'); }}
               className="py-3 text-sm font-medium rounded-xl
                          border border-slate-200 bg-white text-slate-700
                          hover:bg-slate-50 transition-all"
@@ -211,6 +279,7 @@ export default function Navbar() {
               Login
             </button>
             <button
+              onClick={() => { setOpen(false); navigate('/login'); }}
               className="py-3 text-sm font-semibold rounded-xl text-white
                          transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #2563EB, #0EA5E9)" }}

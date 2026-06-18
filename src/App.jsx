@@ -44,16 +44,23 @@ import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Onboarding from './pages/Onboarding';
+import ScrollToTop from './components/ScrollToTop';
 
+import About from './pages/About';
 import Landing from './pages/Landing';
 import Features from './pages/Features';
 import HowItWorks from './pages/HowItWorks';
 import FAQs from './pages/FAQs';
 import Disclaimer from './pages/Disclaimer';
 import PrivacyPolicy from './pages/Privacy';
+import TermsOfUse from './pages/Terms';
 import ComingSoon from './pages/ComingSoon';
+import LjAcademy from './pages/LjAcademy';
+import RefundPolicy from './pages/RefundPolicy';
 import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
+import Pricing from './pages/Pricing';
+import Billing from './pages/billing';
 
 function App() {
   // Requires a general user session
@@ -95,6 +102,7 @@ function App() {
       <NotificationProvider>
         <BrowserRouter>
           <Toaster position="top-center" richColors />
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Landing />} />
 
@@ -108,9 +116,13 @@ function App() {
             {/* Public pages */}
             <Route path="/features" element={<Features />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/faqs" element={<FAQs />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/pricing" element={<Pricing />} />
+            
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/terms" element={<TermsOfUse />} />
             <Route path="/blogs" element={<ComingSoon title="Blog" />} />
             <Route path="/advocates" element={<AdvocateDiscovery />} />
             <Route path="/advocate/login" element={<AdvocateLogin />} />
@@ -121,9 +133,12 @@ function App() {
             <Route path="/advocate/:slug" element={<AdvocateProfile />} />
             <Route path="/admin/verifications" element={<AdminDashboard />} />
 
+            
+            <Route path="/blogs" element={<ComingSoon title="Blog" />} />
+            <Route path="/academy" element={<LjAcademy />} />
             <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
 
-            <Route path="/dashboard" element={<RequireAuth><MainLayout /></RequireAuth>}>
+            <Route path="/dashboard" element={<MainLayout />}>
               <Route path="home" element={<Dashboard />} />
               <Route path="editor" element={<Editor />} />
               <Route path="pdf-editor" element={<PDFEditor />} />
@@ -135,6 +150,7 @@ function App() {
               <Route path="legal-workflow" element={<LegalWorkflow />} />
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
+              <Route path="billing" element={<Billing/>}/>
               <Route path="notifications" element={<Notifications />} />
               <Route path="advocate-profile" element={
                 <RequireAdvocateAuth><AdvocateDashboard /></RequireAdvocateAuth>

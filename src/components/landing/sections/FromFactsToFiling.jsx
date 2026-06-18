@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import { useNavigate } from "react-router-dom";
 
 const STEPS = [
   {
@@ -189,6 +190,7 @@ function MobileStep({ step, index, isLast }) {
 }
 
 export default function FromFactsToFiling() {
+  const navigate = useNavigate();
   return (
     <>
       {/* ── Desktop Section ── */}
@@ -247,7 +249,7 @@ export default function FromFactsToFiling() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <button className="btn-primary px-10 py-4 text-[15px]">
+            <button onClick={() => navigate('/login')} className="btn-primary px-10 py-4 text-[15px]">
               Start Your First Draft Free
             </button>
           </motion.div>

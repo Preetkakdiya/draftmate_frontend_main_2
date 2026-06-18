@@ -1,6 +1,7 @@
 import { ArrowRight, Check, Zap } from "lucide-react";
 import TypewriterText from "@/components/landing/TypewriterText";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import { useNavigate } from "react-router-dom";
 
 const BENEFITS = [
   "Draft any Indian legal document in under 2 minutes",
@@ -19,6 +20,7 @@ const TYPED = [
 ];
 
 export default function UpgradeSection() {
+  const navigate = useNavigate();
   return (
     <section className="section-pad divider">
       <div className="container-xl">
@@ -94,7 +96,7 @@ export default function UpgradeSection() {
               </div>
 
               <div className="flex flex-wrap justify-center gap-4">
-                <button className="btn-primary px-10 py-4 text-[15px]">
+                <button onClick={() => navigate('/login')} className="btn-primary px-10 py-4 text-[15px]">
                   <Zap className="w-4 h-4" />
                   Start Drafting Free
                   <ArrowRight className="w-4 h-4" />

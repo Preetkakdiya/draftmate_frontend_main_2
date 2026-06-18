@@ -1,5 +1,6 @@
 import { Mail, Phone, Linkedin, Facebook, Instagram, Youtube } from "lucide-react";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import { Link } from "react-router-dom";
 
 const LINKS = {
   Product:   ["Features", "Pricing", "How It Works", "Changelog", "Lex Bot"],
@@ -97,7 +98,7 @@ export default function Footer() {
                   <img
                     src="/startup_india_logo.png" 
                     alt="DPIIT Startup India" 
-                    className="w-full h-full object-contain p-1"
+                    className="w-50 h-50 object-contain p-1"
                   />
                 </div>
               </div>
@@ -113,19 +114,49 @@ export default function Footer() {
                   {cat}
                 </h4>
                 <ul className="space-y-3">
-                  {items.map((item) => (
-                    <li key={item}>
-                      <a
-                        href="#"
-                        className="text-[13px] transition-colors duration-200"
-                        style={{ color: "rgba(255,255,255,0.3)" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.85)")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  ))}
+                  {items.map((item) => {
+                    // Logic to determine the correct path for specific items
+                    let route = "#";
+                    if (item === "Privacy Policy") route = "/privacy-policy";
+                    if (item === "Pricing") route = "/pricing";
+                    if (item === "Refund Policy") route = "/refund-policy";
+                    if (item === "Terms of Service") route = "/terms";
+                    if (item === "About Us") route = "/about";
+
+                    // External Link handler for LawJurist
+                    if (item === "LawJurist") {
+                      return (
+                        <li key={item}>
+                          <a
+                            href="https://lawjurist.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[13px] transition-colors duration-200"
+                            style={{ color: "rgba(255,255,255,0.3)" }}
+                            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.85)")}
+                            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                          >
+                            {item}
+                          </a>
+                        </li>
+                      );
+                    }
+
+                    // React Router Link for all other items
+                    return (
+                      <li key={item}>
+                        <Link
+                          to={route}
+                          className="text-[13px] transition-colors duration-200"
+                          style={{ color: "rgba(255,255,255,0.3)" }}
+                          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.85)")}
+                          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                        >
+                          {item}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -144,14 +175,25 @@ export default function Footer() {
               © 2026 DraftMate Pvt Ltd. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
-              {["Privacy Policy", "Terms", "Contact"].map((l) => (
-                <a key={l} href="#" className="text-[12px] transition-colors duration-200"
-                  style={{ color: "rgba(255, 255, 255, 0.9)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}>
-                  {l}
-                </a>
-              ))}
+              {["Privacy Policy", "Terms", "Contact"].map((l) => {
+                // Determine bottom bar routing
+                let bottomRoute = "#";
+                if (l === "Privacy Policy") bottomRoute = "/privacy-policy";
+                if (l === "Terms") bottomRoute = "/terms";
+
+                return (
+                  <Link 
+                    key={l} 
+                    to={bottomRoute} 
+                    className="text-[12px] transition-colors duration-200"
+                    style={{ color: "rgba(255, 255, 255, 0.9)" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}
+                  >
+                    {l}
+                  </Link>
+                );
+              })}
             </div>
             <p className="text-[12px]" style={{ color: "rgba(255, 255, 255, 0.9)" }}>
               Made in India with Love 💖

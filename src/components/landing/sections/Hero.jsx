@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import TypewriterText from "@/components/landing/TypewriterText";
 import AnimatedCounter from "@/components/landing/AnimatedCounter";
+import { useNavigate } from "react-router-dom";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TYPED = [
@@ -173,18 +174,6 @@ function HeroBgImage() {
           boxShadow:   `0 0 ${p.size * 2}px rgba(37,99,235,0.55)`,
         }} />
       ))}
-
-      {/* AI scan line over book area */}
-      <div className="absolute pointer-events-none overflow-hidden" style={{
-        top: "36%", right: "10%", width: "40%", height: "46%",
-      }}>
-        <div className="absolute left-0 right-0" style={{
-          height:     "1px",
-          background: "linear-gradient(to right, transparent, rgba(14,165,233,0.45), rgba(37,99,235,0.35), transparent)",
-          animation:  "scanLine 4.5s linear infinite",
-          top:        "0",
-        }} />
-      </div>
     </div>
   );
 }
@@ -233,6 +222,7 @@ function FloatingCard({ icon: Icon, label, sub, delay, pos }) {
 // ── Main Hero ─────────────────────────────────────────────────────────────────
 export default function Hero() {
   const [mounted, setMounted] = useState(false);
+  const navigate = useNavigate();
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 60);
     return () => clearTimeout(t);
@@ -369,6 +359,7 @@ export default function Hero() {
               }`}
             >
               <button
+                onClick={() => navigate('/login')}
                 className="flex items-center gap-2 px-8 py-4 text-[15px] font-semibold
                            rounded-xl text-white transition-all duration-200
                            hover:opacity-90 hover:scale-[1.02]"

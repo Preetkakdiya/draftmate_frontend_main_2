@@ -10,5 +10,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  server: {
+    host: "0.0.0.0",
+    allowedHosts: true,
+  },
   base: process.env.VITE_BASE_PATH || "/"
 })

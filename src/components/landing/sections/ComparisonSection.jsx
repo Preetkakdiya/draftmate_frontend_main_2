@@ -1,5 +1,6 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import { useNavigate } from "react-router-dom";
 
 const ROWS = [
   { feature: "Indian Case Law Knowledge",  generic: "Limited, often outdated",       dm: "Real-time & Verified"      },
@@ -15,6 +16,7 @@ const ROWS = [
 ];
 
 export default function ComparisonSection() {
+  const navigate = useNavigate();
   return (
     <section className="py-24 lg:py-32 border-b border-slate-200/60 bg-white/50">
       <div className="container-xl px-5 md:px-10">
@@ -102,7 +104,7 @@ export default function ComparisonSection() {
 
         <ScrollReveal delay={200}>
           <div className="text-center mt-10">
-            <button className="btn-primary px-10 py-4 text-[15px]">
+            <button onClick={() => navigate('/login')} className="btn-primary px-10 py-4 text-[15px]">
               Switch to DraftMate Today →
             </button>
           </div>

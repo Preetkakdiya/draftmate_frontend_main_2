@@ -537,4 +537,37 @@ select:focus {
   0%   { top: -2%;   }
   100% { top: 102%;  }
 }
+
+
+/* Custom Scrollbar for DraftMate Dashboard Sections */
+.draftmate-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #2563EB #E2E8F0;
+  scroll-behavior: smooth;
+}
+
+.draftmate-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.draftmate-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+  margin: 4px; /* Optional: gives some padding from edges */
+}
+
+.draftmate-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Subtle default */
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.draftmate-scroll:hover::-webkit-scrollbar-thumb {
+  background: #2563EB; /* DraftMate Blue on hover */
+}
+
+.draftmate-scroll::-webkit-scrollbar-thumb:hover {
+  background: #1D4ED8; /* Darker blue when interacting */
+}
 }
