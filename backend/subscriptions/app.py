@@ -104,7 +104,7 @@ def get_db_connection():
             else:
                  conn = psycopg2.connect(
                     host=os.getenv("POSTGRES_HOST", "db"),
-                    dbname=os.getenv("POSTGRES_DB", "draftmate"),
+                    dbname=os.getenv("POSTGRES_DB", "lex_bot_db"),
                     user=os.getenv("POSTGRES_USER", "postgres"),
                     password=os.getenv("POSTGRES_PASSWORD", "password"),
                     port=os.getenv("POSTGRES_PORT", "5432")

@@ -1,7 +1,7 @@
 import os
 import re
 
-env_path = r"d:\Projects\draftmate_frontend_main_2_avadh\.env"
+env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
 
 def main():
     print("========================================")

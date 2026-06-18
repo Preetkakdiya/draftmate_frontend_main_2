@@ -39,7 +39,7 @@ def init_db():
         )
         cur = conn.cursor()
         
-        schema_path = r"d:\Projects\draftmate_frontend_main_2_avadh\backend\login_db\production_schema.sql"
+        schema_path = os.path.join(os.path.dirname(__file__), "login_db", "production_schema.sql")
         if os.path.exists(schema_path):
             with open(schema_path, "r", encoding="utf-8") as f:
                 schema_sql = f.read()

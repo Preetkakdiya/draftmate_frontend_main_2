@@ -56,11 +56,10 @@ import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
 
 function App() {
-  // Requires either a general user session OR an advocate JWT
+  // Requires a general user session
   const RequireAuth = ({ children }) => {
     const profile = localStorage.getItem('user_profile');
-    const advocateToken = localStorage.getItem('advocate_token');
-    if (!profile && !advocateToken) {
+    if (!profile) {
       return <Navigate to="/login" replace />;
     }
     return children;
