@@ -6,8 +6,9 @@ import { API_CONFIG } from '../services/endpoints';
 import PromptQualityBar from './PromptQualityBar';
 import './DraftingModal.css';
 
-const DraftingModal = ({ onClose, initialPrompt }) => {
-    const [step, setStep] = useState(2);
+const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', onDraftCreated }) => {
+    const isDashboardEntryMode = initialEntryMode === 'dashboard';
+    const [step, setStep] = useState(isDashboardEntryMode ? 1 : 2);
     const [prompt, setPrompt] = useState(initialPrompt || '');
     const [selectedFormat, setSelectedFormat] = useState(null);
     const [previewingFormat, setPreviewingFormat] = useState(null);
@@ -24,6 +25,41 @@ const DraftingModal = ({ onClose, initialPrompt }) => {
 
     // State for formats
     const [formats, setFormats] = useState([]);
+
+    const persistWorkspaceDraft = (record) => {
+        const nextRecord = {
+            ...record,
+            id: record.id || record.documentKey || Date.now().toString(),
+            name: record.name || record.filename || record.title || 'Untitled Draft',
+            filename: record.filename || record.title || record.name || 'Untitled Draft.docx',
+            documentKey: record.documentKey || record.id || '',
+            lastModified: record.lastModified || new Date().toISOString(),
+            status: record.status || 'In progress',
+            trackingParams: record.trackingParams || {
+                source: record.source || 'drafting_modal',
+                documentKey: record.documentKey || record.id || '',
+                filename: record.filename || record.title || record.name || 'Untitled Draft.docx',
+                updatedAt: record.lastModified || new Date().toISOString(),
+            },
+        };
+
+        if (typeof onDraftCreated === 'function') {
+            onDraftCreated(nextRecord);
+            return;
+        }
+
+        try {
+            const savedDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
+            const updatedDrafts = [
+                ...savedDrafts.filter((draft) => String(draft.id) !== String(nextRecord.id)),
+                nextRecord,
+            ];
+            localStorage.setItem('my_drafts', JSON.stringify(updatedDrafts));
+            window.dispatchEvent(new Event('my_drafts_updated'));
+        } catch (error) {
+            console.error('Failed to persist draft metadata:', error);
+        }
+    };
 
     // Zoom handlers
     const handleZoomIn = () => {
@@ -61,6 +97,80 @@ const DraftingModal = ({ onClose, initialPrompt }) => {
             setStep(2);
         } else if (option === 'upload') {
             fileInputRef.current?.click();
+        }
+    };
+
+    const handleDashboardStartAI = () => {
+        setPrompt(initialPrompt || '');
+        setStep(2);
+    };
+
+    const handleDashboardStartEmptyDocument = async () => {
+        const sessionId = localStorage.getItem('session_id');
+        if (!sessionId) {
+            toast.error('Please sign in again before creating a document.');
+            return;
+        }
+
+        setIsUploading(true);
+
+        try {
+            const response = await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/create`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${sessionId}`
+                }
+            });
+
+            if (!response.ok) {
+                let detail = 'Failed to create empty document.';
+                try {
+                    const errorData = await response.json();
+                    detail = errorData?.detail || detail;
+                } catch {
+                    detail = response.statusText || detail;
+                }
+                throw new Error(detail);
+            }
+
+            const data = await response.json();
+
+            persistWorkspaceDraft({
+                id: data.documentKey,
+                name: data.filename,
+                filename: data.filename,
+                documentKey: data.documentKey,
+                onlyofficeConfig: data,
+                variablesDetected: data.variablesDetected || [],
+                status: 'In progress',
+                source: 'empty_document',
+                trackingParams: {
+                    source: 'empty_document',
+                    documentKey: data.documentKey,
+                    filename: data.filename,
+                    createdAt: new Date().toISOString(),
+                },
+            });
+
+            navigate('/dashboard/workspace', {
+                state: {
+                    documentKey: data.documentKey,
+                    filename: data.filename,
+                    onlyofficeConfig: data,
+                    variablesDetected: data.variablesDetected || [],
+                    trackingParams: {
+                        source: 'empty_document',
+                        documentKey: data.documentKey,
+                        filename: data.filename,
+                    },
+                }
+            });
+            toast.success('Empty document created successfully!');
+        } catch (error) {
+            console.error('Failed to create empty document:', error);
+            toast.error(error.message || 'Failed to initialize empty document.');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -311,6 +421,23 @@ const DraftingModal = ({ onClose, initialPrompt }) => {
 
             const data = await response.json();
 
+            persistWorkspaceDraft({
+                id: data.document.key,
+                name: data.document.title,
+                filename: data.document.title,
+                documentKey: data.document.key,
+                onlyofficeConfig: data,
+                variablesDetected: data.variablesDetected || [],
+                status: 'In progress',
+                source: 'ai_generation',
+                trackingParams: {
+                    source: 'ai_generation',
+                    documentKey: data.document.key,
+                    filename: data.document.title,
+                    createdAt: new Date().toISOString(),
+                },
+            });
+
             // Redirect the user to the OnlyOffice workspace route
             navigate('/dashboard/workspace', {
                 state: {
@@ -340,8 +467,34 @@ const DraftingModal = ({ onClose, initialPrompt }) => {
                 {isUploading ? (
                     <div className="step-content fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
                         <Loader2 size={48} className="spinner" style={{ marginBottom: '16px', color: '#4f46e5' }} />
-                        <h2 className="modal-title">Processing your file...</h2>
-                        <p className="modal-subtitle">Converting document to editable format</p>
+                        <h2 className="modal-title">Preparing your document...</h2>
+                        <p className="modal-subtitle">Please wait while DraftMate gets your workspace ready.</p>
+                    </div>
+                ) : isDashboardEntryMode && step === 1 ? (
+                    <div className="step-content fade-in">
+                        <h2 className="modal-title">Create New Draft</h2>
+                        <p className="modal-subtitle">Choose how you would like to start your draft.</p>
+                        <div className="options-grid">
+                            <button className="option-card" onClick={handleDashboardStartAI}>
+                                <div className="icon-box type">
+                                    <PenTool size={24} />
+                                </div>
+                                <div className="text-content">
+                                    <h3>Generate with AI</h3>
+                                    <p>Launch the intake workflow and describe the matter you want drafted.</p>
+                                </div>
+                            </button>
+
+                            <button className="option-card" onClick={handleDashboardStartEmptyDocument}>
+                                <div className="icon-box upload">
+                                    <FileText size={24} />
+                                </div>
+                                <div className="text-content">
+                                    <h3>Start Empty Document</h3>
+                                    <p>Immediately create a clean workspace with no intake required.</p>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 ) : step === 1 ? (
                     <div className="step-content fade-in">
