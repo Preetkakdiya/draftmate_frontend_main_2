@@ -9,9 +9,34 @@ export const judgmentCategories = [
   'Labour Law',
 ];
 
-export const judgmentCourts = ['All', 'Supreme Court', 'High Court', 'NCLAT', 'NCDRC'];
+export const judgmentCourts = ['All', 'Supreme Court', 'High Court', 'Tribunal', 'Consumer Forum', 'NCLT', 'NCLAT'];
 
 export const mockJudgments = [
+  {
+    id: 'kesavananda-bharati-1973',
+    title: 'Kesavananda Bharati v. State of Kerala',
+    citation: '(1973) 4 SCC 225',
+    year: 1973,
+    court: 'Supreme Court',
+    bench: '13-Judge Constitutional Bench (Largest ever)',
+    category: 'Constitutional Law',
+    judges: ['S.M. Sikri CJ', 'J.M. Shelat J', 'K.S. Hegde J', '+ 10 others'],
+    parties: { petitioner: 'Kesavananda Bharati Sripadagalvaru', respondent: 'State of Kerala' },
+    legalIssue: 'Whether Parliament has the power to amend the Fundamental Rights, including the right to property; and whether there are any implied limitations on the amending power.',
+    ratiodecidendi: 'Parliament has the power to amend the Constitution, including Fundamental Rights, but it cannot alter the "basic structure" or the foundational principles of the Constitution. The "basic structure doctrine" was propounded to ensure that the identity of the Constitution remains intact.',
+    heldBy: 'Supreme Court of India',
+    summary: 'In a historic 13-Judge bench decision, the Supreme Court held that while Parliament can amend the Constitution, it cannot damage or destroy its basic structure. The judgment saved India from authoritarianism and ensured that the core principles of democracy, secularism, and rule of law remain inviolable. The property right was subsequently amended to a legal right, but the basic structure doctrine remains a cornerstone of constitutional law.',
+    keyPrinciples: [
+      'The Constitution has a "basic structure" that cannot be amended or destroyed.',
+      'Parliament\'s amending power under Article 368 is not absolute.',
+      'Fundamental Rights can be amended but not abrogated.',
+      'Democracy, secularism, rule of law, and judicial review are part of basic structure.',
+      'This judgment is the guardian of India\'s constitutional identity.',
+    ],
+    relatedActs: ['Constitution of India - Article 368', 'Constitution (25th Amendment) Act, 1971'],
+    tags: ['Basic Structure', 'Article 368', 'Fundamental Rights', 'Constitutional Amendment', 'Landmark'],
+    isSaved: false,
+  },
   {
     id: 'maneka-gandhi-1978',
     title: 'Maneka Gandhi v. Union of India',
