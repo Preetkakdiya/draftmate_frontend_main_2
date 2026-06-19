@@ -51,6 +51,13 @@ const libraryCards = [
     description: 'Manage your hearings, case schedule, and daily practice.',
     color: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400',
   },
+  {
+    title: 'Court Calendar',
+    icon: 'event',
+    path: '/dashboard/library/calendar',
+    description: 'Visualize your hearings, deadlines, and legal events with Month/Week/Day views.',
+    color: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400',
+  },
 ];
 
 const LibraryDashboard = () => {

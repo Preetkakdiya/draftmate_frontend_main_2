@@ -26,6 +26,8 @@ import Dictionary from './pages/library/Dictionary';
 import TermDetails from './pages/library/TermDetails';
 import Diary from './pages/library/Diary';
 import DiaryEntry from './pages/library/DiaryEntry';
+import Calendar from './pages/library/Calendar';
+import EventDetails from './pages/library/EventDetails';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -167,6 +169,8 @@ function App() {
               <Route path="library/dictionary/:termId" element={<TermDetails />} />
               <Route path="library/diary" element={<Diary />} />
               <Route path="library/diary/:entryId" element={<DiaryEntry />} />
+              <Route path="library/calendar" element={<Calendar />} />
+              <Route path="library/calendar/:eventId" element={<EventDetails />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
