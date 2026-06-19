@@ -24,6 +24,8 @@ import Forms from './pages/library/Forms';
 import FormDetails from './pages/library/FormDetails';
 import Dictionary from './pages/library/Dictionary';
 import TermDetails from './pages/library/TermDetails';
+import Diary from './pages/library/Diary';
+import DiaryEntry from './pages/library/DiaryEntry';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -163,6 +165,8 @@ function App() {
               <Route path="library/forms/:formId" element={<FormDetails />} />
               <Route path="library/dictionary" element={<Dictionary />} />
               <Route path="library/dictionary/:termId" element={<TermDetails />} />
+              <Route path="library/diary" element={<Diary />} />
+              <Route path="library/diary/:entryId" element={<DiaryEntry />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
