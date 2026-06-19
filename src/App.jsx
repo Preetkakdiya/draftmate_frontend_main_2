@@ -1,6 +1,6 @@
 import React from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
@@ -63,6 +63,11 @@ import PrivacyPolicy from './pages/Privacy';
 import ComingSoon from './pages/ComingSoon';
 import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
+
+function LibraryRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/dashboard${location.pathname}${location.search}`} replace />;
+}
 
 function App() {
   // Requires a general user session
@@ -166,6 +171,9 @@ function App() {
 
             {/* Payment Verification Route */}
             <Route path="/payment-status" element={<PaymentStatus />} />
+
+            {/* Redirect /library paths to /dashboard/library paths so direct links work */}
+            <Route path="/library/*" element={<LibraryRedirect />} />
 
             {/* Global catch-all redirect to Landing */}
             <Route path="*" element={<Navigate to="/" replace />} />
