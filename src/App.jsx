@@ -28,6 +28,8 @@ import Diary from './pages/library/Diary';
 import DiaryEntry from './pages/library/DiaryEntry';
 import Calendar from './pages/library/Calendar';
 import EventDetails from './pages/library/EventDetails';
+import Hearings from './pages/library/Hearings';
+import HearingDetails from './pages/library/HearingDetails';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -171,6 +173,8 @@ function App() {
               <Route path="library/diary/:entryId" element={<DiaryEntry />} />
               <Route path="library/calendar" element={<Calendar />} />
               <Route path="library/calendar/:eventId" element={<EventDetails />} />
+              <Route path="library/hearings" element={<Hearings />} />
+              <Route path="library/hearings/:hearingId" element={<HearingDetails />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
