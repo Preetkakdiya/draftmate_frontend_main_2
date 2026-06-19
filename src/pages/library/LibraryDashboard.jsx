@@ -44,6 +44,13 @@ const libraryCards = [
     description: 'Quick reference for legal terminology and Latin maxims.',
     color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
   },
+  {
+    title: 'Lawyer Diary',
+    icon: 'calendar_month',
+    path: '/dashboard/library/diary',
+    description: 'Manage your hearings, case schedule, and daily practice.',
+    color: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400',
+  },
 ];
 
 const LibraryDashboard = () => {
