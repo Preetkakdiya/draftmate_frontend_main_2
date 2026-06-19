@@ -58,6 +58,13 @@ const libraryCards = [
     description: 'Visualize your hearings, deadlines, and legal events with Month/Week/Day views.',
     color: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400',
   },
+  {
+    title: 'Hearing Tracker',
+    icon: 'gavel',
+    path: '/dashboard/library/hearings',
+    description: 'Manage your hearings with timeline view and complete litigation tracking.',
+    color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
+  },
 ];
 
 const LibraryDashboard = () => {
