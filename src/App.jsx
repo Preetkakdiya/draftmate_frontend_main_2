@@ -17,6 +17,7 @@ import LibraryDashboard from './pages/library/LibraryDashboard';
 import BareActs from './pages/library/BareActs';
 import ActDetails from './pages/library/ActDetails';
 import Judgments from './pages/library/Judgments';
+import JudgmentDetails from './pages/library/JudgmentDetails';
 import Bookmarks from './pages/library/Bookmarks';
 import Notes from './pages/library/Notes';
 import Forms from './pages/library/Forms';
@@ -153,6 +154,7 @@ function App() {
               <Route path="library/bare-acts" element={<BareActs />} />
               <Route path="library/acts/:actId" element={<ActDetails />} />
               <Route path="library/judgments" element={<Judgments />} />
+              <Route path="library/judgments/:judgmentId" element={<JudgmentDetails />} />
               <Route path="library/bookmarks" element={<Bookmarks />} />
               <Route path="library/notes" element={<Notes />} />
               <Route path="library/forms" element={<Forms />} />
