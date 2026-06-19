@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockBareActs } from '../../data/mockBareActs';
+import SectionToolbar from '../../components/library/SectionToolbar';
+import NoteDrawer from '../../components/library/NoteDrawer';
+import { toast } from 'sonner';
 
 const ActDetails = () => {
   const { actId } = useParams();
   const act = mockBareActs.find(a => a.id === actId);
   
   const [activeChapter, setActiveChapter] = useState(act?.chapters?.[0]?.id || null);
+  
+  // Drawer State
+  const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
+  const [activeSectionForNote, setActiveSectionForNote] = useState(null);
+
+  const handleOpenNote = (section) => {
+    setActiveSectionForNote(section);
+    setIsNoteDrawerOpen(true);
+  };
+
+  const handleAIExplain = (section) => {
+    toast.info(`AI Explain for Section ${section.number} will be available soon!`, {
+      icon: '🤖',
+    });
+  };
 
   if (!act) {
     return (
@@ -104,14 +122,14 @@ const ActDetails = () => {
                         <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
                           {section.content}
                         </p>
-                      </div>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-primary hover:bg-blue-50 transition-colors" title="Bookmark Section">
-                           <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
-                         </button>
-                         <button className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-primary hover:bg-blue-50 transition-colors" title="AI Explain">
-                           <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
-                         </button>
+                        
+                        <SectionToolbar 
+                          act={act} 
+                          chapter={currentChapter} 
+                          section={section} 
+                          onAddNote={() => handleOpenNote(section)}
+                          onAIExplain={() => handleAIExplain(section)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -121,6 +139,15 @@ const ActDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Note Drawer */}
+      <NoteDrawer 
+        isOpen={isNoteDrawerOpen} 
+        onClose={() => setIsNoteDrawerOpen(false)} 
+        act={act}
+        chapter={currentChapter}
+        section={activeSectionForNote}
+      />
     </div>
   );
 };
