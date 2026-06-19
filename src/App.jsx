@@ -21,6 +21,7 @@ import JudgmentDetails from './pages/library/JudgmentDetails';
 import Bookmarks from './pages/library/Bookmarks';
 import Notes from './pages/library/Notes';
 import Forms from './pages/library/Forms';
+import FormDetails from './pages/library/FormDetails';
 import Dictionary from './pages/library/Dictionary';
 import TermDetails from './pages/library/TermDetails';
 
@@ -159,6 +160,7 @@ function App() {
               <Route path="library/bookmarks" element={<Bookmarks />} />
               <Route path="library/notes" element={<Notes />} />
               <Route path="library/forms" element={<Forms />} />
+              <Route path="library/forms/:formId" element={<FormDetails />} />
               <Route path="library/dictionary" element={<Dictionary />} />
               <Route path="library/dictionary/:termId" element={<TermDetails />} />
 
