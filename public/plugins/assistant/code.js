@@ -1,4 +1,4 @@
-(function(window, undefined) {
+﻿(function(window, undefined) {
     var pollTimer = null;
     var lastSelectionSnapshot = '';
     var suppressSelectionSyncUntil = 0;
@@ -108,8 +108,6 @@
             if (isHeadingLine(line)) {
                 runs = '<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">' + escapeXml(line) + '</w:t></w:r>';
                 pPr = '<w:pPr><w:jc w:val="left"/></w:pPr>';
-            } else if (isListLine(line)) {
-                runs = createCaseNameRuns(line);
             } else {
                 runs = createCaseNameRuns(line);
             }
@@ -127,7 +125,7 @@
         if (snapshot === lastSelectionSnapshot) return;
         lastSelectionSnapshot = snapshot;
         postToParent({
-            type: 'ONLYOFFICE_SELECTION_CHANGED',
+            type: 'ONLYOFFICE_SELECTION_STATE',
             text: snapshot,
             hasSelection: !!snapshot.trim()
         });
@@ -187,6 +185,16 @@
         });
     }
 
+    function requestEnhanceSelection() {
+        getSelectedText(function(selectedText) {
+            var cleaned = formatPlainText(selectedText);
+            postToParent({
+                type: 'ONLYOFFICE_ENHANCE_SELECTION',
+                text: cleaned || ''
+            });
+        });
+    }
+
     window.Asc.plugin.init = function() {
         postToParent({ type: 'ONLYOFFICE_PLUGIN_READY' });
         startSelectionWatcher();
@@ -219,6 +227,8 @@
             window.Asc.plugin.executeMethod('PasteText', [event.data.text]);
         } else if (event.data.type === 'ONLYOFFICE_AUTO_FORMAT_SELECTION') {
             applyAutoFormat();
+        } else if (event.data.type === 'ONLYOFFICE_ENHANCE_WITH_AI') {
+            requestEnhanceSelection();
         }
     });
 })(window, undefined);

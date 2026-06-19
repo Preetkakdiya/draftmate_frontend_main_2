@@ -34,3 +34,4 @@ UPGRADE_PLAN.md
 backend/Drafter/__pycache__/
 backend/Deep_research/lex_bot/data/uploads/*.docx
 shared_drafts/
+scratch/

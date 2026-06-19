@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Download, Gavel, Loader2, Quote, Sparkles } from 'lucide-react';
@@ -41,6 +41,7 @@ const OnlyOfficeWorkspace = () => {
   const [selectionPreview, setSelectionPreview] = useState('');
   const [showAutoFormatPopup, setShowAutoFormatPopup] = useState(false);
   const [isAutoFormatting, setIsAutoFormatting] = useState(false);
+  const [enhanceSelectionText, setEnhanceSelectionText] = useState('');
 
   // Case Law Assistant State
   const [caseCards, setCaseCards] = useState([]);
@@ -275,6 +276,19 @@ const OnlyOfficeWorkspace = () => {
         return;
       }
 
+      if (e.data.type === 'ONLYOFFICE_ENHANCE_SELECTION') {
+        const selectedText = String(e.data.text || '').trim();
+        if (!selectedText) {
+          toast.info('Select text in ONLYOFFICE first.');
+          return;
+        }
+        setEnhanceSelectionText(selectedText);
+        setInputMessage('');
+        setActiveTab('chat');
+        setShowAutoFormatPopup(false);
+        return;
+      }
+
       if (e.data.type === 'ONLYOFFICE_SELECTION') {
         const selectedText = String(e.data.text || '').trim();
         if (!selectedText) {
@@ -353,17 +367,36 @@ const OnlyOfficeWorkspace = () => {
     await promise;
   };
 
+  const buildEnhancementPrompt = (selectedText, instruction) => {
+    return [
+      'You are editing a legal document.',
+      'Revise the selected text according to the user instruction.',
+      'Preserve the legal meaning unless the user explicitly requests a change.',
+      'Return only the revised text. Do not explain the changes unless asked.',
+      `Selected text:\n${selectedText}`,
+      `User instruction:\n${instruction}`,
+    ].join('\n\n');
+  };
+
   // Chat message submission
   const handleSendMessage = async (customQuery = null) => {
     const queryText = customQuery || inputMessage;
     if (!queryText.trim()) return;
 
+    const isEnhancementMode = !customQuery && Boolean(enhanceSelectionText.trim());
+    const promptText = isEnhancementMode
+      ? buildEnhancementPrompt(enhanceSelectionText.trim(), queryText.trim())
+      : queryText;
+
     if (!customQuery) setInputMessage('');
 
-    const userMsg = { role: 'user', content: queryText };
+    const userMsg = {
+      role: 'user',
+      content: isEnhancementMode ? `Enhance selected text: ${queryText}` : queryText,
+    };
     setMessages((prev) => [...prev, userMsg]);
     setIsChatLoading(true);
-    setStatusMessage('Assistant is thinking...');
+    setStatusMessage(isEnhancementMode ? 'Enhancing selected text...' : 'Assistant is thinking...');
 
     const assistantMsgId = crypto.randomUUID();
     setMessages((prev) => [...prev, { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true }]);
@@ -372,7 +405,7 @@ const OnlyOfficeWorkspace = () => {
       const activeSessionId = documentKey || 'workspace-chat-session';
       let accumulatedResponse = '';
 
-      await api.chatStream(queryText, activeSessionId, {
+      await api.chatStream(promptText, activeSessionId, {
         onStatus: (msg) => {
           setStatusMessage(msg || 'Processing legal research...');
         },
@@ -417,7 +450,6 @@ const OnlyOfficeWorkspace = () => {
       ));
     }
   };
-
   const normalizeCaseItem = (item, idx, requestId) => {
     const rawCitation = item.citation || item.suggested_citation || item.reporter_citation || '';
     const isPureNumber = /^\d+$/.test(String(rawCitation).trim());
@@ -553,6 +585,25 @@ const OnlyOfficeWorkspace = () => {
     setIsAutoFormatting(true);
     setShowAutoFormatPopup(false);
     pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_AUTO_FORMAT_SELECTION' }, '*');
+  };
+
+  const handleEnhanceWithAISelection = () => {
+    if (!pluginWindowRef.current) {
+      toast.error('AI Assistant plugin is not ready. Please make sure the ONLYOFFICE document is fully loaded.');
+      return;
+    }
+
+    if (!selectionPreview.trim()) {
+      toast.info('Select text in ONLYOFFICE first.');
+      return;
+    }
+
+    selectionPollPausedUntilRef.current = Date.now() + 1200;
+    setEnhanceSelectionText(selectionPreview.trim());
+    setInputMessage('');
+    setActiveTab('chat');
+    setShowAutoFormatPopup(false);
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_ENHANCE_WITH_AI' }, '*');
   };
 
   const handleGenerateCaseParagraph = async (caseItem) => {
@@ -749,15 +800,25 @@ const OnlyOfficeWorkspace = () => {
                 >
                   Dismiss
                 </button>
-                <button
-                  type="button"
-                  onClick={handleAutoFormatSelection}
-                  disabled={isAutoFormatting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70 transition-colors"
-                >
-                  {isAutoFormatting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  Auto format
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAutoFormatSelection}
+                    disabled={isAutoFormatting}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70 transition-colors"
+                  >
+                    {isAutoFormatting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    Auto format
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEnhanceWithAISelection}
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900 transition-colors"
+                  >
+                    <Quote className="h-3.5 w-3.5" />
+                    Enhance with AI
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -984,7 +1045,29 @@ const OnlyOfficeWorkspace = () => {
       </aside>
 
       {/* Floating expanding chat input bar */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none select-none">
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-3 pointer-events-none select-none">
+        {enhanceSelectionText ? (
+          <div className="pointer-events-auto w-[min(640px,calc(100vw-2rem))] rounded-2xl border border-[#B9D9EB] bg-white shadow-xl overflow-hidden">
+            <div className="flex items-start justify-between gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <Quote className="h-3.5 w-3.5" />
+                  Selected text
+                </div>
+                <div className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words max-h-20 overflow-hidden">
+                  {enhanceSelectionText}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnhanceSelectionText('')}
+                className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        ) : null}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -994,7 +1077,7 @@ const OnlyOfficeWorkspace = () => {
             }
           }}
           className={`pointer-events-auto flex items-center bg-white border border-[#B9D9EB] hover:border-blue-400 focus-within:border-blue-500 rounded-full shadow-xl px-6 py-3.5 transition-all duration-300 ${
-            inputMessage.trim().length > 0 ? 'w-[640px]' : 'w-[400px]'
+            inputMessage.trim().length > 0 || enhanceSelectionText ? 'w-[640px]' : 'w-[400px]'
           }`}
         >
           <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">smart_toy</span>
@@ -1002,7 +1085,7 @@ const OnlyOfficeWorkspace = () => {
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Ask your AI"
+            placeholder={enhanceSelectionText ? 'Write enhancement instructions' : 'Ask your AI'}
             disabled={isChatLoading}
             className="flex-1 bg-transparent border-0 outline-none py-1 text-base text-slate-800 placeholder-slate-400 focus:ring-0 focus:outline-none"
           />
