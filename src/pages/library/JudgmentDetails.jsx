@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { mockJudgments } from '../../data/mockJudgments';
 import { judgmentService } from '../../services/library/judgmentService';
 import { notesService } from '../../services/library/notesService';
+import ExplainDrawer from '../../components/library/ExplainDrawer';
+import NoteDrawer from '../../components/library/NoteDrawer';
 
 const DetailSection = ({ icon, title, children, accent = 'blue' }) => {
   const accentMap = {
@@ -30,6 +32,8 @@ const JudgmentDetails = () => {
   const judgment = mockJudgments.find(j => j.id === judgmentId);
   const [isSaved, setIsSaved] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [isExplainOpen, setIsExplainOpen] = useState(false);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
 
   useEffect(() => {
     if (judgment) judgmentService.isSaved(judgment.id).then(setIsSaved);
@@ -101,6 +105,24 @@ const JudgmentDetails = () => {
     }
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: judgment.title,
+      text: `${judgment.citation} - ${judgment.court}, ${judgment.year}`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success('Link copied to clipboard!');
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Header ── */}
@@ -129,6 +151,14 @@ const JudgmentDetails = () => {
             <button onClick={handleCopy} title="Copy" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <span className="material-symbols-outlined text-[18px]">content_copy</span>
               <span className="hidden md:inline">Copy</span>
+            </button>
+            <button onClick={handleShare} title="Share" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <span className="material-symbols-outlined text-[18px]">share</span>
+              <span className="hidden md:inline">Share</span>
+            </button>
+            <button onClick={() => setIsExplainOpen(true)} title="AI Summary" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors shadow-sm">
+              <span className="material-symbols-outlined text-[18px]">smart_toy</span>
+              <span className="hidden md:inline">AI Summary</span>
             </button>
             <button onClick={handleSaveToNotes} disabled={isSavingNote} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-sm">
               <span className="material-symbols-outlined text-[18px]">save</span>
@@ -204,6 +234,8 @@ const JudgmentDetails = () => {
 
         </div>
       </div>
+      <ExplainDrawer isOpen={isExplainOpen} onClose={() => setIsExplainOpen(false)} content={judgment} type="judgment" />
+      <NoteDrawer isOpen={isNoteOpen} onClose={() => setIsNoteOpen(false)} />
     </div>
   );
 };
