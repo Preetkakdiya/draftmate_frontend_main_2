@@ -543,12 +543,13 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <DraftingModal
-                isOpen={isDraftingModalOpen}
-                onClose={() => setIsDraftingModalOpen(false)}
-                initialEntryMode="dashboard"
-                onDraftCreated={saveDeskDraftRecord}
-            />
+            {isDraftingModalOpen && (
+                <DraftingModal
+                    onClose={() => setIsDraftingModalOpen(false)}
+                    initialEntryMode="dashboard"
+                    onDraftCreated={saveDeskDraftRecord}
+                />
+            )}
 
             <SubscriptionModal isOpen={isSubscriptionModalOpen} onClose={() => setIsSubscriptionModalOpen(false)} />
         </div>

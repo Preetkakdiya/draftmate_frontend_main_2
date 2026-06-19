@@ -1,5 +1,8 @@
 import logging
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import logging
 import hashlib
 import json
@@ -80,9 +83,8 @@ def extract_and_cache_docx(file_path: str):
         logger.error(f"Background extraction failed: {e}")
 
 
-from legal_draft import generate_legal_draft
 
-load_dotenv()
+from legal_draft import generate_legal_draft
 
 logger = logging.getLogger(__name__)
 
@@ -1007,7 +1009,16 @@ async def compile_draft(request: DraftCompileRequest, authorization: Optional[st
             "editorConfig": {
                 "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
                 "mode": "edit",
-                "customization": {"forcesave": True, "chat": False},
+                "customization": {
+                    "forcesave": True,
+                    "chat": False,
+                    "uiTheme": "theme-light",
+                    "logo": {
+                        "image": "",
+                        "imageDark": "",
+                        "url": ""
+                    }
+                },
             },
         }
         params["token"] = _jwt_encode(params)
@@ -1069,7 +1080,16 @@ async def create_empty_draft(authorization: Optional[str] = Header(default=None)
             "editorConfig": {
                 "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
                 "mode": "edit",
-                "customization": {"forcesave": True, "chat": False},
+                "customization": {
+                    "forcesave": True,
+                    "chat": False,
+                    "uiTheme": "theme-light",
+                    "logo": {
+                        "image": "",
+                        "imageDark": "",
+                        "url": ""
+                    }
+                },
             },
         }
         params["token"] = _jwt_encode(params)
@@ -1219,7 +1239,16 @@ async def upload_draft(
             "editorConfig": {
                 "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
                 "mode": "edit",
-                "customization": {"forcesave": True, "chat": False},
+                "customization": {
+                    "forcesave": True,
+                    "chat": False,
+                    "uiTheme": "theme-light",
+                    "logo": {
+                        "image": "",
+                        "imageDark": "",
+                        "url": ""
+                    }
+                },
             },
         }
         params["token"] = _jwt_encode(params)

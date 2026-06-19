@@ -49,7 +49,8 @@ const MainLayout = () => {
     return () => window.removeEventListener('user_profile_updated', handleUpdate);
   }, []);
 
-  const isCollapsed = ['/dashboard/editor', '/dashboard/research', '/dashboard/pdf-editor'].some(path => location.pathname.startsWith(path));
+  const isCollapsed = ['/dashboard/editor', '/dashboard/research', '/dashboard/pdf-editor', '/dashboard/workspace'].some(path => location.pathname.startsWith(path));
+  const showHeader = !location.pathname.startsWith('/dashboard/workspace');
 
   const NavItem = ({ to, icon, label }) => {
     const active = isActive(to);
@@ -165,35 +166,37 @@ const MainLayout = () => {
 
       <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative bg-background-light dark:bg-background-dark">
         {/* Top Header */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white dark:bg-[#151f2e] border-b border-slate-200 dark:border-slate-800 z-10">
-          <button className="md:hidden p-2 text-slate-600 dark:text-slate-300">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <div></div>
-          <div className="flex items-center gap-6">
-            {location.pathname === '/dashboard/home' && (
-              <>
-                <Link
-                  to="/dashboard/notifications"
-                  className="relative text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[22px]">notifications</span>
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 text-[8px] font-bold text-white items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
+        {showHeader && (
+          <header className="flex items-center justify-between px-6 py-4 bg-white dark:bg-[#151f2e] border-b border-slate-200 dark:border-slate-800 z-10">
+            <button className="md:hidden p-2 text-slate-600 dark:text-slate-300">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <div></div>
+            <div className="flex items-center gap-6">
+              {location.pathname === '/dashboard/home' && (
+                <>
+                  <Link
+                    to="/dashboard/notifications"
+                    className="relative text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[22px]">notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 text-[8px] font-bold text-white items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
                       </span>
-                    </span>
-                  )}
-                </Link>
-                <Link to="/dashboard/help" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
-                  Help Center
-                </Link>
-              </>
-            )}
-          </div>
-        </header>
+                    )}
+                  </Link>
+                  <Link to="/dashboard/help" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                    Help Center
+                  </Link>
+                </>
+              )}
+            </div>
+          </header>
+        )}
 
         {/* Content Area */}
         <Outlet />

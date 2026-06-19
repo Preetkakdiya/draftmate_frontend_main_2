@@ -26,6 +26,8 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
     const [prompt, setPrompt] = useState(initialPrompt || '');
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('Loading...');
+    const [allQuestions, setAllQuestions] = useState({});
+    const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -174,15 +176,14 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
 
     const buildAnswerContext = (currentAnswers = answers) => {
         const answerLines = Object.entries(currentAnswers).map(([key, value]) => {
-            if (Array.isArray(value)) {
-                return `${key}: ${value.join(', ')}`;
-            }
-            return `${key}: ${String(value)}`;
+            const questionText = allQuestions[key] || key;
+            const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+            return `Question: ${questionText}\n  Answer: ${displayValue}`;
         });
 
         return [
             `Matter: ${prompt.trim()}`,
-            answerLines.length > 0 ? `Clarifications:\n${answerLines.map((line) => `- ${line}`).join('\n')}` : 'Clarifications: none',
+            answerLines.length > 0 ? `Clarifications:\n${answerLines.map((line) => `- ${line}`).join('\n\n')}` : 'Clarifications: none',
         ].join('\n\n');
     };
 
@@ -328,6 +329,13 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
         upsertLoading('Analyzing your draft intake...');
 
         try {
+            const answerCtx = buildAnswerContext(currentAnswers);
+            const formattedAnswers = {};
+            Object.entries(currentAnswers).forEach(([key, val]) => {
+                const questionText = allQuestions[key] || key;
+                formattedAnswers[questionText] = val;
+            });
+
             const response = await fetch(`${DRAFTER_API_URL}/v2/draft/intake/analyze`, {
                 method: 'POST',
                 headers: {
@@ -335,12 +343,14 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
                     Authorization: `Bearer ${sessionToken}`,
                 },
                 body: JSON.stringify({
-                    case_context: buildAnswerContext(currentAnswers),
-                    prompt,
-                    prompt_input: prompt,
-                    answers: currentAnswers,
+                    case_context: answerCtx,
+                    prompt: answerCtx,
+                    prompt_input: answerCtx,
+                    initial_prompt: answerCtx,
+                    answers: formattedAnswers,
                     questions,
                     round_hint: roundHint,
+                    current_round_index: currentRoundIndex,
                 }),
             });
 
@@ -361,6 +371,18 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
             if (!parsed.sufficiencyMet) {
                 if (parsed.questions.length > 0) {
                     setQuestions(parsed.questions);
+                    setAllQuestions((prev) => {
+                        const next = { ...prev };
+                        parsed.questions.forEach((q) => {
+                            next[q.id] = q.prompt || q.question || '';
+                        });
+                        return next;
+                    });
+                    if (parsed.raw && parsed.raw.next_round_index !== undefined) {
+                        setCurrentRoundIndex(parsed.raw.next_round_index);
+                    } else {
+                        setCurrentRoundIndex((prev) => prev + 1);
+                    }
                     setDraftSummary((prev) => ({
                         basis: { ...prev.basis, ...parsed.summary.basis },
                         assumptions: parsed.summary.assumptions.length > 0 ? parsed.summary.assumptions : prev.assumptions,
@@ -416,6 +438,8 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
         if (choice === 'ai') {
             setQuestions([]);
             setAnswers({});
+            setAllQuestions({});
+            setCurrentRoundIndex(0);
             setDraftSummary(INITIAL_SUMMARY);
             setIntakeStep('prompt_input');
             return;
@@ -434,6 +458,8 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
 
         setQuestions([]);
         setAnswers({});
+        setAllQuestions({});
+        setCurrentRoundIndex(0);
         setDraftSummary(INITIAL_SUMMARY);
         await analyzeIntake({ currentAnswers: {}, roundHint: 'initial' });
     };
@@ -596,7 +622,7 @@ const DraftingModal = ({ onClose, initialPrompt, initialEntryMode = 'legacy', on
                 Answer the current round of questions. We will re-run the intake engine if another round is needed.
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2 mb-6">
                 {questions.map((question, idx) => {
                     const currentValue = answers[question.id];
                     const hasOptions = question.options.length > 0;

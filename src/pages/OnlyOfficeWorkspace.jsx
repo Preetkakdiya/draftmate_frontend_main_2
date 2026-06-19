@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Gavel, Loader2, Quote, Sparkles } from 'lucide-react';
+import { Download, Gavel, Loader2, Quote, Sparkles } from 'lucide-react';
 import { API_CONFIG } from '../services/endpoints';
 import { api } from '../services/api';
 
@@ -43,6 +43,37 @@ const OnlyOfficeWorkspace = () => {
   const [caseCardsError, setCaseCardsError] = useState('');
   const [caseGeneratingCardId, setCaseGeneratingCardId] = useState(null);
   const [caseGeneratingText, setCaseGeneratingText] = useState('');
+  const [activeSelectionText, setActiveSelectionText] = useState('');
+  const [sidebarWidth, setSidebarWidth] = useState(360);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const startResize = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth > 260 && newWidth < 800) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const { documentKey, filename, onlyofficeConfig, variablesDetected } = useMemo(() => {
     const state = location?.state || {};
@@ -121,6 +152,17 @@ const OnlyOfficeWorkspace = () => {
       ...onlyofficeConfig,
       editorConfig: {
         ...(onlyofficeConfig?.editorConfig || {}),
+        customization: {
+          ...(onlyofficeConfig?.editorConfig?.customization || {}),
+          forcesave: true,
+          chat: false,
+          uiTheme: 'theme-light',
+          logo: {
+            image: '',
+            imageDark: '',
+            url: '',
+          },
+        },
         plugins: {
           autostart: [
             'asc.{43d1a84f-e274-4b53-a55e-3363f8db1f34}',
@@ -186,6 +228,7 @@ const OnlyOfficeWorkspace = () => {
           toast.error('Please select some text inside the ONLYOFFICE document first.');
           return;
         }
+        setActiveSelectionText(selectedText);
 
         const pendingAction = pendingSelectionActionRef.current || 'explain';
         pendingSelectionActionRef.current = null;
@@ -321,16 +364,20 @@ const OnlyOfficeWorkspace = () => {
     }
   };
 
-  const normalizeCaseItem = (item, idx, requestId) => ({
-    id: item.id || item.case_id || item.doc_id || `${requestId}-${idx}`,
-    name: item.name || item.case_name || item.title || 'Untitled Case',
-    court: item.court || item.court_hierarchy || item.court_name || item.hierarchy || 'Court metadata unavailable',
-    citation: item.citation || item.suggested_citation || item.reporter_citation || '',
-    whyRelevant: item.whyRelevant || item.why_relevant || item.relevance || item.snippet || item.context || '',
-    holding: item.holding || item.ratio || item.ratio_decidendi || item.summary || '',
-    generatedParagraph: item.generatedParagraph || '',
-    raw: item,
-  });
+  const normalizeCaseItem = (item, idx, requestId) => {
+    const rawCitation = item.citation || item.suggested_citation || item.reporter_citation || '';
+    const isPureNumber = /^\d+$/.test(String(rawCitation).trim());
+    return {
+      id: item.id || item.case_id || item.doc_id || `${requestId}-${idx}`,
+      name: item.name || item.case_name || item.title || 'Untitled Case',
+      court: item.court || item.court_hierarchy || item.court_name || item.hierarchy || 'Court metadata unavailable',
+      citation: isPureNumber ? '' : rawCitation,
+      whyRelevant: item.whyRelevant || item.why_relevant || item.relevance || item.snippet || item.context || '',
+      holding: item.holding || item.ratio || item.ratio_decidendi || item.summary || '',
+      generatedParagraph: item.generatedParagraph || '',
+      raw: item,
+    };
+  };
 
   const fetchRelevantCases = async (selectedText) => {
     const requestId = ++activeCaseRequestIdRef.current;
@@ -454,11 +501,13 @@ const OnlyOfficeWorkspace = () => {
 
     const prompt = [
       "Write a professional paragraph applying the following case to the user's highlighted argument.",
+      `User's Highlighted Argument: "${activeSelectionText}"`,
       `Case Name: ${caseItem.name}`,
       `Court: ${caseItem.court}`,
       caseItem.citation ? `Citation: ${caseItem.citation}` : null,
       caseItem.holding ? `Holding: ${caseItem.holding}` : null,
       caseItem.whyRelevant ? `Why Relevant: ${caseItem.whyRelevant}` : null,
+      "If the user's highlighted argument is a document header, name, title, or lacks a specific legal point, write a professional summary of this case's core legal principles, holding, and general application instead. Under no circumstances should you ask follow-up questions or request more information.",
       'Keep the paragraph concise, formal, and legally grounded. Do not invent facts. Focus on the legal principle and its application.',
     ].filter(Boolean).join('\n');
 
@@ -482,10 +531,6 @@ const OnlyOfficeWorkspace = () => {
         },
         onDone: () => {
           if (abortController.signal.aborted || generationId !== activeCaseGenerationIdRef.current) return;
-          const finalText = (caseParagraphTextRef.current || '').trim();
-          if (finalText) {
-            handleInsertText(finalText);
-          }
           setCaseGeneratingCardId(null);
           setCaseGeneratingText('');
         },
@@ -513,7 +558,7 @@ const OnlyOfficeWorkspace = () => {
   const renderCaseCards = () => {
     if (caseCardsLoading) {
       return (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 flex items-center gap-2 text-sm text-slate-300">
+        <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 flex items-center gap-2 text-sm text-slate-700">
           <Loader2 className="h-4 w-4 animate-spin" />
           Finding relevant cases...
         </div>
@@ -522,7 +567,7 @@ const OnlyOfficeWorkspace = () => {
 
     if (caseCardsError) {
       return (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-300">
+        <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 text-sm text-slate-700">
           {caseCardsError}
         </div>
       );
@@ -533,86 +578,52 @@ const OnlyOfficeWorkspace = () => {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3 px-1">
-          <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Case Law Assistant</div>
+          <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Case Law Assistant</div>
           <div className="text-[11px] text-slate-500">{caseCards.length} result{caseCards.length === 1 ? '' : 's'}</div>
         </div>
 
         {caseCards.map((caseItem) => {
-          const isGenerating = caseGeneratingCardId === caseItem.id;
           return (
-            <div key={caseItem.id} className="rounded-2xl border border-slate-800 bg-slate-950/50 overflow-hidden shadow-lg">
-              <div className="p-4 border-b border-slate-800/80">
+            <div key={caseItem.id} className="rounded-2xl border border-[#B9D9EB] bg-white overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-[#B9D9EB]/50 bg-slate-50/50">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-blue-400">
+                    <div className="flex items-center gap-2 text-blue-600">
                       <Sparkles className="h-4 w-4" />
                       <span className="text-[11px] font-semibold uppercase tracking-wider">Relevant Case</span>
                     </div>
-                    <h4 className="mt-2 text-sm font-semibold text-white leading-snug">{caseItem.name}</h4>
-                    <p className="mt-1 text-[11px] text-slate-400">{caseItem.court}</p>
+                    <h4 className="mt-2 text-sm font-semibold text-slate-800 leading-snug">{caseItem.name}</h4>
+                    <p className="mt-1 text-[11px] text-slate-500">{caseItem.court}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleInsertText(caseItem.citation || caseItem.name)}
-                    className="shrink-0 text-[11px] font-semibold px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors"
-                  >
-                    Insert Citation
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {caseItem.raw?.source_url && (
+                      <a
+                        href={caseItem.raw.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-semibold px-3 py-2 rounded-lg bg-[#E3F0F7] hover:bg-[#D0E6F2] border border-[#B9D9EB] text-slate-700 transition-colors inline-block whitespace-nowrap"
+                      >
+                        View Case
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleInsertText(caseItem.citation || caseItem.name)}
+                      className="text-[11px] font-semibold px-3 py-2 rounded-lg bg-[#E3F0F7] hover:bg-[#D0E6F2] border border-[#B9D9EB] text-slate-700 transition-colors whitespace-nowrap"
+                    >
+                      Insert Citation
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div className="p-4 space-y-3">
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Why Relevant</div>
-                  <p className="text-sm text-slate-200 leading-relaxed">
+                  <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Why Relevant</div>
+                  <p className="text-sm text-slate-700 leading-relaxed">
                     {caseItem.whyRelevant || 'A matching legal proposition was identified for the highlighted text.'}
                   </p>
                 </div>
-
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Holding</div>
-                  <p className="text-sm text-slate-200 leading-relaxed">
-                    {caseItem.holding || 'A concise ratio decidendi summary will appear here.'}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateCaseParagraph(caseItem)}
-                    disabled={isGenerating}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-400 text-white text-[11px] font-semibold px-3 py-2 transition-colors"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Generating Paragraph
-                      </>
-                    ) : (
-                      <>
-                        <Quote className="h-3.5 w-3.5" />
-                        Generate Paragraph
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {isGenerating ? (
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                    <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Streaming paragraph into the assistant...
-                    </div>
-                    <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
-                      {caseGeneratingText || 'Drafting tailored paragraph...'}
-                    </p>
-                  </div>
-                ) : caseItem.generatedParagraph ? (
-                  <div className="rounded-xl border border-emerald-800/70 bg-emerald-950/30 p-3">
-                    <div className="text-xs text-emerald-300 mb-2 font-semibold uppercase tracking-wider">Generated Paragraph</div>
-                    <p className="text-sm text-slate-100 whitespace-pre-wrap leading-relaxed">{caseItem.generatedParagraph}</p>
-                  </div>
-                ) : null}
               </div>
             </div>
           );
@@ -622,48 +633,42 @@ const OnlyOfficeWorkspace = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-0px)] w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden relative">
+    <div className="flex h-[calc(100vh-0px)] w-full bg-[#E3F0F7] text-slate-800 overflow-hidden relative">
       {/* Left 70% Area: Header and ONLYOFFICE Iframe */}
-      <div className="flex-1 flex flex-col min-w-0 h-full border-r border-slate-200 dark:border-slate-800">
-        <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
+      <div className="flex-1 flex flex-col min-w-0 h-full border-r border-[#B9D9EB]">
+        <div className="shrink-0 border-b border-[#B9D9EB] bg-[#E3F0F7]/95 backdrop-blur">
           <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-sm text-slate-500 dark:text-slate-400">ONLYOFFICE Workspace</div>
-              <div className="font-semibold truncate">{filename || 'Untitled'}</div>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">DRAFTMATE WORKSPACE</div>
+              <div className="font-bold text-slate-800 truncate">{filename || 'Untitled'}</div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSynchronize}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors"
-              >
-                Synchronize Matrix Changes
-              </button>
               <button
                 type="button"
                 onClick={() => {
                   window.open(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${filename || documentKey + '.docx'}`, '_blank');
                 }}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition-colors"
+                className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center"
+                title="Download"
               >
-                Force Emergency Backup Download
+                <Download className="h-5 w-5" />
               </button>
             </div>
           </div>
         </div>
 
         <div className="flex-1 min-h-0 relative">
-          <div id="onlyoffice-canvas-target-node" className="h-full w-full bg-white dark:bg-slate-900" />
+          <div id="onlyoffice-canvas-target-node" className="h-full w-full bg-white" />
           {isCanvasLoading ? (
-            <div className="absolute inset-0 bg-slate-950/90 z-20">
-              <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900" />
+            <div className="absolute inset-0 bg-[#E3F0F7]/90 z-20">
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#E3F0F7] via-[#B9D9EB] to-[#E3F0F7]" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-[min(680px,90%)] space-y-4">
-                  <div className="h-6 rounded-lg bg-slate-800/70" />
-                  <div className="h-4 rounded-lg bg-slate-800/60 w-5/6" />
-                  <div className="h-4 rounded-lg bg-slate-800/60 w-4/6" />
-                  <div className="h-4 rounded-lg bg-slate-800/60 w-3/6" />
-                  <div className="h-64 rounded-2xl bg-slate-900/70 border border-slate-800" />
+                  <div className="h-6 rounded-lg bg-[#B9D9EB]/50" />
+                  <div className="h-4 rounded-lg bg-[#B9D9EB]/40 w-5/6" />
+                  <div className="h-4 rounded-lg bg-[#B9D9EB]/40 w-4/6" />
+                  <div className="h-4 rounded-lg bg-[#B9D9EB]/40 w-3/6" />
+                  <div className="h-64 rounded-2xl bg-white/70 border border-[#B9D9EB]" />
                 </div>
               </div>
             </div>
@@ -671,48 +676,69 @@ const OnlyOfficeWorkspace = () => {
         </div>
       </div>
 
-      {/* Right 30% Panel: Tabbed Navigation with AI Assistant / Variables */}
-      <aside className="w-96 lg:w-[420px] xl:w-[480px] shrink-0 h-full bg-slate-900 text-slate-100 flex flex-col shadow-2xl z-10 border-l border-slate-800">
+      {/* Resizable Sash Divider */}
+      <div
+        onMouseDown={startResize}
+        className="w-1.5 hover:w-2 shrink-0 cursor-col-resize transition-all select-none h-full bg-[#B9D9EB] hover:bg-blue-400 active:bg-blue-500 z-30"
+      />
+
+      {/* Right Resizable Panel: Tabbed Navigation with AI Assistant / Variables */}
+      <aside
+        style={{ width: `${sidebarWidth}px` }}
+        className="shrink-0 h-full bg-[#E3F0F7] text-slate-800 flex flex-col shadow-2xl z-10 border-l border-[#B9D9EB]"
+      >
         {/* Tabs Headers */}
-        <div className="shrink-0 flex border-b border-slate-800 bg-slate-950/50">
+        <div className="shrink-0 flex border-b border-[#B9D9EB] bg-[#CDE3F0]">
           <button
             type="button"
             onClick={() => setActiveTab('chat')}
-            className={`flex-1 py-4 text-center text-sm font-semibold border-b-2 transition-all duration-200 ${
+            className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${
               activeTab === 'chat'
-                ? 'border-blue-500 text-blue-400 bg-slate-800/30'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
+                : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
             }`}
           >
-            <span className="material-symbols-outlined align-middle mr-1.5 text-lg">smart_toy</span>
+            <span className="material-symbols-outlined align-middle mr-1.5 text-base">smart_toy</span>
             AI Assistant
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('variables')}
-            className={`flex-1 py-4 text-center text-sm font-semibold border-b-2 transition-all duration-200 ${
-              activeTab === 'variables'
-                ? 'border-blue-500 text-blue-400 bg-slate-800/30'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+            onClick={() => setActiveTab('case')}
+            className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${
+              activeTab === 'case'
+                ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
+                : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
             }`}
           >
-            <span className="material-symbols-outlined align-middle mr-1.5 text-lg">schema</span>
+            <span className="material-symbols-outlined align-middle mr-1.5 text-base">gavel</span>
+            Case Assistant
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('variables')}
+            className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${
+              activeTab === 'variables'
+                ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
+                : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
+            }`}
+          >
+            <span className="material-symbols-outlined align-middle mr-1.5 text-base">schema</span>
             Variables ({variablesDetected.length})
           </button>
         </div>
 
         {/* Tab Panel: Variables */}
         {activeTab === 'variables' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#E3F0F7]">
             <div className="px-1 py-2">
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-slate-650">
                 Variables detected from the drafting matrix. Mapping content controls directly to active placeholders.
               </div>
             </div>
             {variablesDetected.length === 0 ? (
-              <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm">
                 <div className="text-sm font-semibold">No variables detected</div>
-                <div className="text-xs text-slate-300 mt-1">
+                <div className="text-xs text-slate-500 mt-1">
                   This panel will populate after the drafting engine identifies placeholders.
                 </div>
               </div>
@@ -720,20 +746,20 @@ const OnlyOfficeWorkspace = () => {
               variablesDetected.map((variable, idx) => {
                 const name = String(variable || '');
                 return (
-                  <div key={`${name}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                  <div key={`${name}-${idx}`} className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold truncate">{name}</div>
-                        <div className="text-xs text-slate-300 mt-1">
+                        <div className="text-sm font-semibold truncate text-slate-800">{name}</div>
+                        <div className="text-xs text-slate-500 mt-1">
                           This tag maps to an active content control inside the editor.
                         </div>
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
+                      <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1">
                         Replacement Tag
                       </div>
-                      <div className="select-all font-mono text-xs rounded-lg bg-slate-800/70 border border-slate-700 px-3 py-2">
+                      <div className="select-all font-mono text-xs rounded-lg bg-slate-50 border border-[#B9D9EB] px-3 py-2 text-slate-700">
                         {name}
                       </div>
                     </div>
@@ -746,7 +772,7 @@ const OnlyOfficeWorkspace = () => {
 
         {/* Tab Panel: AI Assistant Chat */}
         {activeTab === 'chat' && (
-          <div className="flex-1 flex flex-col min-h-0 bg-slate-900">
+          <div className="flex-1 flex flex-col min-h-0 bg-[#E3F0F7]">
             {/* Conversation Thread */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((msg, index) => (
@@ -754,18 +780,18 @@ const OnlyOfficeWorkspace = () => {
                   key={index}
                   className={`flex flex-col max-w-[85%] rounded-xl p-3.5 text-sm ${
                     msg.role === 'user'
-                      ? 'bg-blue-600 text-white ml-auto'
-                      : 'bg-slate-800/70 border border-slate-700/50 text-slate-100 mr-auto'
+                      ? 'bg-blue-600 text-white ml-auto shadow-sm'
+                      : 'bg-white border border-[#B9D9EB] text-slate-800 mr-auto shadow-sm'
                   }`}
                 >
                   <div className="whitespace-pre-wrap leading-relaxed">{msg.content || '...'}</div>
 
                   {msg.role === 'assistant' && !msg.isStreaming && msg.content && (
-                    <div className="mt-3.5 pt-2.5 border-t border-slate-700/60 flex justify-end">
+                    <div className="mt-3.5 pt-2.5 border-t border-[#E3F0F7] flex justify-end">
                       <button
                         type="button"
                         onClick={() => handleInsertText(msg.content)}
-                        className="flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider"
+                        className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-wider"
                       >
                         <span className="material-symbols-outlined text-sm">input</span>
                         Insert into Document
@@ -777,18 +803,41 @@ const OnlyOfficeWorkspace = () => {
 
               {/* Streaming Status Indicator */}
               {isChatLoading && statusMessage && (
-                <div className="flex items-center gap-2 text-xs text-slate-400 px-2 py-1 italic animate-pulse">
+                <div className="flex items-center gap-2 text-xs text-slate-500 px-2 py-1 italic animate-pulse">
                   <span className="material-symbols-outlined text-sm animate-spin">autorenew</span>
                   {statusMessage}
                 </div>
               )}
 
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Bottom Controls Bar for AI Assistant */}
+            <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex">
+              <button
+                type="button"
+                onClick={handleExplainSelection}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-[#B9D9EB] text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                title="Select text in ONLYOFFICE and click here to explain it"
+              >
+                <span className="material-symbols-outlined text-base mr-1.5">school</span>
+                Explain Selection
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Panel: Case Assistant */}
+        {activeTab === 'case' && (
+          <div className="flex-1 flex flex-col min-h-0 bg-[#E3F0F7]">
+            {/* Case Cards Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 px-1">
-                  <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Case Law Assistant</div>
+                  <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Case Law Assistant</div>
                   <div className="flex items-center gap-2">
                     {caseCardsLoading ? (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Searching
                       </div>
@@ -797,7 +846,7 @@ const OnlyOfficeWorkspace = () => {
                       <button
                         type="button"
                         onClick={clearCaseState}
-                        className="text-[11px] text-slate-500 hover:text-slate-200 transition-colors"
+                        className="text-[11px] text-slate-500 hover:text-slate-800 transition-colors"
                       >
                         Clear
                       </button>
@@ -806,61 +855,70 @@ const OnlyOfficeWorkspace = () => {
                 </div>
 
                 {renderCaseCards()}
-              </div>
 
-              <div ref={chatEndRef} />
+                {!caseCards.length && !caseCardsLoading && (
+                  <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm text-center text-slate-600 text-xs">
+                    <span className="material-symbols-outlined text-3xl text-slate-400 block mb-2">find_in_page</span>
+                    Highlight text in the editor and click <strong>Find Relevant Cases</strong> below to perform legal research.
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Chat Action Controls & Text Input Box */}
-            <div className="shrink-0 p-4 border-t border-slate-800 bg-slate-950/40">
-              <div className="flex gap-2 mb-3">
-                <button
-                  type="button"
-                  onClick={handleExplainSelection}
-                  className="flex-1 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                  title="Select text in ONLYOFFICE and click here to explain it"
-                >
-                  <span className="material-symbols-outlined text-sm">school</span>
-                  Explain Selection
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFindRelevantCases}
-                  className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-                  title="Find case law relevant to the selected text"
-                >
-                  <Gavel size={14} />
-                  Find Relevant Cases
-                </button>
-              </div>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-                className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 focus-within:border-blue-500 transition-colors"
+            {/* Bottom Controls Bar for Case Assistant */}
+            <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex">
+              <button
+                type="button"
+                onClick={handleFindRelevantCases}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                title="Find case law relevant to the selected text"
               >
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Ask the AI Assistant..."
-                  disabled={isChatLoading}
-                  className="flex-1 bg-transparent border-0 outline-none p-1 text-sm text-slate-100 placeholder-slate-400 focus:ring-0 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isChatLoading || !inputMessage.trim()}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-400 text-white transition-colors"
-                >
-                  <span className="material-symbols-outlined text-base">send</span>
-                </button>
-              </form>
+                <Gavel size={16} />
+                Find Relevant Cases
+              </button>
             </div>
           </div>
         )}
       </aside>
+
+      {/* Floating expanding chat input bar */}
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none select-none">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (inputMessage.trim()) {
+              handleSendMessage();
+              setActiveTab('chat');
+            }
+          }}
+          className={`pointer-events-auto flex items-center bg-white border border-[#B9D9EB] hover:border-blue-400 focus-within:border-blue-500 rounded-full shadow-xl px-6 py-3.5 transition-all duration-300 ${
+            inputMessage.trim().length > 0 ? 'w-[640px]' : 'w-[400px]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">smart_toy</span>
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Ask your AI"
+            disabled={isChatLoading}
+            className="flex-1 bg-transparent border-0 outline-none py-1 text-base text-slate-800 placeholder-slate-400 focus:ring-0 focus:outline-none"
+          />
+          {inputMessage.trim().length > 0 && (
+            <button
+              type="submit"
+              disabled={isChatLoading}
+              className="ml-3 w-10 h-10 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 shrink-0"
+            >
+              <span className="material-symbols-outlined text-lg">send</span>
+            </button>
+          )}
+        </form>
+      </div>
+
+      {isDragging && (
+        <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
+      )}
     </div>
   );
 };
