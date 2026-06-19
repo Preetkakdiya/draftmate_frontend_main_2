@@ -13,12 +13,37 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    // ─── Demo credentials ────────────────────────────────────────────────────
+    const DEMO_EMAIL    = 'Test@gmail.com';
+    const DEMO_PASSWORD = 'Test@1234';
+    // ─────────────────────────────────────────────────────────────────────────
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         const loadingToast = toast.loading("Logging in...");
 
         try {
+            // ── Dummy / demo login bypass ─────────────────────────────────────
+            if (email.toLowerCase() === DEMO_EMAIL.toLowerCase() && password === DEMO_PASSWORD) {
+                const demoProfile = {
+                    id: 'demo-user-001',
+                    email: DEMO_EMAIL,
+                    name: 'Test User',
+                    firstName: 'Test',
+                    lastName: 'User',
+                    image: `https://ui-avatars.com/api/?name=Test+User&background=3b82f6&color=fff&size=128`,
+                };
+                localStorage.setItem('session_id', 'demo-session-001');
+                localStorage.setItem('user_id', 'demo-user-001');
+                localStorage.setItem('user_profile', JSON.stringify(demoProfile));
+                toast.dismiss(loadingToast);
+                toast.success('Welcome, Test User! 👋');
+                navigate('/dashboard/home');
+                return;
+            }
+            // ─────────────────────────────────────────────────────────────────
+
             const loginUrl = `${API_CONFIG.AUTH.BASE_URL}${API_CONFIG.AUTH.ENDPOINTS.LOGIN}`;
             const response = await fetch(loginUrl, {
                 method: 'POST',
@@ -144,6 +169,22 @@ const Login = () => {
 
                         {/* Form */}
                         <form className="space-y-5" onSubmit={handleLogin}>
+
+                            {/* Demo Credentials Banner */}
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[20px] mt-0.5 flex-shrink-0">info</span>
+                                <div className="text-sm">
+                                    <p className="font-semibold text-blue-800 dark:text-blue-300 mb-1">Demo Account</p>
+                                    <p className="text-blue-700 dark:text-blue-400">
+                                        Email: <button type="button" onClick={() => { setEmail('Test@gmail.com'); }} className="font-mono font-bold hover:underline">Test@gmail.com</button>
+                                    </p>
+                                    <p className="text-blue-700 dark:text-blue-400">
+                                        Password: <button type="button" onClick={() => { setPassword('Test@1234'); }} className="font-mono font-bold hover:underline">Test@1234</button>
+                                    </p>
+                                    <p className="text-blue-500 dark:text-blue-500 text-xs mt-1">Click values above to auto-fill.</p>
+                                </div>
+                            </div>
+
                             {/* Email */}
                             <label className="flex flex-col gap-2 group">
                                 <span className="text-slate-900 dark:text-white text-sm font-medium leading-normal">Email or Username</span>
