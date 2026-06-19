@@ -62,6 +62,9 @@ export const bookmarkService = {
   
   isBookmarked: async (actId, sectionNumber) => {
       const bookmarks = await bookmarkService.getBookmarks();
-      return bookmarks.find(b => b.actId === actId && b.sectionNumber === sectionNumber);
+      if (sectionNumber !== undefined && sectionNumber !== null) {
+        return bookmarks.find(b => b.actId === actId && b.sectionNumber === sectionNumber);
+      }
+      return bookmarks.find(b => b.actId === actId);
   }
 };
