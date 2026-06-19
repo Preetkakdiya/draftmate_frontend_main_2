@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { mockBareActs } from '../../data/mockBareActs';
 import SectionToolbar from '../../components/library/SectionToolbar';
 import NoteDrawer from '../../components/library/NoteDrawer';
-import { toast } from 'sonner';
+import ExplainDrawer from '../../components/library/ExplainDrawer';
 
 const ActDetails = () => {
   const { actId } = useParams();
@@ -15,15 +15,17 @@ const ActDetails = () => {
   const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
   const [activeSectionForNote, setActiveSectionForNote] = useState(null);
 
+  const [isExplainDrawerOpen, setIsExplainDrawerOpen] = useState(false);
+  const [activeSectionForExplain, setActiveSectionForExplain] = useState(null);
+
   const handleOpenNote = (section) => {
     setActiveSectionForNote(section);
     setIsNoteDrawerOpen(true);
   };
 
   const handleAIExplain = (section) => {
-    toast.info(`AI Explain for Section ${section.number} will be available soon!`, {
-      icon: '🤖',
-    });
+    setActiveSectionForExplain(section);
+    setIsExplainDrawerOpen(true);
   };
 
   if (!act) {
@@ -147,6 +149,15 @@ const ActDetails = () => {
         act={act}
         chapter={currentChapter}
         section={activeSectionForNote}
+      />
+
+      {/* AI Explain Drawer */}
+      <ExplainDrawer
+        isOpen={isExplainDrawerOpen}
+        onClose={() => setIsExplainDrawerOpen(false)}
+        act={act}
+        chapter={currentChapter}
+        section={activeSectionForExplain}
       />
     </div>
   );
