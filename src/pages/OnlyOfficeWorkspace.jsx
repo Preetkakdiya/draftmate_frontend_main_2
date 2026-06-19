@@ -19,6 +19,8 @@ const OnlyOfficeWorkspace = () => {
   const caseGenerationAbortRef = useRef(null);
   const caseParagraphTextRef = useRef('');
   const chatEndRef = useRef(null);
+  const selectionPollRef = useRef(null);
+  const selectionPollPausedUntilRef = useRef(0);
 
   const [docsApiReady, setDocsApiReady] = useState(false);
   const [isCanvasLoading, setIsCanvasLoading] = useState(true);
@@ -36,6 +38,9 @@ const OnlyOfficeWorkspace = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [selectionPreview, setSelectionPreview] = useState('');
+  const [showAutoFormatPopup, setShowAutoFormatPopup] = useState(false);
+  const [isAutoFormatting, setIsAutoFormatting] = useState(false);
 
   // Case Law Assistant State
   const [caseCards, setCaseCards] = useState([]);
@@ -212,6 +217,24 @@ const OnlyOfficeWorkspace = () => {
     }
   };
 
+  const startSelectionPolling = () => {
+    if (selectionPollRef.current) return;
+
+    selectionPollRef.current = window.setInterval(() => {
+      const plugin = pluginWindowRef.current;
+      if (!plugin) return;
+      if (Date.now() < selectionPollPausedUntilRef.current) return;
+      plugin.postMessage({ type: 'ONLYOFFICE_POLL_SELECTION' }, '*');
+    }, 500);
+  };
+
+  const stopSelectionPolling = () => {
+    if (selectionPollRef.current) {
+      window.clearInterval(selectionPollRef.current);
+      selectionPollRef.current = null;
+    }
+  };
+
   useEffect(() => {
     const handleMessage = (e) => {
       if (!e.data) return;
@@ -219,6 +242,36 @@ const OnlyOfficeWorkspace = () => {
       if (e.data.type === 'ONLYOFFICE_PLUGIN_READY') {
         console.log('ONLYOFFICE plugin is ready!', e.source);
         pluginWindowRef.current = e.source;
+        startSelectionPolling();
+        return;
+      }
+
+      if (e.data.type === 'ONLYOFFICE_SELECTION_STATE' || e.data.type === 'ONLYOFFICE_SELECTION_CHANGED') {
+        const selectedText = String(e.data.text || '').trim();
+        setSelectionPreview(selectedText);
+        setShowAutoFormatPopup(Boolean(selectedText));
+        if (!selectedText) {
+          setIsAutoFormatting(false);
+        }
+        return;
+      }
+
+      if (e.data.type === 'ONLYOFFICE_AUTOFORMAT_DONE') {
+        setIsAutoFormatting(false);
+        selectionPollPausedUntilRef.current = Date.now() + 900;
+        setShowAutoFormatPopup(false);
+        if (e.data.applied) {
+          toast.success('Selection auto-formatted.');
+        } else {
+          toast.info('Select text first to auto-format it.');
+        }
+        return;
+      }
+
+      if (e.data.type === 'ONLYOFFICE_AUTOFORMAT_ERROR') {
+        setIsAutoFormatting(false);
+        selectionPollPausedUntilRef.current = Date.now() + 900;
+        toast.error(e.data.message || 'Auto-format failed.');
         return;
       }
 
@@ -254,6 +307,7 @@ const OnlyOfficeWorkspace = () => {
   useEffect(() => {
     return () => {
       clearCaseState();
+      stopSelectionPolling();
     };
   }, []);
 
@@ -484,6 +538,23 @@ const OnlyOfficeWorkspace = () => {
     toast.success('Inserted content into ONLYOFFICE document!');
   };
 
+  const handleAutoFormatSelection = () => {
+    if (!pluginWindowRef.current) {
+      toast.error('AI Assistant plugin is not ready. Please make sure the ONLYOFFICE document is fully loaded.');
+      return;
+    }
+
+    if (!selectionPreview.trim()) {
+      toast.info('Select text in ONLYOFFICE first.');
+      return;
+    }
+
+    selectionPollPausedUntilRef.current = Date.now() + 1200;
+    setIsAutoFormatting(true);
+    setShowAutoFormatPopup(false);
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_AUTO_FORMAT_SELECTION' }, '*');
+  };
+
   const handleGenerateCaseParagraph = async (caseItem) => {
     if (!caseItem) return;
 
@@ -659,6 +730,37 @@ const OnlyOfficeWorkspace = () => {
 
         <div className="flex-1 min-h-0 relative">
           <div id="onlyoffice-canvas-target-node" className="h-full w-full bg-white" />
+          {showAutoFormatPopup && selectionPreview ? (
+            <div className="absolute top-4 right-4 z-30 w-[min(360px,calc(100%-2rem))] rounded-xl border border-[#B9D9EB] bg-white shadow-2xl overflow-hidden">
+              <div className="border-b border-[#B9D9EB]/70 bg-[#F7FBFD] px-3 py-2.5">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Auto format</div>
+                <div className="mt-1 text-xs text-slate-600" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {selectionPreview}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-3 py-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAutoFormatPopup(false);
+                    setIsAutoFormatting(false);
+                  }}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAutoFormatSelection}
+                  disabled={isAutoFormatting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70 transition-colors"
+                >
+                  {isAutoFormatting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Auto format
+                </button>
+              </div>
+            </div>
+          ) : null}
           {isCanvasLoading ? (
             <div className="absolute inset-0 bg-[#E3F0F7]/90 z-20">
               <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#E3F0F7] via-[#B9D9EB] to-[#E3F0F7]" />
