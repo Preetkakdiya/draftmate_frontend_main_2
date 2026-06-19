@@ -22,6 +22,7 @@ import Bookmarks from './pages/library/Bookmarks';
 import Notes from './pages/library/Notes';
 import Forms from './pages/library/Forms';
 import Dictionary from './pages/library/Dictionary';
+import TermDetails from './pages/library/TermDetails';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -159,6 +160,7 @@ function App() {
               <Route path="library/notes" element={<Notes />} />
               <Route path="library/forms" element={<Forms />} />
               <Route path="library/dictionary" element={<Dictionary />} />
+              <Route path="library/dictionary/:termId" element={<TermDetails />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
