@@ -32,6 +32,10 @@ parent_dir = os.path.abspath(os.path.join(current_dir, "../"))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+deep_research_dir = os.path.abspath(os.path.join(current_dir, "../Deep_research"))
+if deep_research_dir not in sys.path:
+    sys.path.append(deep_research_dir)
+
 try:
     from Deep_research.lex_bot.tools.pdf_processor import pdf_processor
     from Deep_research.lex_bot.tools.session_cache import get_session_cache
@@ -245,6 +249,23 @@ def _build_clarifying_question(question_id: str, prompt: str, options: List[Tupl
 def _heuristic_intake_analysis(initial_prompt: str, accumulated_answers: Dict[str, Any], current_round_index: int) -> Dict[str, Any]:
     text = f"{initial_prompt}\n{_flatten_answers(accumulated_answers)}".lower()
 
+    # Look for explicit answers in accumulated_answers
+    ans_doc_type = None
+    ans_jurisdiction = None
+    ans_position = None
+
+    for k, v in accumulated_answers.items():
+        k_lower = str(k).lower()
+        v_str = str(v).strip()
+        if not v_str:
+            continue
+        if "document" in k_lower or "preparing" in k_lower or "doc_type" in k_lower:
+            ans_doc_type = v_str
+        if "jurisdiction" in k_lower or "govern" in k_lower:
+            ans_jurisdiction = v_str
+        if "representing" in k_lower or "side" in k_lower or "position" in k_lower:
+            ans_position = v_str
+
     document_type = "Legal Document"
     if any(token in text for token in ["lease", "tenancy"]):
         document_type = "Lease / Tenancy Agreement"
@@ -259,11 +280,17 @@ def _heuristic_intake_analysis(initial_prompt: str, accumulated_answers: Dict[st
     elif any(token in text for token in ["petition", "writ", "appeal", "suit"]):
         document_type = "Litigation Filing"
 
+    if ans_doc_type:
+        document_type = ans_doc_type
+
     jurisdiction = "Not specified"
     for candidate in ["india", "indian", "delhi", "mumbai", "maharashtra", "karnataka", "tamil nadu", "california", "new york"]:
         if candidate in text:
             jurisdiction = candidate.title()
             break
+
+    if ans_jurisdiction:
+        jurisdiction = ans_jurisdiction
 
     rep_position = "Not specified"
     for candidate in [
@@ -281,49 +308,55 @@ def _heuristic_intake_analysis(initial_prompt: str, accumulated_answers: Dict[st
             rep_position = candidate.replace("for the ", "").title()
             break
 
+    if ans_position:
+        rep_position = ans_position
+
     questions: List[ClarifyingQuestion] = []
     missing_key_inputs = []
-    if jurisdiction == "Not specified":
+    if jurisdiction == "Not specified" and not ans_jurisdiction:
         missing_key_inputs.append("jurisdiction")
-    if document_type == "Legal Document":
+    if document_type == "Legal Document" and not ans_doc_type:
         missing_key_inputs.append("document_type")
-    if rep_position == "Not specified":
+    if rep_position == "Not specified" and not ans_position:
         missing_key_inputs.append("representation_position")
     if not accumulated_answers:
         missing_key_inputs.append("commercial_terms")
 
     if missing_key_inputs:
-        questions.append(
-            _build_clarifying_question(
-                "jurisdiction",
-                "Which jurisdiction should govern this draft?",
-                [("India", "India"), ("United States", "United States"), ("Other / mixed", "Other / mixed")],
+        if "jurisdiction" in missing_key_inputs:
+            questions.append(
+                _build_clarifying_question(
+                    "jurisdiction",
+                    "Which jurisdiction should govern this draft?",
+                    [("India", "India"), ("United States", "United States"), ("Other / mixed", "Other / mixed")],
+                )
             )
-        )
-        questions.append(
-            _build_clarifying_question(
-                "document_type",
-                "What kind of document are we preparing?",
-                [
-                    (document_type, document_type),
-                    ("Contract / Agreement", "Contract / Agreement"),
-                    ("Litigation / Court filing", "Litigation / Court filing"),
-                    ("Other", "Other"),
-                ],
+        if "document_type" in missing_key_inputs:
+            questions.append(
+                _build_clarifying_question(
+                    "document_type",
+                    "What kind of document are we preparing?",
+                    [
+                        (document_type, document_type),
+                        ("Contract / Agreement", "Contract / Agreement"),
+                        ("Litigation / Court filing", "Litigation / Court filing"),
+                        ("Other", "Other"),
+                    ],
+                )
             )
-        )
-        questions.append(
-            _build_clarifying_question(
-                "position",
-                "Which side are we representing?",
-                [
-                    ("Party A / initiator", "Party A / initiator"),
-                    ("Party B / responding party", "Party B / responding party"),
-                    ("Buyer / recipient", "Buyer / recipient"),
-                    ("Seller / provider", "Seller / provider"),
-                ],
+        if "representation_position" in missing_key_inputs:
+            questions.append(
+                _build_clarifying_question(
+                    "position",
+                    "Which side are we representing?",
+                    [
+                        ("Party A / initiator", "Party A / initiator"),
+                        ("Party B / responding party", "Party B / responding party"),
+                        ("Buyer / recipient", "Buyer / recipient"),
+                        ("Seller / provider", "Seller / provider"),
+                    ],
+                )
             )
-        )
 
     basis = DraftBasis(
         document_type=document_type,

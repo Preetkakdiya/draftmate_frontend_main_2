@@ -1,7 +1,6 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Download, Gavel, Loader2, Quote, Sparkles } from 'lucide-react';
+import { Download, Gavel, Loader2, Plus, Mic, Quote, Send, Sparkles } from 'lucide-react';
 import { API_CONFIG } from '../services/endpoints';
 import { api } from '../services/api';
 
@@ -19,6 +18,9 @@ const OnlyOfficeWorkspace = () => {
   const caseGenerationAbortRef = useRef(null);
   const caseParagraphTextRef = useRef('');
   const chatEndRef = useRef(null);
+  const composerTextareaRef = useRef(null);
+  const [composerExpanded, setComposerExpanded] = useState(false);
+  const [composerHasValue, setComposerHasValue] = useState(false);
   const selectionPollRef = useRef(null);
   const selectionPollPausedUntilRef = useRef(0);
 
@@ -80,6 +82,19 @@ const OnlyOfficeWorkspace = () => {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging]);
+
+  useEffect(() => {
+    const el = composerTextareaRef.current;
+    if (!el) return;
+
+    const minHeight = 24;
+    const maxHeight = 160;
+    el.style.height = '0px';
+    const nextHeight = Math.min(el.scrollHeight || minHeight, maxHeight);
+    el.style.height = `${nextHeight}px`;
+    setComposerExpanded(nextHeight > 42);
+    setComposerHasValue(Boolean(inputMessage.trim()));
+  }, [inputMessage]);
 
   const { documentKey, filename, onlyofficeConfig, variablesDetected } = useMemo(() => {
     const state = location?.state || {};
@@ -1045,9 +1060,9 @@ const OnlyOfficeWorkspace = () => {
       </aside>
 
       {/* Floating expanding chat input bar */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-3 pointer-events-none select-none">
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-3 pointer-events-none select-none" style={{ width: 'min(760px, calc(100vw - 2rem))' }}>
         {enhanceSelectionText ? (
-          <div className="pointer-events-auto w-[min(640px,calc(100vw-2rem))] rounded-2xl border border-[#B9D9EB] bg-white shadow-xl overflow-hidden">
+          <div className="pointer-events-auto w-full rounded-2xl border border-[#B9D9EB] bg-white shadow-xl overflow-hidden">
             <div className="flex items-start justify-between gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -1071,36 +1086,75 @@ const OnlyOfficeWorkspace = () => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (inputMessage.trim()) {
+            if (composerHasValue) {
               handleSendMessage();
               setActiveTab('chat');
             }
           }}
-          className={`pointer-events-auto flex items-center bg-white border border-[#B9D9EB] hover:border-blue-400 focus-within:border-blue-500 rounded-full shadow-xl px-6 py-3.5 transition-all duration-300 ${
-            inputMessage.trim().length > 0 || enhanceSelectionText ? 'w-[640px]' : 'w-[400px]'
+          className={`pointer-events-auto w-full flex items-end gap-3 bg-[#f0f4f9] border border-[#d8e1ea] shadow-[0_12px_30px_rgba(15,23,42,0.08)] px-4 py-3.5 transition-all duration-300 ${
+            composerExpanded ? 'rounded-[20px]' : 'rounded-full'
           }`}
         >
-          <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">smart_toy</span>
-          <input
-            type="text"
+          {/* Left Column (fixed height side column, bottom anchored) */}
+          <div className="flex h-10 items-center justify-center shrink-0">
+            <button
+              type="button"
+              disabled
+              title="Attachments coming soon"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d8e1ea] bg-white/80 text-slate-500 opacity-70"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          <textarea
+            ref={composerTextareaRef}
+            rows={1}
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder={enhanceSelectionText ? 'Write enhancement instructions' : 'Ask your AI'}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (composerHasValue) {
+                  handleSendMessage();
+                  setActiveTab('chat');
+                }
+              }
+            }}
+            placeholder={enhanceSelectionText ? 'Write enhancement instructions...' : 'Ask your AI...'}
             disabled={isChatLoading}
-            className="flex-1 bg-transparent border-0 outline-none py-1 text-base text-slate-800 placeholder-slate-400 focus:ring-0 focus:outline-none"
+            style={{
+              height: '24px',
+              minHeight: '24px',
+              maxHeight: '160px',
+            }}
+            className="flex-1 resize-none overflow-y-auto bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-[15px] leading-6 text-slate-800 placeholder:text-slate-400 font-sans"
           />
-          {inputMessage.trim().length > 0 && (
+
+          {/* Right Column (fixed height side column, bottom anchored) */}
+          <div className="flex h-10 items-center justify-end gap-2 shrink-0">
+            <button
+              type="button"
+              disabled
+              title="Voice input coming soon"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d8e1ea] bg-white/80 text-slate-500 opacity-70"
+            >
+              <Mic className="h-4 w-4" />
+            </button>
             <button
               type="submit"
-              disabled={isChatLoading}
-              className="ml-3 w-10 h-10 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 shrink-0"
+              disabled={isChatLoading || !inputMessage.trim()}
+              className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold transition-all duration-200 ${
+                inputMessage.trim()
+                  ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 opacity-100'
+                  : 'bg-slate-900/10 text-slate-500 opacity-50 cursor-not-allowed'
+              } ${isChatLoading ? 'cursor-wait opacity-70' : ''}`}
             >
-              <span className="material-symbols-outlined text-lg">send</span>
+              <Send className="h-4 w-4" />
             </button>
-          )}
+          </div>
         </form>
       </div>
-
       {isDragging && (
         <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
       )}
