@@ -88,6 +88,7 @@ const MainLayout = () => {
               <NavItem to="/dashboard/drafts" icon="article" label="My Drafts" />
               <NavItem to="/dashboard/research" icon="balance" label="AI Research" />
               <NavItem to="/dashboard/legal-workflow" icon="gavel" label="Legal Assistant" />
+              <NavItem to="/dashboard/library" icon="local_library" label="Library" />
               <NavItem to="/dashboard/settings" icon="settings" label="Settings" />
             </div>
           </nav>

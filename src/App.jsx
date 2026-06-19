@@ -13,6 +13,15 @@ import ChatWithPDF from './pages/ChatWithPDF';
 import CaseSearch from './pages/CaseSearch';
 import LegalWorkflow from './pages/LegalWorkflow';
 
+import LibraryDashboard from './pages/library/LibraryDashboard';
+import BareActs from './pages/library/BareActs';
+import ActDetails from './pages/library/ActDetails';
+import Judgments from './pages/library/Judgments';
+import Bookmarks from './pages/library/Bookmarks';
+import Notes from './pages/library/Notes';
+import Forms from './pages/library/Forms';
+import Dictionary from './pages/library/Dictionary';
+
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
 import PaymentStatus from './pages/PaymentStatus';
@@ -133,6 +142,17 @@ function App() {
               <Route path="chat-pdf" element={<ChatWithPDF />} />
               <Route path="case-search" element={<CaseSearch />} />
               <Route path="legal-workflow" element={<LegalWorkflow />} />
+              
+              {/* Library Routes */}
+              <Route path="library" element={<LibraryDashboard />} />
+              <Route path="library/bare-acts" element={<BareActs />} />
+              <Route path="library/acts/:actId" element={<ActDetails />} />
+              <Route path="library/judgments" element={<Judgments />} />
+              <Route path="library/bookmarks" element={<Bookmarks />} />
+              <Route path="library/notes" element={<Notes />} />
+              <Route path="library/forms" element={<Forms />} />
+              <Route path="library/dictionary" element={<Dictionary />} />
+
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
               <Route path="notifications" element={<Notifications />} />
