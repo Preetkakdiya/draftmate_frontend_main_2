@@ -1,8 +1,11 @@
 """Database helpers for the translator service."""
 
 import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+load_dotenv()
 
 def _get_database_url() -> str:
     return (
