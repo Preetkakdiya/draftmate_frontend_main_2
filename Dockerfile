@@ -2,7 +2,7 @@
 FROM node:20-slim AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --prefer-offline --no-audit --progress=false
 COPY index.html vite.config.js eslint.config.js ./
 COPY src/ src/
 COPY public/ public/
@@ -26,8 +26,8 @@ ENV HF_ENDPOINT=https://hf-mirror.com
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies, supervisor, and nginx
-RUN apt-get update && apt-get install -y \
+# Install system dependencies, supervisor, and nginx (no-install-recommends)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpoppler-cpp-dev \
     pkg-config \
@@ -38,32 +38,17 @@ RUN apt-get update && apt-get install -y \
     wkhtmltopdf \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip to minimize connection issues
-RUN pip install --upgrade pip
+# Copy requirements first to leverage Docker layer caching
+COPY requirements_base.txt requirements.txt ./
 
-# Install heavy dependencies first with increased retries and timeout
-RUN pip install --default-timeout=3000 --no-cache-dir --retries 10 \
-    numpy \
-    grpcio \
-    grpcio-status \
-    opencv-python-headless \
-    faiss-cpu \
-    sqlalchemy \
-    psycopg2-binary
-
-# Install Base Python dependencies (Cached Layer)
-COPY requirements_base.txt .
-RUN pip install --default-timeout=3000 --no-cache-dir --retries 10 -r requirements_base.txt
-
-# Install CPU-only PyTorch and heavy ML libraries
-# We install torch first from the CPU index, then easyocr/sentence-transformers
-RUN pip install --default-timeout=3000 --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-RUN pip install --default-timeout=3000 --no-cache-dir easyocr sentence-transformers
-
-# Install Remaining Python dependencies
-COPY requirements.txt .
-RUN pip install --default-timeout=3000 --no-cache-dir -r requirements.txt
+# Upgrade pip and install Python dependencies in a single cached layer.
+# Note: we avoid `--no-cache-dir` here to allow pip caching between builds (faster rebuilds,
+# at the cost of larger image). If you prefer smaller images, re-add `--no-cache-dir`.
+RUN pip install --upgrade pip && \
+    pip install --default-timeout=3000 --retries 10 -r requirements_base.txt && \
+    pip install --default-timeout=3000 --retries 10 torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --default-timeout=3000 --retries 10 easyocr sentence-transformers && \
+    pip install --default-timeout=3000 --retries 10 -r requirements.txt
 
 # Copy all backend code (including pre-downloaded models if present)
 COPY backend/ backend/
