@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_CLIENT_ID=${VITE_CLIENT_ID}
+    ports:
+      - "8080:8080"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-lex_bot_db}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-lex_bot_db}
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - IKApi=${IKApi}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - EMBED_MODEL=${EMBED_MODEL:-/app/backend/models/embedding}
+      - RERANK_MODEL=${RERANK_MODEL:-/app/backend/models/rerank}
+      - EASYOCR_MODULE_PATH=${EASYOCR_MODULE_PATH:-/app/backend/models/easyocr}
+      - MEM0_ENABLED=${MEM0_ENABLED}
+      - SESSION_CACHE_TTL=${SESSION_CACHE_TTL}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT}
+      - JWT_SECRET=${JWT_SECRET}
+      - QDRANT_HOST=qdrant
+      - AUTH_SERVICE_URL=http://127.0.0.1:8009
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - FRONTEND_URL_DEV=${FRONTEND_URL_DEV}
+      - FRONTEND_URL_PROD=${FRONTEND_URL_PROD}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+    depends_on:
+      - db
+      - qdrant
+
+  db:
+    image: ankane/pgvector:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  postgres_data:
+  qdrant_data:

@@ -313,7 +313,7 @@ def login(user: UserLogin):
         
         user_id, stored_hash = result
         
-        if not verify_password(user.password, stored_hash):
+        if not stored_hash or not verify_password(user.password, stored_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # Create Session

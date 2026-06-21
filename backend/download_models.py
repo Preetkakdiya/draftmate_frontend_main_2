@@ -1,7 +1,16 @@
 import os
+import sys
 import urllib.request
 import zipfile
 from huggingface_hub import snapshot_download
+
+def safe_snapshot_download(**kwargs):
+    try:
+        snapshot_download(**kwargs)
+    except Exception as e:
+        print(f"⚠️ Warning: failed to download {kwargs.get('repo_id', '')}: {e}")
+        return False
+    return True
 
 def download_models():
     # Define paths relative to this script
@@ -15,21 +24,27 @@ def download_models():
 
     # 1. Embedding Model
     print(f"⬇️ Downloading embedding model to: {embed_path}")
-    snapshot_download(
+    ok = safe_snapshot_download(
         repo_id="sentence-transformers/all-MiniLM-L6-v2",
         local_dir=embed_path,
         local_dir_use_symlinks=False
     )
-    print("✅ Embedding model download complete.")
+    if ok:
+        print("✅ Embedding model download complete.")
+    else:
+        print("⚠️ Embedding model not available locally; continuing without it.")
 
     # 2. Rerank Model
     print(f"⬇️ Downloading rerank model to: {rerank_path}")
-    snapshot_download(
+    ok = safe_snapshot_download(
         repo_id="cross-encoder/ms-marco-MiniLM-L-6-v2",
         local_dir=rerank_path,
         local_dir_use_symlinks=False
     )
-    print("✅ Rerank model download complete.")
+    if ok:
+        print("✅ Rerank model download complete.")
+    else:
+        print("⚠️ Rerank model not available locally; continuing without it.")
 
     # 3. EasyOCR Models
     print(f"⬇️ Downloading EasyOCR models to: {easyocr_path}")
@@ -43,18 +58,27 @@ def download_models():
 
     for filename, url in easyocr_urls.items():
         dest_zip = os.path.join(easyocr_path, filename)
-        if not os.path.exists(dest_zip.replace(".zip", ".pth")):
-            print(f"Downloading {filename}...")
-            urllib.request.urlretrieve(url, dest_zip)
-            print(f"Extracting {filename}...")
-            with zipfile.ZipFile(dest_zip, 'r') as zip_ref:
-                zip_ref.extractall(easyocr_path)
-            os.remove(dest_zip)
-            print(f"✅ {filename} extracted.")
-        else:
-            print(f"EasyOCR model {filename} already exists.")
+        try:
+            if not os.path.exists(dest_zip.replace(".zip", ".pth")):
+                print(f"Downloading {filename}...")
+                urllib.request.urlretrieve(url, dest_zip)
+                print(f"Extracting {filename}...")
+                with zipfile.ZipFile(dest_zip, 'r') as zip_ref:
+                    zip_ref.extractall(easyocr_path)
+                os.remove(dest_zip)
+                print(f"✅ {filename} extracted.")
+            else:
+                print(f"EasyOCR model {filename} already exists.")
+        except Exception as e:
+            print(f"⚠️ Warning: failed to download/extract {filename}: {e}")
+            continue
 
-    print("✅ All models downloaded successfully.")
+    print("✅ Model download step finished (some models may be missing).")
 
 if __name__ == "__main__":
-    download_models()
+    try:
+        download_models()
+    except Exception as e:
+        print(f"⚠️ Warning: download_models raised an unexpected error: {e}")
+        # Do not fail the process in build stage — models can be provided at runtime
+        sys.exit(0)
