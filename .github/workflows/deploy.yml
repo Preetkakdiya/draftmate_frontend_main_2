@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - DockerAuto
+      - dockerauto
   workflow_dispatch:
 
 env:
