@@ -17,7 +17,7 @@ const VideoLinks = () => {
     try {
       const data = await videoLinksService.getLinks();
       setLinks(data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load video links');
     } finally {
       setLoading(false);
@@ -30,7 +30,7 @@ const VideoLinks = () => {
         await videoLinksService.deleteLink(id);
         toast.success('Video link deleted');
         loadLinks();
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete video link');
       }
     }
@@ -343,7 +343,7 @@ const VideoLinkModal = ({ link, onClose, onSave }) => {
         toast.success('Video link added');
       }
       onSave();
-    } catch (err) {
+    } catch {
       toast.error('Failed to save video link');
     }
   };
