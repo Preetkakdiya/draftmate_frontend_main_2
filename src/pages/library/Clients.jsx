@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { clientService } from '../../services/library/clientService';
@@ -12,11 +12,7 @@ const Clients = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
 
-  useEffect(() => {
-    loadClients();
-  }, []);
-
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     try {
       const data = await clientService.getClients();
       setClients(data);
@@ -26,7 +22,11 @@ const Clients = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadClients();
+  }, [loadClients]);
 
   const handleSearch = (query) => {
     setSearchQuery(query);

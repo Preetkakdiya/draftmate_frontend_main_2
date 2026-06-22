@@ -33,6 +33,10 @@ import HearingDetails from './pages/library/HearingDetails';
 import VideoLinks from './pages/library/VideoLinks';
 import Clients from './pages/library/Clients';
 import ClientDetails from './pages/library/ClientDetails';
+import Cases from './pages/library/Cases';
+import CaseDetails from './pages/library/CaseDetails';
+import CaseTracking from './pages/library/CaseTracking';
+import CaseTrackingDetails from './pages/library/CaseTrackingDetails';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -181,6 +185,10 @@ function App() {
               <Route path="library/video-links" element={<VideoLinks />} />
               <Route path="library/clients" element={<Clients />} />
               <Route path="library/clients/:clientId" element={<ClientDetails />} />
+              <Route path="library/cases" element={<Cases />} />
+              <Route path="library/cases/:caseId" element={<CaseDetails />} />
+              <Route path="library/case-tracking" element={<CaseTracking />} />
+              <Route path="library/case-tracking/:trackingId" element={<CaseTrackingDetails />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />

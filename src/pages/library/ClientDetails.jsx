@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { clientService } from '../../services/library/clientService';
@@ -12,11 +12,7 @@ const ClientDetails = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
 
-  useEffect(() => {
-    loadClient();
-  }, [clientId]);
-
-  const loadClient = async () => {
+  const loadClient = useCallback(async () => {
     try {
       const data = await clientService.getClientById(clientId);
       setClient(data);
@@ -25,7 +21,11 @@ const ClientDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadClient();
+  }, [loadClient]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this client?')) {
