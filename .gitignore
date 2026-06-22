@@ -26,6 +26,7 @@ venv/
 env/
 .env
 apprunner_config.json
+new-task-def.json
 
 LEXBOT_LATENCY_ANALYSIS.md
 UPGRADE_PLAN.md
