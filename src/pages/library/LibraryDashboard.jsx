@@ -72,6 +72,13 @@ const libraryCards = [
     description: 'Manage virtual court hearing links and one-click join.',
     color: 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400',
   },
+  {
+    title: 'Clients',
+    icon: 'group',
+    path: '/dashboard/library/clients',
+    description: 'Manage your client relationships and CRM.',
+    color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400',
+  },
 ];
 
 const LibraryDashboard = () => {

@@ -31,6 +31,8 @@ import EventDetails from './pages/library/EventDetails';
 import Hearings from './pages/library/Hearings';
 import HearingDetails from './pages/library/HearingDetails';
 import VideoLinks from './pages/library/VideoLinks';
+import Clients from './pages/library/Clients';
+import ClientDetails from './pages/library/ClientDetails';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -177,6 +179,8 @@ function App() {
               <Route path="library/hearings" element={<Hearings />} />
               <Route path="library/hearings/:hearingId" element={<HearingDetails />} />
               <Route path="library/video-links" element={<VideoLinks />} />
+              <Route path="library/clients" element={<Clients />} />
+              <Route path="library/clients/:clientId" element={<ClientDetails />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
