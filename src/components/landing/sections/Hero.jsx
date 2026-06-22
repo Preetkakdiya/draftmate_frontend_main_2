@@ -190,7 +190,7 @@ function FloatingCard({ icon: Icon, label, sub, delay, pos }) {
       }}
     >
       <div
-        className="surface-card rounded-2xl px-4 py-3 flex items-center gap-3 w-[178px] card-lift cursor-default select-none"
+        className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(37,99,235,0.12)] rounded-2xl px-4 py-3 flex items-center gap-3 w-[178px] cursor-default select-none hover:shadow-[0_12px_40px_rgba(37,99,235,0.2)] transition-shadow duration-300"
       >
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"

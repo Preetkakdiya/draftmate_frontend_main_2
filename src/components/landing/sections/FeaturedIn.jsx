@@ -104,16 +104,16 @@ export default function FeaturedIn() {
       <div className="container-xl px-5 md:px-10 mt-12">
         <ScrollReveal delay={200}>
           <div className="flex justify-center">
-            <div className="surface-card rounded-2xl px-8 py-5 flex items-center gap-5 card-lift">
-              <div className="flex items-center gap-4">
+            <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-[32px] px-10 py-6 flex items-center gap-6 shadow-[0_12px_40px_rgba(15,28,46,0.06)] hover:shadow-[0_12px_40px_rgba(37,99,235,0.08)] transition-all duration-300">
+              <div className="flex items-center gap-5">
                 <img
                   src="/Lawjurist.jpeg"
                   alt="LawJurist"
                   className="w-[120px] h-[40px]"
                 />
 
-                <div>
-                  <h3 className="font-bold text-lg">
+                <div className="flex flex-col justify-center">
+                  <h3 className="font-black text-xl text-[#0F1C2E] leading-tight">
                     Backed by the Law Jurist
                   </h3>
 

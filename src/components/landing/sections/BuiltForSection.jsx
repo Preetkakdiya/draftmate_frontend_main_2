@@ -40,22 +40,22 @@ export default function BuiltForSection() {
             <ScrollReveal key={p.title} delay={i * 100}>
               <div
                 className="
-                    surface-card
-                    rounded-2xl
-                    p-7
-                    card-lift
+                    bg-white
+                    rounded-[24px]
+                    p-8
                     group
                     transition-all
                     duration-500
                     ease-out
                     hover:-translate-y-2
-                    hover:shadow-[0_20px_50px_rgba(37,99,235,0.15)]
+                    shadow-[0_4px_24px_rgba(15,28,46,0.04)]
+                    hover:shadow-[0_20px_50px_rgba(37,99,235,0.12)]
                     hover:bg-gradient-to-br
-                    hover:from-blue-50
+                    hover:from-blue-50/50
                     hover:to-white
                     border
-                    border-transparent
-                    hover:border-blue-100
+                    border-slate-200/80
+                    hover:border-blue-200
                     relative overflow-hidden
                   "
               >
