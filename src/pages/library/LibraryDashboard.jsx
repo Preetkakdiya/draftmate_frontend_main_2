@@ -65,6 +65,13 @@ const libraryCards = [
     description: 'Manage your hearings with timeline view and complete litigation tracking.',
     color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
   },
+  {
+    title: 'Video Links',
+    icon: 'videocam',
+    path: '/dashboard/library/video-links',
+    description: 'Manage virtual court hearing links and one-click join.',
+    color: 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400',
+  },
 ];
 
 const LibraryDashboard = () => {

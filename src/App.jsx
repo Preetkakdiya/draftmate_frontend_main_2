@@ -30,6 +30,7 @@ import Calendar from './pages/library/Calendar';
 import EventDetails from './pages/library/EventDetails';
 import Hearings from './pages/library/Hearings';
 import HearingDetails from './pages/library/HearingDetails';
+import VideoLinks from './pages/library/VideoLinks';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -175,6 +176,7 @@ function App() {
               <Route path="library/calendar/:eventId" element={<EventDetails />} />
               <Route path="library/hearings" element={<Hearings />} />
               <Route path="library/hearings/:hearingId" element={<HearingDetails />} />
+              <Route path="library/video-links" element={<VideoLinks />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
