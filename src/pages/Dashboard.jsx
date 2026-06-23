@@ -57,24 +57,32 @@ const Dashboard = () => {
             if (saved) setUserProfile(JSON.parse(saved));
         };
 
-        const handleDraftUpdate = () => {
+        const handleDraftUpdate = async () => {
             try {
-                const savedDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
-                const sortedDrafts = [...savedDrafts].sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
-
-                const processedDrafts = sortedDrafts.map((draft) => {
+                const token = localStorage.getItem('session_id');
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/list`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error("Failed to load drafts from database.");
+                }
+                const data = await response.json();
+                const savedDrafts = data.drafts || [];
+                const processedDrafts = savedDrafts.map((draft) => {
                     const status = draft.status || 'In progress';
                     const trackingParams = draft.trackingParams || {
                         documentKey: draft.documentKey || draft.id || '',
-                        filename: ensureDocxFilename(draft.filename || draft.name || draft.title || 'Untitled Draft'),
-                        source: draft.source || 'local_draft',
+                        filename: ensureDocxFilename(draft.filename || draft.name || 'Untitled Draft'),
+                        source: draft.source || 'db_draft',
                         folderId: draft.folderId ?? null,
                     };
 
                     return {
                         id: draft.id,
-                        title: draft.name || draft.title || trackingParams.filename || 'Untitled Draft',
-                        filename: ensureDocxFilename(draft.filename || draft.name || draft.title || trackingParams.filename || 'Untitled Draft'),
+                        title: draft.name || trackingParams.filename || 'Untitled Draft',
+                        filename: ensureDocxFilename(draft.filename || draft.name || trackingParams.filename || 'Untitled Draft'),
                         documentKey: draft.documentKey || draft.id || trackingParams.documentKey || '',
                         modified: new Date(draft.lastModified || Date.now()).toLocaleDateString('en-US', {
                             month: 'short',
@@ -86,8 +94,8 @@ const Dashboard = () => {
                         statusColor: buildStatusColor(status),
                         content: draft.content,
                         placeholders: draft.placeholders,
-                        rawName: draft.name || draft.title,
-                        onlyofficeConfig: draft.onlyofficeConfig || draft.workspaceConfig || null,
+                        rawName: draft.name,
+                        onlyofficeConfig: draft.onlyofficeConfig || null,
                         variablesDetected: draft.variablesDetected || [],
                         trackingParams,
                     };
@@ -136,30 +144,7 @@ const Dashboard = () => {
     };
 
     const saveDeskDraftRecord = (record) => {
-        const savedDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
-        const nextRecord = {
-            ...record,
-            id: record.id || record.documentKey || Date.now().toString(),
-            name: record.name || record.filename || record.title || 'Untitled Draft',
-            filename: ensureDocxFilename(record.filename || record.name || record.title || 'Untitled Draft'),
-            documentKey: record.documentKey || record.id || '',
-            lastModified: record.lastModified || new Date().toISOString(),
-            status: record.status || 'In progress',
-            trackingParams: record.trackingParams || {
-                source: record.source || 'dashboard',
-                documentKey: record.documentKey || record.id || '',
-                filename: ensureDocxFilename(record.filename || record.name || record.title || 'Untitled Draft'),
-                updatedAt: record.lastModified || new Date().toISOString(),
-                folderId: record.folderId ?? null,
-            },
-        };
-
-        const updatedDrafts = [
-            ...savedDrafts.filter((draft) => String(draft.id) !== String(nextRecord.id)),
-            nextRecord,
-        ];
-
-        localStorage.setItem('my_drafts', JSON.stringify(updatedDrafts));
+        // Trigger page refresh to reload drafts from backend PostgreSQL DB
         window.dispatchEvent(new Event('my_drafts_updated'));
     };
 
@@ -187,20 +172,7 @@ const Dashboard = () => {
     };
 
     const handleEditDraft = (draft) => {
-        navigate('/dashboard/editor', {
-            state: {
-                htmlContent: draft.content,
-                placeholders: draft.placeholders || [],
-                uploadDetails: `Draft: ${draft.rawName}`,
-                isEmpty: false,
-                isSavedDraft: true,
-                id: draft.id,
-                documentKey: draft.documentKey || draft.id,
-                filename: draft.filename || draft.title || draft.rawName,
-                onlyofficeConfig: draft.onlyofficeConfig || null,
-                variablesDetected: draft.variablesDetected || [],
-            },
-        });
+        handleWorkspaceDraftOpen(draft);
     };
 
     const handleWorkspaceDraftOpen = (draft) => {
@@ -214,6 +186,8 @@ const Dashboard = () => {
 
         navigate('/dashboard/workspace', {
             state: {
+                draftId: draft.id,
+                id: draft.id,
                 documentKey,
                 filename,
                 onlyofficeConfig,

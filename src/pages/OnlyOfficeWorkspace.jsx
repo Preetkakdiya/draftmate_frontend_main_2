@@ -56,6 +56,14 @@ const OnlyOfficeWorkspace = () => {
   const [sidebarWidth, setSidebarWidth] = useState(360);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Dynamic config and sharing states
+  const [dynamicConfig, setDynamicConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareAccess, setShareAccess] = useState('edit');
+  const [isSharing, setIsSharing] = useState(false);
+
   const startResize = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -107,17 +115,42 @@ const OnlyOfficeWorkspace = () => {
     };
   }, [location]);
 
-  useEffect(() => {
-    const missing = [];
-    if (!documentKey) missing.push('documentKey');
-    if (!filename) missing.push('filename');
-    if (!onlyofficeConfig) missing.push('onlyofficeConfig');
+  const draftId = useMemo(() => {
+    return location?.state?.draftId || location?.state?.id;
+  }, [location]);
 
-    if (missing.length > 0) {
-      toast.error(`ONLYOFFICE workspace is missing required state: ${missing.join(', ')}`);
+  useEffect(() => {
+    const fetchConfig = async () => {
+      if (!draftId) return;
+      setConfigLoading(true);
+      try {
+        const token = localStorage.getItem('session_id');
+        const resp = await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/config/${draftId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
+        if (resp.ok) {
+          const config = await resp.json();
+          setDynamicConfig(config);
+        } else {
+          console.error("Failed to load dynamic draft config from backend, falling back to state config.");
+        }
+      } catch (err) {
+        console.error("Error fetching draft config:", err);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, [draftId]);
+
+  useEffect(() => {
+    if (!draftId && (!documentKey || !filename || !onlyofficeConfig)) {
+      toast.error("ONLYOFFICE workspace is missing required state.");
       navigate('/dashboard', { replace: true });
     }
-  }, [documentKey, filename, onlyofficeConfig, navigate]);
+  }, [draftId, documentKey, filename, onlyofficeConfig, navigate]);
 
   useEffect(() => {
     const existingApi = window?.DocsAPI?.DocEditor;
@@ -149,9 +182,11 @@ const OnlyOfficeWorkspace = () => {
     };
   }, [navigate]);
 
+  const activeConfig = dynamicConfig || onlyofficeConfig;
+
   useEffect(() => {
     if (!docsApiReady) return;
-    if (!onlyofficeConfig) return;
+    if (!activeConfig) return;
 
     const mount = document.getElementById('onlyoffice-canvas-target-node');
     if (!mount) return;
@@ -176,14 +211,14 @@ const OnlyOfficeWorkspace = () => {
     }
 
     const nextConfig = {
-      ...onlyofficeConfig,
+      ...activeConfig,
       editorConfig: {
-        ...(onlyofficeConfig?.editorConfig || {}),
+        ...(activeConfig?.editorConfig || {}),
         customization: {
-          ...(onlyofficeConfig?.editorConfig?.customization || {}),
-          forcesave: true,
-          chat: false,
+          chat: true,
           uiTheme: 'theme-light',
+          ...(activeConfig?.editorConfig?.customization || {}),
+          forcesave: true,
           logo: {
             image: '',
             imageDark: '',
@@ -198,10 +233,10 @@ const OnlyOfficeWorkspace = () => {
         },
       },
       events: {
-        ...(onlyofficeConfig?.events || {}),
+        ...(activeConfig?.events || {}),
         onDocumentReady: (...args) => {
           try {
-            const existing = onlyofficeConfig?.events?.onDocumentReady;
+            const existing = activeConfig?.events?.onDocumentReady;
             if (typeof existing === 'function') existing(...args);
           } finally {
             setIsCanvasLoading(false);
@@ -228,7 +263,7 @@ const OnlyOfficeWorkspace = () => {
         }
       }
     };
-  }, [docsApiReady, onlyofficeConfig, navigate]);
+  }, [docsApiReady, activeConfig, navigate]);
 
   const clearCaseState = () => {
     pendingSelectionActionRef.current = null;
@@ -787,6 +822,46 @@ const OnlyOfficeWorkspace = () => {
     );
   };
 
+  const handleShareDraft = async (e) => {
+    e.preventDefault();
+    if (!shareEmail.trim()) return;
+
+    setIsSharing(true);
+    try {
+      const token = localStorage.getItem('session_id');
+      const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          draft_id: draftId,
+          email: shareEmail.trim(),
+          access_level: shareAccess,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(`Draft shared successfully with ${shareEmail}`);
+        setIsShareModalOpen(false);
+        setShareEmail('');
+      } else {
+        toast.error(data.detail || 'Failed to share draft.');
+      }
+    } catch (error) {
+      console.error('Error sharing draft:', error);
+      toast.error('Failed to share draft.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const downloadUrl = draftId 
+    ? `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${draftId}/${filename || 'document.docx'}` 
+    : `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${filename || 'document.docx'}`;
+
   return (
     <div className="flex h-[calc(100vh-0px)] w-full bg-[#E3F0F7] text-slate-800 overflow-hidden relative">
       {/* Left 70% Area: Header and ONLYOFFICE Iframe */}
@@ -798,10 +873,21 @@ const OnlyOfficeWorkspace = () => {
               <div className="font-bold text-slate-800 truncate">{filename || 'Untitled'}</div>
             </div>
             <div className="flex items-center gap-2">
+              {draftId && (
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  title="Share Document / Collaborate"
+                >
+                  <span className="material-symbols-outlined text-base">share</span>
+                  <span>Share</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
-                  window.open(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${filename || documentKey + '.docx'}`, '_blank');
+                  window.open(downloadUrl, '_blank');
                 }}
                 className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center"
                 title="Download"
@@ -1175,6 +1261,87 @@ const OnlyOfficeWorkspace = () => {
       </div>
       {isDragging && (
         <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
+      )}
+
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 border border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-500 text-xl">share</span>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Invite Collaborator</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsShareModalOpen(false);
+                  setShareEmail('');
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleShareDraft} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Collaborator Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-550 text-sm"
+                  placeholder="e.g. colleague@firm.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Permission Level
+                </label>
+                <select
+                  value={shareAccess}
+                  onChange={(e) => setShareAccess(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-550 text-sm"
+                >
+                  <option value="edit">Can Edit (Co-author)</option>
+                  <option value="read">Can Read (View only)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsShareModalOpen(false);
+                    setShareEmail('');
+                  }}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-355 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSharing || !shareEmail.trim()}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  {isSharing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Sharing...</span>
+                    </>
+                  ) : (
+                    <span>Invite</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

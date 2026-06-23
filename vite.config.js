@@ -19,18 +19,41 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/lexbot/, '')
       },
-      '/query': {
-        target: 'http://localhost',
-        changeOrigin: true
+      '/auth': {
+        target: 'http://localhost:8009',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/auth/, '')
       },
-      '/api': {
-        target: 'http://localhost',
-        changeOrigin: true
+      '/query': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/query/, '')
+      },
+      '/converter': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/converter/, '')
+      },
+      '/pdf': {
+        target: 'http://localhost:8005',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/pdf/, '')
+      },
+      '/notification': {
+        target: 'http://localhost:8015',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/notification/, '')
+      },
+      '/case_search': {
+        target: 'http://localhost:8006',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/case_search/, '')
       },
       '/onlyoffice': {
-        target: 'http://localhost',
+        target: 'http://localhost:8081',
         changeOrigin: true,
-        ws: true
+        ws: true,
+        rewrite: (path) => path.replace(/^\/onlyoffice/, '')
       }
     }
   }

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { API_CONFIG } from '../services/endpoints';
 import DateTimelineModal from '../components/DateTimelineModal';
 
 const MyDrafts = () => {
@@ -17,46 +19,66 @@ const MyDrafts = () => {
     const [folderNameInput, setFolderNameInput] = useState('');
     const [isDraggingOverId, setIsDraggingOverId] = useState(null);
 
-    useEffect(() => {
-        // Load drafts from localStorage
-        const savedDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
-        const savedFolders = JSON.parse(localStorage.getItem('my_folders') || '[]');
-
-        // ensure drafts have folderId if missing
-        const validatedDrafts = savedDrafts.map(d => ({ ...d, folderId: d.folderId || null }));
-
-        setDrafts(validatedDrafts);
-        setFolders(savedFolders);
-    }, []);
-
-    const saveDraftsAndFolders = (newDrafts, newFolders) => {
-        if (newDrafts) {
-            setDrafts(newDrafts);
-            localStorage.setItem('my_drafts', JSON.stringify(newDrafts));
-        }
-        if (newFolders) {
-            setFolders(newFolders);
-            localStorage.setItem('my_folders', JSON.stringify(newFolders));
+    const fetchDraftsAndFolders = async () => {
+        try {
+            const token = localStorage.getItem('session_id');
+            const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/list`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setDrafts(data.drafts || []);
+                setFolders(data.folders || []);
+            } else {
+                toast.error("Failed to load drafts from database.");
+            }
+        } catch (error) {
+            console.error("Error fetching drafts:", error);
+            toast.error("Error connecting to drafts service.");
         }
     };
 
-    const handleDeleteDraft = (id, e) => {
+    useEffect(() => {
+        fetchDraftsAndFolders();
+    }, []);
+
+    const handleDeleteDraft = async (id, e) => {
         e.stopPropagation();
         if (window.confirm('Are you sure you want to delete this draft?')) {
-            const updatedDrafts = drafts.filter(draft => draft.id !== id);
-            saveDraftsAndFolders(updatedDrafts, null);
+            try {
+                const token = localStorage.getItem('session_id');
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ id }),
+                });
+                if (response.ok) {
+                    setDrafts(prev => prev.filter(draft => draft.id !== id));
+                    toast.success("Draft deleted successfully.");
+                } else {
+                    toast.error("Failed to delete draft.");
+                }
+            } catch (error) {
+                console.error("Error deleting draft:", error);
+                toast.error("Failed to delete draft.");
+            }
         }
     };
 
     const handleOpenDraft = (draft) => {
-        navigate('/dashboard/editor', {
+        navigate('/dashboard/workspace', {
             state: {
-                htmlContent: draft.content,
-                placeholders: draft.placeholders || [],
-                uploadDetails: `Draft: ${draft.name}`,
-                isEmpty: false,
-                isSavedDraft: true,
-                id: draft.id
+                draftId: draft.id,
+                id: draft.id,
+                filename: draft.filename || draft.name,
+                documentKey: draft.documentKey || draft.id,
+                variablesDetected: draft.variablesDetected || [],
+                onlyofficeConfig: draft.onlyofficeConfig || null,
             }
         });
     };
@@ -73,41 +95,77 @@ const MyDrafts = () => {
         setIsFolderModalOpen(true);
     };
 
-    const handleSaveFolder = () => {
+    const handleSaveFolder = async () => {
         if (!folderNameInput.trim()) return;
 
-        let updatedFolders;
-        if (editingFolderId) {
-            updatedFolders = folders.map(f =>
-                f.id === editingFolderId ? { ...f, name: folderNameInput.trim() } : f
-            );
-        } else {
-            const newFolder = {
-                id: 'folder_' + Date.now(),
-                name: folderNameInput.trim(),
-                createdAt: new Date().toISOString()
-            };
-            updatedFolders = [...folders, newFolder];
+        const token = localStorage.getItem('session_id');
+        try {
+            if (editingFolderId) {
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/folder/rename`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ id: editingFolderId, name: folderNameInput.trim() }),
+                });
+                if (response.ok) {
+                    setFolders(prev => prev.map(f => f.id === editingFolderId ? { ...f, name: folderNameInput.trim() } : f));
+                    toast.success("Folder renamed successfully.");
+                } else {
+                    toast.error("Failed to rename folder.");
+                }
+            } else {
+                const newFolderId = 'folder_' + Date.now();
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/folder/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ id: newFolderId, name: folderNameInput.trim() }),
+                });
+                if (response.ok) {
+                    setFolders(prev => [...prev, { id: newFolderId, name: folderNameInput.trim(), createdAt: new Date().toISOString() }]);
+                    toast.success("Folder created successfully.");
+                } else {
+                    toast.error("Failed to create folder.");
+                }
+            }
+        } catch (error) {
+            console.error("Error saving folder:", error);
+            toast.error("Error saving folder.");
         }
-
-        saveDraftsAndFolders(null, updatedFolders);
         setIsFolderModalOpen(false);
         setFolderNameInput('');
     };
 
-    const handleDeleteFolder = (id, e) => {
+    const handleDeleteFolder = async (id, e) => {
         e.stopPropagation();
         if (window.confirm('Are you sure you want to delete this folder? All drafts inside will be moved to root.')) {
-            const updatedFolders = folders.filter(f => f.id !== id);
-
-            // Move drafts out of folder
-            const updatedDrafts = drafts.map(d =>
-                d.folderId === id ? { ...d, folderId: null } : d
-            );
-
-            saveDraftsAndFolders(updatedDrafts, updatedFolders);
-            if (currentFolder === id) {
-                setCurrentFolder(null); // return to root if deleting current folder
+            try {
+                const token = localStorage.getItem('session_id');
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/folder/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ id }),
+                });
+                if (response.ok) {
+                    setFolders(prev => prev.filter(f => f.id !== id));
+                    setDrafts(prev => prev.map(d => d.folderId === id ? { ...d, folderId: null } : d));
+                    if (currentFolder === id) {
+                        setCurrentFolder(null);
+                    }
+                    toast.success("Folder deleted successfully.");
+                } else {
+                    toast.error("Failed to delete folder.");
+                }
+            } catch (error) {
+                console.error("Error deleting folder:", error);
+                toast.error("Failed to delete folder.");
             }
         }
     };
@@ -126,25 +184,36 @@ const MyDrafts = () => {
         setIsDraggingOverId(null);
     };
 
-    const handleDrop = (e, targetFolderId) => {
+    const handleDrop = async (e, targetFolderId) => {
         e.preventDefault();
         setIsDraggingOverId(null);
 
         const draftId = e.dataTransfer.getData('draftId');
         if (!draftId) return;
 
-        // Verify it isn't moving to the same folder
         const existingDraft = drafts.find(d => String(d.id) === String(draftId));
         if (existingDraft && existingDraft.folderId === targetFolderId) return;
 
-        const updatedDrafts = drafts.map(d => {
-            if (String(d.id) === String(draftId)) {
-                return { ...d, folderId: targetFolderId };
+        try {
+            const token = localStorage.getItem('session_id');
+            const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ id: draftId, folder_id: targetFolderId || "null" }),
+            });
+            if (response.ok) {
+                setDrafts(prev => prev.map(d => String(d.id) === String(draftId) ? { ...d, folderId: targetFolderId } : d));
+                toast.success("Draft moved successfully.");
+            } else {
+                toast.error("Failed to move draft.");
             }
-            return d;
-        });
-
-        saveDraftsAndFolders(updatedDrafts, null);
+        } catch (error) {
+            console.error("Error moving draft:", error);
+            toast.error("Failed to move draft.");
+        }
     };
 
     // --- Rendering Helpers ---

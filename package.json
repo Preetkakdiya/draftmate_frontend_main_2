@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "dev:all": "concurrently \"npm run dev\" \"cd backend/Deep_research && uvicorn lex_bot.app:app --host 0.0.0.0 --port 8004\" \"cd backend/Drafter && uvicorn Drafter:app --host 0.0.0.0 --port 8003\""
+    "dev:all": "concurrently \"npm run dev\" \"cd backend/Deep_research && ..\\..\\.venv\\Scripts\\python.exe -X utf8 -m uvicorn lex_bot.app:app --host 0.0.0.0 --port 8004\" \"cd backend/Drafter && ..\\..\\.venv\\Scripts\\python.exe -X utf8 -m uvicorn Drafter:app --host 0.0.0.0 --port 8003\" \"cd backend/login_db && ..\\..\\.venv\\Scripts\\python.exe -X utf8 -m uvicorn auth:app --host 0.0.0.0 --port 8009\""
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
