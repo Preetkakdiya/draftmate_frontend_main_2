@@ -2,12 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { trackingService } from '../../services/library/trackingService';
+import { ecourtsService } from '../../services/library/ecourtsService';
+import { hearingService } from '../../services/library/hearingService';
 
 const CaseTracking = () => {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCase, setEditingCase] = useState(null);
+  const [isCNRSearchModalOpen, setIsCNRSearchModalOpen] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const loadTrackedCases = useCallback(async () => {
     try {
@@ -36,6 +41,59 @@ const CaseTracking = () => {
     }
   };
 
+  const handleCNRSearch = async (formData) => {
+    setSearchLoading(true);
+    try {
+      const result = await ecourtsService.searchByCNR(formData.cnrNumber);
+      setSearchResult(result);
+    } catch {
+      toast.error('Failed to search for CNR number');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!searchResult) return;
+    
+    try {
+      // Import to tracking
+      await trackingService.createTrackedCase({
+        cnrNumber: searchResult.cnrNumber,
+        caseNumber: searchResult.caseNumber,
+        caseTitle: searchResult.caseTitle,
+        courtEstablishment: searchResult.courtEstablishment,
+        caseStage: searchResult.caseStage,
+        lastUpdated: searchResult.lastUpdated,
+        nextHearingDate: searchResult.nextHearingDate,
+        nextHearingTime: searchResult.nextHearingTime,
+        latestOrder: searchResult.latestOrder?.title || '',
+        latestProceeding: searchResult.latestProceeding || ''
+      });
+      
+      // Import to hearings
+      const hearings = await ecourtsService.fetchHearings(searchResult.cnrNumber);
+      for (const hearing of hearings) {
+        await hearingService.createHearing({
+          caseNumber: searchResult.caseNumber,
+          caseTitle: searchResult.caseTitle,
+          court: searchResult.court,
+          date: hearing.date,
+          time: hearing.time,
+          judge: hearing.judge,
+          status: hearing.status
+        });
+      }
+
+      toast.success('Case imported successfully!');
+      setSearchResult(null);
+      setIsCNRSearchModalOpen(false);
+      loadTrackedCases();
+    } catch {
+      toast.error('Failed to import case');
+    }
+  };
+
   const getStats = () => {
     const tracked = cases.length;
     const recentlyUpdated = cases.filter(c => new Date(c.lastUpdated) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
@@ -57,16 +115,28 @@ const CaseTracking = () => {
               Track cases with e-Courts integration readiness
             </p>
           </div>
-          <button
-            onClick={() => {
-              setEditingCase(null);
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
-          >
-            <span className="material-symbols-outlined">track_changes</span>
-            Track Case
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                setSearchResult(null);
+                setIsCNRSearchModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined">search</span>
+              Track By CNR Number
+            </button>
+            <button
+              onClick={() => {
+                setEditingCase(null);
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined">track_changes</span>
+              Track Case
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -203,6 +273,20 @@ const CaseTracking = () => {
             loadTrackedCases();
             setIsModalOpen(false);
             setEditingCase(null);
+          }}
+        />
+      )}
+
+      {/* CNR Search Modal */}
+      {isCNRSearchModalOpen && (
+        <CNRSearchModal
+          isLoading={searchLoading}
+          searchResult={searchResult}
+          onSearch={handleCNRSearch}
+          onImport={handleImport}
+          onClose={() => {
+            setIsCNRSearchModalOpen(false);
+            setSearchResult(null);
           }}
         />
       )}
@@ -405,6 +489,200 @@ const CaseTrackingModal = ({ trackingCase, onClose, onSave }) => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// CNR Search Modal Component
+const CNRSearchModal = ({ isLoading, searchResult, onSearch, onImport, onClose }) => {
+  const [formData, setFormData] = useState({
+    cnrNumber: '',
+    courtType: 'High Court',
+    state: 'Maharashtra',
+    district: 'Mumbai'
+  });
+
+  const courtTypes = ['Supreme Court', 'High Court', 'District Court', 'Family Court', 'Labour Court'];
+  const states = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu & Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'];
+  const districts = ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad'];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await onSearch(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/50" onClick={onClose}></div>
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Track By CNR Number</h2>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        {!searchResult ? (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                CNR Number
+              </label>
+              <input
+                type="text"
+                value={formData.cnrNumber}
+                onChange={(e) => setFormData({ ...formData, cnrNumber: e.target.value })}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none"
+                placeholder="e.g. DL2501000000012024"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Court Type
+                </label>
+                <select
+                  value={formData.courtType}
+                  onChange={(e) => setFormData({ ...formData, courtType: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none"
+                >
+                  {courtTypes.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  State
+                </label>
+                <select
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none"
+                >
+                  {states.map((state) => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  District
+                </label>
+                <select
+                  value={formData.district}
+                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none"
+                >
+                  {districts.map((district) => (
+                    <option key={district} value={district}>{district}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined">search</span>
+                )}
+                {isLoading ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{searchResult.caseTitle}</h3>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                  {searchResult.cnrNumber}
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                  {searchResult.caseStage}
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                  {searchResult.caseType}
+                </span>
+              </div>
+            </div>
+
+            {/* Case Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Case Status</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{searchResult.caseStage}</p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Petitioner</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{searchResult.petitioner}</p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Respondent</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{searchResult.respondent}</p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Court</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{searchResult.court}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-xs text-blue-500 dark:text-blue-400">Next Hearing</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {searchResult.nextHearingDate ? `${new Date(searchResult.nextHearingDate).toLocaleDateString()} at ${searchResult.nextHearingTime}` : 'Not scheduled'}
+                </p>
+              </div>
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <p className="text-xs text-green-500 dark:text-green-400">Latest Order</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{searchResult.latestOrder?.title}</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg mb-6">
+              <p className="text-xs text-purple-500 dark:text-purple-400">Latest Proceeding</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{searchResult.latestProceeding}</p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setSearchResult(null)}
+                className="px-4 py-2 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                Search Another
+              </button>
+              <button
+                onClick={onImport}
+                className="px-6 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined">download</span>
+                Import To DraftMate
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
