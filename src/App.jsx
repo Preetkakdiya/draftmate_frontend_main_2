@@ -55,6 +55,14 @@ import ComingSoon from './pages/ComingSoon';
 import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
 
+const RequireAuth = ({ children }) => {
+  const profile = localStorage.getItem('user_profile');
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 function App() {
   // Requires a general user session
   const RequireAuth = ({ children }) => {
