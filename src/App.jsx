@@ -11,12 +11,19 @@ import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
 import ChatWithPDF from './pages/ChatWithPDF';
 import CaseSearch from './pages/CaseSearch';
-import TranslateComparePage from './pages/TranslateComparePage';
-import TranslateDocumentPage from './pages/TranslateDocumentPage';
+import LegalWorkflow from './pages/LegalWorkflow';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
 import PaymentStatus from './pages/PaymentStatus';
+
+import AdvocateProfile from './pages/AdvocateProfile';
+import AdvocateDiscovery from './pages/AdvocateDiscovery';
+import AdvocateDashboard from './pages/AdvocateDashboard';
+import AdvocateLogin from './pages/AdvocateLogin';
+import AdvocateSignup from './pages/AdvocateSignup';
+import AdvocateOnboarding from './pages/AdvocateOnboarding';
+import AdminDashboard from './pages/AdminDashboard';
 
 
 // Placeholder for other routes
@@ -57,7 +64,24 @@ const RequireAuth = ({ children }) => {
 };
 
 function App() {
-  // Check if user has onboarded (simple check)
+  // Requires a general user session
+  const RequireAuth = ({ children }) => {
+    const profile = localStorage.getItem('user_profile');
+    if (!profile) {
+      return <Navigate to="/login" replace />;
+    }
+    return children;
+  };
+
+  // Requires a valid advocate JWT specifically
+  const RequireAdvocateAuth = ({ children }) => {
+    const advocateToken = localStorage.getItem('advocate_token');
+    if (!advocateToken) {
+      return <Navigate to="/advocate/login?session_expired=1" replace />;
+    }
+    return children;
+  };
+
   if (!import.meta.env.VITE_CLIENT_ID) {
     return (
       <div className="flex h-screen items-center justify-center bg-red-50 text-red-800 p-4">
@@ -96,6 +120,14 @@ function App() {
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/blogs" element={<ComingSoon title="Blog" />} />
+            <Route path="/advocates" element={<AdvocateDiscovery />} />
+            <Route path="/advocate/login" element={<AdvocateLogin />} />
+            <Route path="/advocate/signup" element={<AdvocateSignup />} />
+            <Route path="/advocate/onboarding" element={
+              <RequireAdvocateAuth><AdvocateOnboarding /></RequireAdvocateAuth>
+            } />
+            <Route path="/advocate/:slug" element={<AdvocateProfile />} />
+            <Route path="/admin/verifications" element={<AdminDashboard />} />
 
             <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
 
@@ -111,11 +143,13 @@ function App() {
               <Route path="research" element={<ResearchChat />} />
               <Route path="chat-pdf" element={<ChatWithPDF />} />
               <Route path="case-search" element={<CaseSearch />} />
-              <Route path="translate-document" element={<TranslateDocumentPage />} />
-              
+              <Route path="legal-workflow" element={<LegalWorkflow />} />
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
               <Route path="notifications" element={<Notifications />} />
+              <Route path="advocate-profile" element={
+                <RequireAdvocateAuth><AdvocateDashboard /></RequireAdvocateAuth>
+              } />
               <Route path="chat" element={<Placeholder title="AI Chat" />} />
               {/* Catch-all relative to dashboard */}
               <Route path="*" element={<Navigate to="/dashboard/home" replace />} />
