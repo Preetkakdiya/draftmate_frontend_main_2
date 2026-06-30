@@ -25,6 +25,8 @@ import AdvocateLogin from './pages/AdvocateLogin';
 import AdvocateSignup from './pages/AdvocateSignup';
 import AdvocateOnboarding from './pages/AdvocateOnboarding';
 import AdminDashboard from './pages/AdminDashboard';
+import TranslateDocumentPage from './pages/TranslateDocumentPage';
+import TranslateComparePage from './pages/TranslateComparePage';
 
 
 // Placeholder for other routes
@@ -154,6 +156,7 @@ function App() {
               <Route path="home" element={<Dashboard />} />
               <Route path="editor" element={<Editor />} />
               <Route path="workspace" element={<OnlyOfficeWorkspace />} />
+              <Route path="translate" element={<TranslateDocumentPage />} />
               <Route path="pdf-editor" element={<PDFEditor />} />
               <Route path="tools" element={<Tools />} />
               <Route path="drafts" element={<MyDrafts />} />

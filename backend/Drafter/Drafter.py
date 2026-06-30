@@ -1,13 +1,22 @@
 import logging
 import os
 from dotenv import load_dotenv
-load_dotenv()
+
+# Walk up and load the workspace root .env if it exists
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_env_path = os.path.abspath(os.path.join(_current_dir, "../..", ".env"))
+if os.path.exists(_env_path):
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
+
+ONLYOFFICE_API_URL = os.getenv("ONLYOFFICE_API_URL", "http://onlyoffice-server")
 
 import logging
 import hashlib
 import json
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 import jwt
@@ -153,11 +162,23 @@ def _safe_basename_from_url(url: str) -> str:
 
 
 def _normalize_download_url(download_source_url: str) -> str:
-    if "localhost" in download_source_url:
-        return download_source_url.replace("localhost", "onlyoffice-server")
-    if "127.0.0.1" in download_source_url:
-        return download_source_url.replace("127.0.0.1", "onlyoffice-server")
-    return download_source_url
+    parsed_source = urlparse(download_source_url)
+    
+    path = parsed_source.path
+    if path.startswith("/onlyoffice/"):
+        path = path.replace("/onlyoffice", "", 1)
+        
+    parsed_internal = urlparse(ONLYOFFICE_API_URL)
+    
+    normalized_url = urlunparse((
+        parsed_internal.scheme or "http",
+        parsed_internal.netloc or "onlyoffice-server",
+        path,
+        parsed_source.params,
+        parsed_source.query,
+        parsed_source.fragment
+    ))
+    return normalized_url
 
 
 def _strip_json_block(text: str) -> str:
@@ -978,6 +999,50 @@ def root():
     return {"service": "drafter-service", "status": "ok"}
 
 
+class VariableSyncRequest(BaseModel):
+    filename: str
+    placeholder_tag: str
+    new_value: str
+
+
+@app.post("/v2/draft/variable/sync")
+async def sync_variable_value(request: VariableSyncRequest, authorization: Optional[str] = Header(default=None)):
+    await verify_token(authorization)
+    
+    shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
+    if not shared_storage_path:
+        raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
+        
+    file_path = os.path.join(shared_storage_path, os.path.basename(request.filename))
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Target document not found.")
+        
+    try:
+        from docx import Document
+        doc = Document(file_path)
+        
+        modified = False
+        body_elements = doc.element.body
+        for sdt in body_elements.findall('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}sdt'):
+            tag_elem = sdt.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tag')
+            if tag_elem is not None and tag_elem.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val') == request.placeholder_tag:
+                t_elements = sdt.findall('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
+                if t_elements:
+                    t_elements[0].text = request.new_value
+                    for extra_t in t_elements[1:]:
+                        extra_t.text = ""
+                    modified = True
+                    
+        if modified:
+            doc.save(file_path)
+            return {"status": "synchronized", "updated": True}
+            
+        return {"status": "unchanged", "updated": False}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"XML modification failed: {str(e)}")
+
+
 @app.get("/v2/draft/serve/{filename}")
 def serve_draft_file(filename: str):
     shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
@@ -999,10 +1064,36 @@ def serve_draft_file(filename: str):
     )
 
 
+@app.get("/v2/draft/serve/{draft_id}/{filename}")
+async def serve_draft(draft_id: str, filename: str):
+    shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
+    if not shared_storage_path:
+        raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
+
+    safe_draft_id = os.path.basename(draft_id.replace("\\", "/"))
+    safe_name = os.path.basename((filename or "").replace("\\", "/"))
+    if not safe_name or not safe_draft_id:
+        raise HTTPException(status_code=400, detail="Invalid path parameter.")
+
+    file_path = os.path.join(shared_storage_path, safe_draft_id, safe_name)
+    if not os.path.isfile(file_path):
+        root_path = os.path.join(shared_storage_path, safe_name)
+        if os.path.isfile(root_path):
+            file_path = root_path
+        else:
+            raise HTTPException(status_code=404, detail="File not found.")
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=safe_name,
+    )
+
+
 @app.post("/v2/draft/compile")
 async def compile_draft(request: DraftCompileRequest, authorization: Optional[str] = Header(default=None)):
     try:
-        await verify_token(authorization)
+        user_id = await verify_token(authorization)
 
         context_parts: List[str] = []
         if request.case_metadata_context:
@@ -1021,30 +1112,79 @@ async def compile_draft(request: DraftCompileRequest, authorization: Optional[st
             legal_documents=request.legal_documents,
             document_type=request.document_type,
         )
+        
+        shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
+        if not shared_storage_path:
+            raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
+
+        import uuid
+        draft_id = str(uuid.uuid4())
+        draft_dir = os.path.join(shared_storage_path, draft_id)
+        os.makedirs(draft_dir, exist_ok=True)
+
         output_path = build_docx_with_controls(ai_data=ai_data, file_target_name=request.file_target_name)
         file_name = os.path.basename(output_path)
+        
+        # Move generated file to the sandboxed path
+        sandboxed_path = os.path.join(draft_dir, file_name)
+        os.rename(output_path, sandboxed_path)
+
+        document_key = hashlib.sha256(draft_id.encode("utf-8")).hexdigest()
+
+        # Copy file to lex_bot upload directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        lex_bot_upload_dir = os.path.abspath(os.path.join(current_dir, "../Deep_research/lex_bot/data/uploads"))
+        os.makedirs(lex_bot_upload_dir, exist_ok=True)
+        lex_bot_path = os.path.join(lex_bot_upload_dir, file_name)
+        with open(sandboxed_path, "rb") as sf:
+            with open(lex_bot_path, "wb") as lf:
+                lf.write(sf.read())
+
+        metadata = ai_data.get("metadata") or {}
+        placeholders_list = metadata.get("placeholders_detected") or []
+
+        # Register draft metadata in PostgreSQL db via auth service
         try:
-            with open(output_path, "rb") as f:
-                file_bytes = f.read()
-            document_key = hashlib.sha256(file_bytes).hexdigest()
-        except Exception:
-            document_key = hashlib.sha256(file_name.encode("utf-8")).hexdigest()
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/register",
+                    json={
+                        "draft_id": draft_id,
+                        "name": request.file_target_name or file_name,
+                        "filename": file_name,
+                        "document_key": document_key,
+                        "created_by": user_id,
+                        "variables_detected": placeholders_list,
+                        "status": "In progress"
+                    },
+                    timeout=10.0
+                )
+        except Exception as reg_err:
+            logger.warning(f"Failed to register draft in DB: {reg_err}")
 
         params: Dict[str, Any] = {
             "document": {
                 "fileType": "docx",
                 "key": document_key,
                 "title": file_name,
-                "url": f"http://drafter-service:8003/v2/draft/serve/{file_name}",
+                "url": f"http://drafter-service:8003/v2/draft/serve/{draft_id}/{file_name}",
                 "permissions": {"edit": True, "download": True, "print": True},
             },
             "documentType": "word",
             "editorConfig": {
-                "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
+                "callbackUrl": f"http://drafter-service:8003/v2/draft/callback/{draft_id}",
                 "mode": "edit",
+                "user": {
+                    "id": user_id,
+                    "name": f"User {user_id[:4]}" if len(user_id) >= 4 else f"User {user_id}"
+                },
+                "coauthoring": {
+                    "mode": "fast",
+                    "change": True
+                },
                 "customization": {
                     "forcesave": True,
-                    "chat": False,
+                    "chat": True,
                     "uiTheme": "theme-light",
                     "logo": {
                         "image": "",
@@ -1052,14 +1192,19 @@ async def compile_draft(request: DraftCompileRequest, authorization: Optional[st
                         "url": ""
                     }
                 },
+                "plugins": {
+                    "autostart": [
+                        "asc.{43d1a84f-e274-4b53-a55e-3363f8db1f34}"
+                    ],
+                    "pluginsData": []
+                }
             },
         }
         params["token"] = _jwt_encode(params)
-        
-        # Include the detected placeholder variables for the frontend workspace side-panel
-        metadata = ai_data.get("metadata") or {}
-        placeholders_list = metadata.get("placeholders_detected") or []
+        params["documentKey"] = document_key
+        params["filename"] = file_name
         params["variablesDetected"] = placeholders_list
+        params["draftId"] = draft_id
 
         return params
     except ValueError as e:
@@ -1072,16 +1217,19 @@ async def compile_draft(request: DraftCompileRequest, authorization: Optional[st
 @app.post("/v2/draft/create")
 async def create_empty_draft(authorization: Optional[str] = Header(default=None)):
     try:
-        await verify_token(authorization)
+        user_id = await verify_token(authorization)
 
         shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
         if not shared_storage_path:
             raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
 
-        os.makedirs(shared_storage_path, exist_ok=True)
+        import uuid
+        draft_id = str(uuid.uuid4())
+        draft_dir = os.path.join(shared_storage_path, draft_id)
+        os.makedirs(draft_dir, exist_ok=True)
 
         file_name = f"Empty_Draft_{int(time.time())}.docx"
-        output_path = os.path.join(shared_storage_path, file_name)
+        output_path = os.path.join(draft_dir, file_name)
 
         from docx import Document
         doc = Document()
@@ -1091,7 +1239,7 @@ async def create_empty_draft(authorization: Optional[str] = Header(default=None)
         with open(output_path, "rb") as f:
             file_bytes = f.read()
 
-        document_key = hashlib.sha256(file_bytes).hexdigest()
+        document_key = hashlib.sha256(draft_id.encode("utf-8")).hexdigest()
 
         # Copy empty file to lex_bot upload directory
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1101,21 +1249,48 @@ async def create_empty_draft(authorization: Optional[str] = Header(default=None)
         with open(lex_bot_path, "wb") as f:
             f.write(file_bytes)
 
+        # Register draft metadata in PostgreSQL db via auth service
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/register",
+                    json={
+                        "draft_id": draft_id,
+                        "name": file_name,
+                        "filename": file_name,
+                        "document_key": document_key,
+                        "created_by": user_id,
+                        "variables_detected": [],
+                        "status": "In progress"
+                    },
+                    timeout=10.0
+                )
+        except Exception as reg_err:
+            logger.warning(f"Failed to register draft in DB: {reg_err}")
+
         params: Dict[str, Any] = {
             "document": {
                 "fileType": "docx",
                 "key": document_key,
                 "title": file_name,
-                "url": f"http://drafter-service:8003/v2/draft/serve/{file_name}",
+                "url": f"http://drafter-service:8003/v2/draft/serve/{draft_id}/{file_name}",
                 "permissions": {"edit": True, "download": True, "print": True},
             },
             "documentType": "word",
             "editorConfig": {
-                "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
+                "callbackUrl": f"http://drafter-service:8003/v2/draft/callback/{draft_id}",
                 "mode": "edit",
+                "user": {
+                    "id": user_id,
+                    "name": f"User {user_id[:4]}" if len(user_id) >= 4 else f"User {user_id}"
+                },
+                "coauthoring": {
+                    "mode": "fast",
+                    "change": True
+                },
                 "customization": {
                     "forcesave": True,
-                    "chat": False,
+                    "chat": True,
                     "uiTheme": "theme-light",
                     "logo": {
                         "image": "",
@@ -1129,6 +1304,7 @@ async def create_empty_draft(authorization: Optional[str] = Header(default=None)
         params["documentKey"] = document_key
         params["filename"] = file_name
         params["variablesDetected"] = []
+        params["draftId"] = draft_id
 
         return params
     except Exception as e:
@@ -1144,13 +1320,16 @@ async def upload_draft(
     authorization: Optional[str] = Header(default=None)
 ):
     try:
-        await verify_token(authorization)
+        user_id = await verify_token(authorization)
         
         shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
         if not shared_storage_path:
             raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
             
-        os.makedirs(shared_storage_path, exist_ok=True)
+        import uuid
+        draft_id = str(uuid.uuid4())
+        draft_dir = os.path.join(shared_storage_path, draft_id)
+        os.makedirs(draft_dir, exist_ok=True)
         
         file_name = file.filename or "uploaded_draft.docx"
         safe_name = file_name.strip()
@@ -1171,7 +1350,7 @@ async def upload_draft(
                 else:
                     safe_name = f"{safe_name}_{int(time.time())}.docx"
                 
-        output_path = os.path.join(shared_storage_path, safe_name)
+        output_path = os.path.join(draft_dir, safe_name)
         
         if is_pdf:
             import tempfile
@@ -1258,23 +1437,50 @@ async def upload_draft(
         except Exception as docx_e:
             logger.warning(f"Placeholder parsing failed: {docx_e}")
             
-        document_key = hashlib.sha256(docx_bytes).hexdigest()
+        document_key = hashlib.sha256(draft_id.encode("utf-8")).hexdigest()
         
+        # Register draft metadata in PostgreSQL db via auth service
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/register",
+                    json={
+                        "draft_id": draft_id,
+                        "name": safe_name,
+                        "filename": safe_name,
+                        "document_key": document_key,
+                        "created_by": user_id,
+                        "variables_detected": placeholders_detected,
+                        "status": "In progress"
+                    },
+                    timeout=10.0
+                )
+        except Exception as reg_err:
+            logger.warning(f"Failed to register draft in DB: {reg_err}")
+
         params: Dict[str, Any] = {
             "document": {
                 "fileType": "docx",
                 "key": document_key,
                 "title": safe_name,
-                "url": f"http://drafter-service:8003/v2/draft/serve/{safe_name}",
+                "url": f"http://drafter-service:8003/v2/draft/serve/{draft_id}/{safe_name}",
                 "permissions": {"edit": True, "download": True, "print": True},
             },
             "documentType": "word",
             "editorConfig": {
-                "callbackUrl": "http://drafter-service:8003/v2/draft/callback",
+                "callbackUrl": f"http://drafter-service:8003/v2/draft/callback/{draft_id}",
                 "mode": "edit",
+                "user": {
+                    "id": user_id,
+                    "name": f"User {user_id[:4]}" if len(user_id) >= 4 else f"User {user_id}"
+                },
+                "coauthoring": {
+                    "mode": "fast",
+                    "change": True
+                },
                 "customization": {
                     "forcesave": True,
-                    "chat": False,
+                    "chat": True,
                     "uiTheme": "theme-light",
                     "logo": {
                         "image": "",
@@ -1288,6 +1494,7 @@ async def upload_draft(
         params["variablesDetected"] = placeholders_detected
         params["documentKey"] = document_key
         params["filename"] = safe_name
+        params["draftId"] = draft_id
         
         background_tasks.add_task(extract_and_cache_docx, lex_bot_path)
         
@@ -1313,7 +1520,7 @@ async def onlyoffice_forcesave(request: ForceSaveRequest, authorization: Optiona
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                "http://onlyoffice-server/coauthoring/CommandService.ashx",
+                f"{ONLYOFFICE_API_URL.rstrip('/')}/coauthoring/CommandService.ashx",
                 json=command_payload,
                 headers=headers,
                 timeout=15.0,
@@ -1327,8 +1534,105 @@ async def onlyoffice_forcesave(request: ForceSaveRequest, authorization: Optiona
     return {"ok": True}
 
 
+@app.get("/v2/draft/config/{draft_id}")
+async def get_draft_config(draft_id: str, authorization: Optional[str] = Header(default=None)):
+    try:
+        user_id = await verify_token(authorization)
+        
+        # 1. Verify access via auth service
+        try:
+            async with httpx.AsyncClient() as client:
+                access_resp = await client.get(
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/verify_access/{draft_id}?user_id={user_id}",
+                    timeout=5.0
+                )
+                access_resp.raise_for_status()
+                access_data = access_resp.json()
+        except Exception as exc:
+            logger.error(f"Failed to contact auth service for access verification: {exc}")
+            raise HTTPException(status_code=502, detail=f"Failed to contact auth service: {exc}")
+             
+        access_level = access_data.get("access_level", "none")
+        if access_level == "none":
+            raise HTTPException(status_code=403, detail="You do not have access to this draft.")
+             
+        # 2. Get draft metadata from auth service
+        try:
+            async with httpx.AsyncClient() as client:
+                draft_resp = await client.get(
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/get/{draft_id}",
+                    timeout=5.0
+                )
+                draft_resp.raise_for_status()
+                draft_data = draft_resp.json()
+        except Exception as exc:
+            logger.error(f"Failed to fetch draft metadata from auth service: {exc}")
+            raise HTTPException(status_code=502, detail=f"Failed to fetch draft info: {exc}")
+             
+        file_name = draft_data.get("filename")
+        document_key = draft_data.get("documentKey")
+         
+        # 3. Build OnlyOffice config
+        params: Dict[str, Any] = {
+            "document": {
+                "fileType": "docx",
+                "key": document_key,
+                "title": file_name,
+                "url": f"http://drafter-service:8003/v2/draft/serve/{draft_id}/{file_name}",
+                "permissions": {
+                    "edit": access_level == "edit",
+                    "download": True,
+                    "print": True
+                },
+            },
+            "documentType": "word",
+            "editorConfig": {
+                "callbackUrl": f"http://drafter-service:8003/v2/draft/callback/{draft_id}",
+                "mode": "edit" if access_level == "edit" else "view",
+                "user": {
+                    "id": user_id,
+                    "name": f"User {user_id[:4]}" if len(user_id) >= 4 else f"User {user_id}"
+                },
+                "coauthoring": {
+                    "mode": "fast",
+                    "change": True
+                },
+                "customization": {
+                    "forcesave": True,
+                    "chat": True,
+                    "uiTheme": "theme-light",
+                    "logo": {
+                        "image": "",
+                        "imageDark": "",
+                        "url": ""
+                    }
+                },
+                "plugins": {
+                    "autostart": [
+                        "asc.{43d1a84f-e274-4b53-a55e-3363f8db1f34}"
+                    ],
+                    "pluginsData": []
+                }
+            },
+        }
+        params["token"] = _jwt_encode(params)
+        params["documentKey"] = document_key
+        params["filename"] = file_name
+        params["variablesDetected"] = draft_data.get("variablesDetected", [])
+        params["draftId"] = draft_id
+        params["status"] = draft_data.get("status", "In progress")
+         
+        return params
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.exception("Failed to load draft configuration.")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v2/draft/callback/{draft_id}")
 @app.post("/v2/draft/callback")
-async def onlyoffice_callback(event: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
+async def onlyoffice_callback(event: Dict[str, Any], draft_id: Optional[str] = None, authorization: Optional[str] = Header(default=None)):
     try:
         token: Optional[str] = None
         if isinstance(authorization, str) and authorization.strip():
@@ -1346,7 +1650,12 @@ async def onlyoffice_callback(event: Dict[str, Any], authorization: Optional[str
             raise HTTPException(status_code=403, detail="Forbidden")
 
         try:
-            jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            if isinstance(decoded, dict):
+                if "payload" in decoded:
+                    event = decoded["payload"]
+                else:
+                    event = decoded
         except jwt.PyJWTError:
             raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -1370,12 +1679,33 @@ async def onlyoffice_callback(event: Dict[str, Any], authorization: Optional[str
             if not shared_storage_path:
                 return {"error": 0}
 
-            file_name = _safe_basename_from_url(url)
+            file_name = None
+            if draft_id:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        draft_resp = await client.get(
+                            f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/get/{draft_id}",
+                            timeout=5.0
+                        )
+                        draft_resp.raise_for_status()
+                        draft_data = draft_resp.json()
+                        file_name = draft_data.get("filename")
+                except Exception as exc:
+                    logger.error(f"Failed to fetch draft metadata from auth service: {exc}")
+
+            if not file_name:
+                file_name = _safe_basename_from_url(url)
+
             if not file_name:
                 return {"error": 0}
 
-            target_path = os.path.join(shared_storage_path, file_name)
-            os.makedirs(shared_storage_path, exist_ok=True)
+            if draft_id:
+                target_dir = os.path.join(shared_storage_path, draft_id)
+                os.makedirs(target_dir, exist_ok=True)
+                target_path = os.path.join(target_dir, file_name)
+            else:
+                target_path = os.path.join(shared_storage_path, file_name)
+                os.makedirs(shared_storage_path, exist_ok=True)
 
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 async with client.stream("GET", url, timeout=60.0) as resp:
@@ -1384,6 +1714,17 @@ async def onlyoffice_callback(event: Dict[str, Any], authorization: Optional[str
                         async for chunk in resp.aiter_bytes():
                             if chunk:
                                 f.write(chunk)
+                                
+            # Touch draft updated_at in DB
+            if draft_id:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/touch/{draft_id}",
+                            timeout=5.0
+                        )
+                except Exception as touch_err:
+                    logger.warning(f"Failed to touch draft updated_at: {touch_err}")
     except Exception:
         logger.exception("OnlyOffice callback processing failed.")
 

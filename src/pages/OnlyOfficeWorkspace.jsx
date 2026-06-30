@@ -4,7 +4,8 @@ import { Download, Gavel, Loader2, Plus, Mic, Quote, Send, Sparkles } from 'luci
 import { API_CONFIG } from '../services/endpoints';
 import { api } from '../services/api';
 
-const ONLYOFFICE_API_SRC = `${window.location.protocol}//${window.location.hostname}/onlyoffice/web-apps/apps/api/documents/api.js`;
+const ONLYOFFICE_API_SRC = `${window.location.origin}/onlyoffice/web-apps/apps/api/documents/api.js`;
+const ONLYOFFICE_ORIGIN = new URL(ONLYOFFICE_API_SRC).origin;
 
 const OnlyOfficeWorkspace = () => {
   const location = useLocation();
@@ -24,6 +25,7 @@ const OnlyOfficeWorkspace = () => {
   const selectionPollRef = useRef(null);
   const selectionPollPausedUntilRef = useRef(0);
 
+  const canvasTargetRef = useRef(null);
   const [docsApiReady, setDocsApiReady] = useState(false);
   const [isCanvasLoading, setIsCanvasLoading] = useState(true);
 
@@ -54,6 +56,18 @@ const OnlyOfficeWorkspace = () => {
   const [activeSelectionText, setActiveSelectionText] = useState('');
   const [sidebarWidth, setSidebarWidth] = useState(360);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState('In progress');
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [sidebarInput, setSidebarInput] = useState('');
+
+  // Dynamic config and sharing states
+  const [dynamicConfig, setDynamicConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareAccess, setShareAccess] = useState('edit');
+  const [isSharing, setIsSharing] = useState(false);
 
   const startResize = (e) => {
     e.preventDefault();
@@ -106,17 +120,53 @@ const OnlyOfficeWorkspace = () => {
     };
   }, [location]);
 
-  useEffect(() => {
-    const missing = [];
-    if (!documentKey) missing.push('documentKey');
-    if (!filename) missing.push('filename');
-    if (!onlyofficeConfig) missing.push('onlyofficeConfig');
+  const draftId = useMemo(() => {
+    return location?.state?.draftId || location?.state?.id;
+  }, [location]);
 
-    if (missing.length > 0) {
-      toast.error(`ONLYOFFICE workspace is missing required state: ${missing.join(', ')}`);
+  useEffect(() => {
+    const fetchConfig = async () => {
+      if (!draftId) {
+        console.warn("fetchConfig called but draftId is null");
+        return;
+      }
+      setConfigLoading(true);
+      try {
+        const token = localStorage.getItem('session_id');
+        console.log("[OnlyOfficeWorkspace] Fetching config for draftId:", draftId);
+        const resp = await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/config/${draftId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
+        console.log("[OnlyOfficeWorkspace] Fetch config response status:", resp.status);
+        if (resp.ok) {
+          const config = await resp.json();
+          console.log("[OnlyOfficeWorkspace] Fetched config successfully:", config);
+          setDynamicConfig(config);
+          if (config.status) {
+            setCurrentStatus(config.status);
+          }
+        } else {
+          console.error("[OnlyOfficeWorkspace] Failed to load dynamic draft config. Status:", resp.status);
+          const errorText = await resp.text().catch(() => "");
+          console.error("[OnlyOfficeWorkspace] Response error details:", errorText);
+        }
+      } catch (err) {
+        console.error("[OnlyOfficeWorkspace] Error fetching draft config:", err);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, [draftId]);
+
+  useEffect(() => {
+    if (!draftId && (!documentKey || !filename || !onlyofficeConfig)) {
+      toast.error("ONLYOFFICE workspace is missing required state.");
       navigate('/dashboard', { replace: true });
     }
-  }, [documentKey, filename, onlyofficeConfig, navigate]);
+  }, [draftId, documentKey, filename, onlyofficeConfig, navigate]);
 
   useEffect(() => {
     const existingApi = window?.DocsAPI?.DocEditor;
@@ -148,12 +198,24 @@ const OnlyOfficeWorkspace = () => {
     };
   }, [navigate]);
 
-  useEffect(() => {
-    if (!docsApiReady) return;
-    if (!onlyofficeConfig) return;
+  const activeConfig = dynamicConfig || onlyofficeConfig;
 
-    const mount = document.getElementById('onlyoffice-canvas-target-node');
-    if (!mount) return;
+  useEffect(() => {
+    console.log("[OnlyOfficeWorkspace] Editor init useEffect triggered. docsApiReady =", docsApiReady, "activeConfig =", activeConfig);
+    if (!docsApiReady) {
+      console.log("[OnlyOfficeWorkspace] docsApiReady is false, skipping editor init.");
+      return;
+    }
+    if (!activeConfig) {
+      console.log("[OnlyOfficeWorkspace] activeConfig is null/falsy, skipping editor init.");
+      return;
+    }
+
+    const mount = canvasTargetRef.current;
+    if (!mount) {
+      console.error("[OnlyOfficeWorkspace] onlyoffice-canvas-target-node ref is not set");
+      return;
+    }
 
     setIsCanvasLoading(true);
     mount.innerHTML = '';
@@ -164,54 +226,72 @@ const OnlyOfficeWorkspace = () => {
       return;
     }
 
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const pluginUrl = isLocalhost
-      ? 'http://host.docker.internal:5173/plugins/assistant/config.json'
-      : `${window.location.protocol}//${window.location.host}/plugins/assistant/config.json`;
+    // Safely garbage collect previous instance if remounting
+    if (editorInstanceRef.current && typeof editorInstanceRef.current.destroy === 'function') {
+      try {
+        editorInstanceRef.current.destroy();
+        console.log('Previous ONLYOFFICE instance garbage collected safely.');
+      } catch (err) {
+        console.error('Error destroying active editor instance:', err);
+      }
+    }
 
     const nextConfig = {
-      ...onlyofficeConfig,
-      editorConfig: {
-        ...(onlyofficeConfig?.editorConfig || {}),
-        customization: {
-          ...(onlyofficeConfig?.editorConfig?.customization || {}),
-          forcesave: true,
-          chat: false,
-          uiTheme: 'theme-light',
-          logo: {
-            image: '',
-            imageDark: '',
-            url: '',
-          },
-        },
-        plugins: {
-          autostart: [
-            'asc.{43d1a84f-e274-4b53-a55e-3363f8db1f34}',
-          ],
-          pluginsData: [
-            pluginUrl,
-          ],
-        },
-      },
+      ...activeConfig,
       events: {
-        ...(onlyofficeConfig?.events || {}),
+        ...(activeConfig?.events || {}),
         onDocumentReady: (...args) => {
           try {
-            const existing = onlyofficeConfig?.events?.onDocumentReady;
+            const existing = activeConfig?.events?.onDocumentReady;
             if (typeof existing === 'function') existing(...args);
           } finally {
             setIsCanvasLoading(false);
           }
         },
+        onError: (event) => {
+          console.error("ONLYOFFICE Error:", event);
+          setIsCanvasLoading(false); // Hide skeleton so user can see the error
+        },
+        onAppReady: () => {
+          console.log("ONLYOFFICE App is ready.");
+        }
       },
       width: '100%',
       height: '100%',
     };
 
-    editorInstanceRef.current = new window.DocsAPI.DocEditor('onlyoffice-canvas-target-node', {
-      ...nextConfig,
-    });
-  }, [docsApiReady, onlyofficeConfig, navigate]);
+    // Fallback to hide skeleton after 15 seconds if DocEditor hangs silently
+    const loadingTimeout = setTimeout(() => {
+      setIsCanvasLoading(false);
+      console.warn("ONLYOFFICE initialization timed out. Hidden skeleton loader.");
+    }, 15000);
+
+    try {
+      console.log("[OnlyOfficeWorkspace] Instantiating DocsAPI.DocEditor...");
+      editorInstanceRef.current = new window.DocsAPI.DocEditor('onlyoffice-canvas-target-node', {
+        ...nextConfig,
+      });
+      console.log("[OnlyOfficeWorkspace] DocsAPI.DocEditor instantiated successfully:", editorInstanceRef.current);
+    } catch (editorError) {
+      console.error("[OnlyOfficeWorkspace] Critical error during DocsAPI.DocEditor instantiation:", editorError);
+      toast.error("Failed to initialize ONLYOFFICE editor: " + (editorError.message || editorError));
+      setIsCanvasLoading(false);
+    }
+
+    // Clean up instance on component unmount
+    return () => {
+      clearTimeout(loadingTimeout);
+      if (editorInstanceRef.current && typeof editorInstanceRef.current.destroy === 'function') {
+        try {
+          editorInstanceRef.current.destroy();
+          editorInstanceRef.current = null;
+          console.log('ONLYOFFICE editor instance cleanly destroyed.');
+        } catch (e) {
+          console.warn('Deferred clean phase warning:', e);
+        }
+      }
+    };
+  }, [docsApiReady, activeConfig, navigate]);
 
   const clearCaseState = () => {
     pendingSelectionActionRef.current = null;
@@ -240,7 +320,7 @@ const OnlyOfficeWorkspace = () => {
       const plugin = pluginWindowRef.current;
       if (!plugin) return;
       if (Date.now() < selectionPollPausedUntilRef.current) return;
-      plugin.postMessage({ type: 'ONLYOFFICE_POLL_SELECTION' }, '*');
+      plugin.postMessage({ type: 'ONLYOFFICE_POLL_SELECTION' }, ONLYOFFICE_ORIGIN);
     }, 500);
   };
 
@@ -253,6 +333,7 @@ const OnlyOfficeWorkspace = () => {
 
   useEffect(() => {
     const handleMessage = (e) => {
+      if (e.origin !== window.location.origin && e.origin !== ONLYOFFICE_ORIGIN) return;
       if (!e.data) return;
 
       if (e.data.type === 'ONLYOFFICE_PLUGIN_READY') {
@@ -335,10 +416,21 @@ const OnlyOfficeWorkspace = () => {
 
   useEffect(() => {
     return () => {
+      if (documentKey) {
+        const sessionId = localStorage.getItem('session_id');
+        const headers = { 'Content-Type': 'application/json' };
+        if (sessionId) headers.Authorization = `Bearer ${sessionId}`;
+        
+        fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/forcesave`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ document_key: documentKey }),
+        }).catch((err) => console.warn("Background forcesave on unmount failed:", err));
+      }
       clearCaseState();
       stopSelectionPolling();
     };
-  }, []);
+  }, [documentKey]);
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -562,7 +654,7 @@ const OnlyOfficeWorkspace = () => {
     }
 
     pendingSelectionActionRef.current = 'explain';
-    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_GET_SELECTION' }, '*');
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_GET_SELECTION' }, ONLYOFFICE_ORIGIN);
   };
 
   const handleFindRelevantCases = () => {
@@ -572,7 +664,7 @@ const OnlyOfficeWorkspace = () => {
     }
 
     pendingSelectionActionRef.current = 'cases';
-    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_GET_SELECTION' }, '*');
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_GET_SELECTION' }, ONLYOFFICE_ORIGIN);
   };
 
   const handleInsertText = (textToInsert) => {
@@ -581,7 +673,7 @@ const OnlyOfficeWorkspace = () => {
       return;
     }
 
-    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_INSERT_TEXT', text: textToInsert }, '*');
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_INSERT_TEXT', text: textToInsert }, ONLYOFFICE_ORIGIN);
     toast.success('Inserted content into ONLYOFFICE document!');
   };
 
@@ -599,7 +691,7 @@ const OnlyOfficeWorkspace = () => {
     selectionPollPausedUntilRef.current = Date.now() + 1200;
     setIsAutoFormatting(true);
     setShowAutoFormatPopup(false);
-    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_AUTO_FORMAT_SELECTION' }, '*');
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_AUTO_FORMAT_SELECTION' }, ONLYOFFICE_ORIGIN);
   };
 
   const handleEnhanceWithAISelection = () => {
@@ -618,7 +710,7 @@ const OnlyOfficeWorkspace = () => {
     setInputMessage('');
     setActiveTab('chat');
     setShowAutoFormatPopup(false);
-    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_ENHANCE_WITH_AI' }, '*');
+    pluginWindowRef.current.postMessage({ type: 'ONLYOFFICE_ENHANCE_WITH_AI' }, ONLYOFFICE_ORIGIN);
   };
 
   const handleGenerateCaseParagraph = async (caseItem) => {
@@ -769,33 +861,181 @@ const OnlyOfficeWorkspace = () => {
     );
   };
 
+  const handleUpdateStatus = async (newStatus) => {
+    setIsStatusDropdownOpen(false);
+    if (!draftId) return;
+
+    try {
+      const token = localStorage.getItem('session_id');
+      const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: draftId,
+          status: newStatus,
+        }),
+      });
+
+      if (response.ok) {
+        setCurrentStatus(newStatus);
+        toast.success(`Draft status updated to ${newStatus === 'Review' ? 'Work under Review' : newStatus === 'Completed' ? 'Draft Completed' : 'In Progress'}`);
+      } else {
+        toast.error('Failed to update draft status.');
+      }
+    } catch (error) {
+      console.error('Error updating draft status:', error);
+      toast.error('Failed to update draft status.');
+    }
+  };
+
+  const handleShareDraft = async (e) => {
+    e.preventDefault();
+    if (!shareEmail.trim()) return;
+
+    setIsSharing(true);
+    try {
+      const token = localStorage.getItem('session_id');
+      const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          draft_id: draftId,
+          email: shareEmail.trim(),
+          access_level: shareAccess,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(`Draft shared successfully with ${shareEmail}`);
+        setIsShareModalOpen(false);
+        setShareEmail('');
+      } else {
+        toast.error(data.detail || 'Failed to share draft.');
+      }
+    } catch (error) {
+      console.error('Error sharing draft:', error);
+      toast.error('Failed to share draft.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const downloadUrl = draftId 
+    ? `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${draftId}/${filename || 'document.docx'}` 
+    : `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${filename || 'document.docx'}`;
+
   return (
     <div className="flex h-[calc(100vh-0px)] w-full bg-[#E3F0F7] text-slate-800 overflow-hidden relative">
       {/* Left 70% Area: Header and ONLYOFFICE Iframe */}
       <div className="flex-1 flex flex-col min-w-0 h-full border-r border-[#B9D9EB]">
         <div className="shrink-0 border-b border-[#B9D9EB] bg-[#E3F0F7]/95 backdrop-blur">
           <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">DRAFTMATE WORKSPACE</div>
-              <div className="font-bold text-slate-800 truncate">{filename || 'Untitled'}</div>
+            <div className="min-w-0 flex items-center gap-3">
+              <div>
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">DRAFTMATE WORKSPACE</div>
+                <div className="font-bold text-slate-800 truncate max-w-[200px] sm:max-w-[300px]">{filename || 'Untitled'}</div>
+              </div>
+
+              {/* Work Status Dropdown Selector */}
+              {draftId && (
+                <div className="relative inline-block text-left ml-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                    className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-[#B9D9EB] text-xs font-semibold text-slate-700 shadow-sm transition-colors"
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${
+                      currentStatus === 'In progress' ? 'bg-yellow-400' :
+                      currentStatus === 'Review' ? 'bg-red-500' :
+                      currentStatus === 'Completed' ? 'bg-green-500' : 'bg-yellow-400'
+                    }`} />
+                    <span>
+                      {currentStatus === 'In progress' ? 'In Progress' :
+                       currentStatus === 'Review' ? 'Work under Review' :
+                       currentStatus === 'Completed' ? 'Draft Completed' : 'In Progress'}
+                    </span>
+                    <span className="material-symbols-outlined text-xs text-slate-400">arrow_drop_down</span>
+                  </button>
+
+                  {isStatusDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsStatusDropdownOpen(false)} />
+                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 flex items-center gap-1.5 bg-white border border-[#B9D9EB] shadow-xl z-50 rounded-xl px-2 py-1.5 whitespace-nowrap transition-all">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus('In progress')}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-[#E3F0F7] transition-colors font-medium"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                          <span>In Progress</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus('Review')}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-[#E3F0F7] transition-colors font-medium"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          <span>Work under Review</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus('Completed')}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-700 hover:bg-[#E3F0F7] transition-colors font-medium"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          <span>Draft Completed</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              {draftId && (
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  title="Share Document / Collaborate"
+                >
+                  <span className="material-symbols-outlined text-base">share</span>
+                  <span>Share</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
-                  window.open(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${filename || documentKey + '.docx'}`, '_blank');
+                  window.open(downloadUrl, '_blank');
                 }}
                 className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center"
                 title="Download"
               >
                 <Download className="h-5 w-5" />
               </button>
+              {isSidebarCollapsed && (
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center"
+                  title="Expand Sidebar"
+                >
+                  <span className="material-symbols-outlined text-lg">last_page</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex-1 min-h-0 relative">
-          <div id="onlyoffice-canvas-target-node" className="h-full w-full bg-white" />
+          <div ref={canvasTargetRef} id="onlyoffice-canvas-target-node" className="h-full w-full bg-white" />
           {showAutoFormatPopup && selectionPreview ? (
             <div className="absolute top-4 right-4 z-30 w-[min(360px,calc(100%-2rem))] rounded-xl border border-[#B9D9EB] bg-white shadow-2xl overflow-hidden">
               <div className="border-b border-[#B9D9EB]/70 bg-[#F7FBFD] px-3 py-2.5">
@@ -855,18 +1095,29 @@ const OnlyOfficeWorkspace = () => {
       </div>
 
       {/* Resizable Sash Divider */}
-      <div
-        onMouseDown={startResize}
-        className="w-1.5 hover:w-2 shrink-0 cursor-col-resize transition-all select-none h-full bg-[#B9D9EB] hover:bg-blue-400 active:bg-blue-500 z-30"
-      />
+      {!isSidebarCollapsed && (
+        <div
+          onMouseDown={startResize}
+          className="w-1.5 hover:w-2 shrink-0 cursor-col-resize transition-all select-none h-full bg-[#B9D9EB] hover:bg-blue-400 active:bg-blue-500 z-30"
+        />
+      )}
 
       {/* Right Resizable Panel: Tabbed Navigation with AI Assistant / Variables */}
-      <aside
-        style={{ width: `${sidebarWidth}px` }}
-        className="shrink-0 h-full bg-[#E3F0F7] text-slate-800 flex flex-col shadow-2xl z-10 border-l border-[#B9D9EB]"
-      >
-        {/* Tabs Headers */}
-        <div className="shrink-0 flex border-b border-[#B9D9EB] bg-[#CDE3F0]">
+      {!isSidebarCollapsed && (
+        <aside
+          style={{ width: `${sidebarWidth}px` }}
+          className="shrink-0 h-full bg-[#E3F0F7] text-slate-800 flex flex-col shadow-2xl z-10 border-l border-[#B9D9EB]"
+        >
+          {/* Tabs Headers */}
+          <div className="shrink-0 flex border-b border-[#B9D9EB] bg-[#CDE3F0]">
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(true)}
+              className="px-3 hover:bg-[#B9D9EB]/50 text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center border-r border-[#B9D9EB]"
+              title="Collapse Sidebar"
+            >
+              <span className="material-symbols-outlined text-base">first_page</span>
+            </button>
           <button
             type="button"
             onClick={() => setActiveTab('chat')}
@@ -991,11 +1242,43 @@ const OnlyOfficeWorkspace = () => {
             </div>
 
             {/* Bottom Controls Bar for AI Assistant */}
-            <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex">
+            <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex flex-col gap-2">
+              {/* Secondary Chat Input Bar */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (sidebarInput.trim()) {
+                    handleSendMessage(sidebarInput.trim());
+                    setSidebarInput('');
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#B9D9EB] shadow-sm w-full"
+              >
+                <input
+                  type="text"
+                  value={sidebarInput}
+                  onChange={(e) => setSidebarInput(e.target.value)}
+                  placeholder="your legal research..."
+                  disabled={isChatLoading}
+                  className="flex-1 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm text-slate-800 placeholder:text-slate-455"
+                />
+                <button
+                  type="submit"
+                  disabled={isChatLoading || !sidebarInput.trim()}
+                  className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
+                    sidebarInput.trim()
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">send</span>
+                </button>
+              </form>
+
               <button
                 type="button"
                 onClick={handleExplainSelection}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-[#B9D9EB] text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-[#B9D9EB] text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
                 title="Select text in ONLYOFFICE and click here to explain it"
               >
                 <span className="material-symbols-outlined text-base mr-1.5">school</span>
@@ -1058,6 +1341,7 @@ const OnlyOfficeWorkspace = () => {
           </div>
         )}
       </aside>
+      )}
 
       {/* Floating expanding chat input bar */}
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-3 pointer-events-none select-none" style={{ width: 'min(760px, calc(100vw - 2rem))' }}>
@@ -1157,6 +1441,87 @@ const OnlyOfficeWorkspace = () => {
       </div>
       {isDragging && (
         <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
+      )}
+
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 border border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-500 text-xl">share</span>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Invite Collaborator</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsShareModalOpen(false);
+                  setShareEmail('');
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleShareDraft} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Collaborator Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-550 text-sm"
+                  placeholder="e.g. colleague@firm.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Permission Level
+                </label>
+                <select
+                  value={shareAccess}
+                  onChange={(e) => setShareAccess(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-550 text-sm"
+                >
+                  <option value="edit">Can Edit (Co-author)</option>
+                  <option value="read">Can Read (View only)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsShareModalOpen(false);
+                    setShareEmail('');
+                  }}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-355 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSharing || !shareEmail.trim()}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  {isSharing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Sharing...</span>
+                    </>
+                  ) : (
+                    <span>Invite</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -135,6 +135,17 @@ export const API_CONFIG = {
         }
     },
 
+    // Service: backend/translator (Port 8012)
+    TRANSLATOR: {
+        BASE_URL: `${BASE_URL}/translator`,
+        ENDPOINTS: {
+            CREATE_JOB: '/translation-jobs',
+            GET_JOB: (jobId) => `/translation-jobs/${jobId}`,
+            LIST_JOBS: '/translation-jobs',
+            DOWNLOAD_JOB: (jobId) => `/translation-jobs/${jobId}/download`,
+        }
+    },
+
     // Service: backend/Case_search (Port 8006)
     CASE_SEARCH: {
         BASE_URL: `${BASE_URL}/case_search`,
