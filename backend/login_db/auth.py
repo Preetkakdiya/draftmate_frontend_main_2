@@ -275,8 +275,9 @@ def register(user: UserSignup):
     cur = conn.cursor()
     
     try:
-        # Check if user already exists
-        cur.execute("SELECT id FROM users WHERE email = %s", (user.email,))
+        # Check if user already exists (case-insensitive lookup)
+        email_lower = user.email.strip().lower() if user.email else ""
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email_lower,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -286,7 +287,7 @@ def register(user: UserSignup):
         
         cur.execute(
             "INSERT INTO users (id, email, password_hash) VALUES (%s, %s, %s)",
-            (user_id, user.email, hashed_pwd)
+            (user_id, email_lower, hashed_pwd)
         )
         conn.commit()
         return {"message": "User registered successfully", "user_id": user_id}
@@ -305,7 +306,8 @@ def login(user: UserLogin):
     cur = conn.cursor()
     
     try:
-        cur.execute("SELECT id, password_hash FROM users WHERE email = %s", (user.email,))
+        email_lower = user.email.strip().lower() if user.email else ""
+        cur.execute("SELECT id, password_hash FROM users WHERE LOWER(email) = %s", (email_lower,))
         result = cur.fetchone()
         
         if not result:
@@ -313,7 +315,13 @@ def login(user: UserLogin):
         
         user_id, stored_hash = result
         
-        if not stored_hash or not verify_password(user.password, stored_hash):
+        if not stored_hash:
+            raise HTTPException(
+                status_code=400,
+                detail="This account was registered using Google Sign-In. Please sign in with Google, or reset your password to set a manual login password."
+            )
+            
+        if not verify_password(user.password, stored_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # Create Session
@@ -329,7 +337,7 @@ def login(user: UserLogin):
             "message": "Login successful", 
             "session_id": session_id, 
             "user_id": user_id,
-            "email": user.email,
+            "email": email_lower,
             "profile": get_profile_internal(cur, user_id)
         }
         
@@ -374,8 +382,10 @@ def google_login(model: GoogleLoginModel):
         if not email:
              raise HTTPException(status_code=400, detail="Invalid token: no email found")
              
+        email = email.strip().lower()
+             
         # Check if user exists
-        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
         result = cur.fetchone()
         
         user_id = None
@@ -391,6 +401,22 @@ def google_login(model: GoogleLoginModel):
                 (user_id, email, google_id)
             )
         
+        # Ensure Profile exists for Google Login users
+        cur.execute("SELECT profile_id FROM profiles WHERE user_id = %s", (user_id,))
+        if not cur.fetchone():
+            name = id_info.get('name') if 'id_info' in locals() else user_info.get('name')
+            first_name, last_name = "", ""
+            if name:
+                parts = name.split(None, 1)
+                first_name = parts[0]
+                if len(parts) > 1:
+                    last_name = parts[1]
+            picture = id_info.get('picture') if 'id_info' in locals() else user_info.get('picture')
+            cur.execute(
+                "INSERT INTO profiles (user_id, first_name, last_name, profile_image_url) VALUES (%s, %s, %s, %s)",
+                (user_id, first_name, last_name, picture)
+            )
+
         # Create Session
         session_id = str(uuid.uuid4())
         cur.execute(
@@ -449,21 +475,101 @@ def logout(model: LogoutModel):
 
 @app.post("/forgot-password")
 def forgot_password(request: ForgotPasswordRequest):
+    import random
     conn = get_db_connection()
     cur = conn.cursor()
     
     try:
-        # 1. Check if user exists
-        cur.execute("SELECT id FROM users WHERE email = %s", (request.email,))
+        # 1. Check if user exists (case-insensitive)
+        email_lower = request.email.strip().lower() if request.email else ""
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email_lower,))
         user = cur.fetchone()
         
         if not user:
             # Security: Always return success to prevent email enumeration
-            return {"message": "If this email is registered, a password reset link has been sent."}
+            return {"message": "OTP verification code sent if the email is registered."}
             
         user_id = user[0]
         
-        # 2. Generate JWT Token (Stateless)
+        # 2. Generate 6-digit OTP code and save/update it
+        otp_code = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.utcnow() + timedelta(minutes=10) # Expires in 10 minutes
+        
+        cur.execute("""
+            INSERT INTO password_reset_otps (email, otp_code, expires_at)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (email)
+            DO UPDATE SET otp_code = EXCLUDED.otp_code, expires_at = EXCLUDED.expires_at
+        """, (email_lower, otp_code, expires_at))
+        conn.commit()
+        
+        # 3. Send Email via Notification Service
+        try:
+            notification_payload = {
+                "to_email": email_lower,
+                "subject": "Reset Your DraftMate Password - Verification Code",
+                "body": f"Your verification code to reset your password is: {otp_code}\n\nThis code will expire in 10 minutes."
+            }
+            requests.post("http://localhost:8015/send-email", json=notification_payload, timeout=5)
+        except Exception as e:
+            print(f"Failed to call Notification Service: {e}")
+            
+        response = {"message": "OTP verification code sent if the email is registered."}
+        env = os.getenv("ENVIRONMENT", "development").strip().lower()
+        if "development" in env or env.startswith("dev"):
+            response["dev_otp"] = otp_code
+            
+        return response
+        
+    except Exception as e:
+        print(f"Forgot password error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        cur.close()
+        conn.close()
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    otp: str
+
+@app.post("/verify-otp")
+def verify_otp(request: VerifyOTPRequest):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        email_lower = request.email.strip().lower() if request.email else ""
+        
+        # 1. Fetch OTP record
+        cur.execute("SELECT otp_code, expires_at FROM password_reset_otps WHERE email = %s", (email_lower,))
+        row = cur.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=400, detail="Invalid code or code expired.")
+            
+        stored_otp, expires_at = row
+        
+        # Ensure timezone compatibility
+        now = datetime.now(expires_at.tzinfo) if expires_at.tzinfo else datetime.utcnow()
+        
+        if now > expires_at:
+            # Delete expired OTP
+            cur.execute("DELETE FROM password_reset_otps WHERE email = %s", (email_lower,))
+            conn.commit()
+            raise HTTPException(status_code=400, detail="Invalid code or code expired.")
+            
+        if request.otp.strip() != stored_otp:
+            raise HTTPException(status_code=400, detail="Invalid code or code expired.")
+            
+        # 2. Get User ID
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email_lower,))
+        user = cur.fetchone()
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found.")
+            
+        user_id = user[0]
+        
+        # 3. Generate reset JWT token (1 hour)
         expiration = datetime.utcnow() + timedelta(hours=1)
         payload = {
             "sub": user_id,
@@ -471,42 +577,17 @@ def forgot_password(request: ForgotPasswordRequest):
             "exp": expiration
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-        # 3. Create Reset Link
         
-        # Safety: Default to 'development' if env var is missing to prevent crash on .strip()
-        env_mode = os.getenv("ENVIRONMENT", "development").strip().lower()
+        # 4. Clean up OTP record
+        cur.execute("DELETE FROM password_reset_otps WHERE email = %s", (email_lower,))
+        conn.commit()
         
-        if env_mode == "production":
-             frontend_url = os.getenv("FRONTEND_URL_PROD").strip()
-        elif env_mode == "development":
-             frontend_url = os.getenv("FRONTEND_URL_DEV").strip()
-             
-        reset_link = f"{frontend_url}/reset-password?token={token}"
+        return {"message": "OTP verified successfully.", "token": token}
         
-        # 4. Send Email via Notification Service
-        try:
-            notification_payload = {
-                "to_email": request.email,
-                "subject": "Reset Your DraftMate Password",
-                "body": f"Click the link below to reset your password. This link expires in 1 hour.\n\n{reset_link}"
-            }
-            # Add timeout to prevent hanging
-            # Use localhost since notification service runs in the same container (via supervisord)
-            requests.post("http://localhost:8015/send-email", json=notification_payload, timeout=5)
-        except Exception as e:
-            print(f"Failed to call Notification Service: {e}")
-            # We still return success to the user, but maybe log this error
-            
-        # Return link for dev/testing convenience (Remove in production!)
-        response= {"message": "Reset link sent"}
-        if os.getenv("ENVIRONMENT") == "development":
-            response["dev_link"] = reset_link
-
-        return response
-        
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"Forgot password error: {e}")
+        print(f"Verify OTP error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
     finally:
         cur.close()

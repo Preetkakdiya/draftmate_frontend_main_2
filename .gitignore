@@ -31,3 +31,15 @@ setup.md
 
 LEXBOT_LATENCY_ANALYSIS.md
 UPGRADE_PLAN.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Nightly 2am Proof Report files
+NIGHTLY_2AM_PROOF.md
+NIGHTLY_2AM_PROOF.json

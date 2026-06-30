@@ -117,6 +117,7 @@ export const API_CONFIG = {
             GET_PROFILE: (userId) => `/profile/${userId}`, // GET
             UPDATE_PROFILE: '/profile/update', // POST
             FORGOT_PASSWORD: '/forgot-password', // POST
+            VERIFY_OTP: '/verify-otp', // POST
             RESET_PASSWORD: '/reset-password', // POST
         }
     },
