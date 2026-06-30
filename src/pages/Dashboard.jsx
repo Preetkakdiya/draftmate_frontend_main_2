@@ -747,8 +747,6 @@ function CreateEventModalTrigger({ onAdd }) {
         }
     };
 
-    const visibleDeskDrafts = allDrafts;
-
     return (
         <>
             <button

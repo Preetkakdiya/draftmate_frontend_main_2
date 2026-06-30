@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { API_CONFIG } from '../services/endpoints';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { 
   Search, Bell, LayoutDashboard, FileText, Scale, FolderOpen, 
   Languages, Library, GraduationCap, Eye, Gavel, Wrench, 
@@ -282,7 +283,9 @@ export default function MainLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto pt-24 pb-12 px-4 md:px-8 custom-scrollbar">
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
 
         {/* ── REFER & EARN MODAL ── */}

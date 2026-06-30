@@ -62,6 +62,9 @@ import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
 import Pricing from './pages/Pricing';
 import Billing from './pages/billing';
+import TranslateComparePage from './pages/TranslateComparePage';
+import TranslateDocumentPage from './pages/TranslateDocumentPage';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const RequireAuth = ({ children }) => {
   const profile = localStorage.getItem('user_profile');
@@ -109,6 +112,7 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_CLIENT_ID}>
       <NotificationProvider>
+        <ErrorBoundary>
         <BrowserRouter>
           <Toaster position="top-center" richColors />
           <ScrollToTop />
@@ -169,6 +173,21 @@ function App() {
                 <RequireAdvocateAuth><AdvocateDashboard /></RequireAdvocateAuth>
               } />
               <Route path="chat" element={<Placeholder title="AI Chat" />} />
+
+              {/* Sidebar items — real pages */}
+              <Route path="translate" element={<TranslateDocumentPage />} />
+              <Route path="academy" element={<LjAcademy />} />
+
+              {/* Sidebar items — features not yet built (show Coming Soon
+                  instead of silently redirecting to the dashboard) */}
+              <Route path="cases" element={<ComingSoon title="Document Management" />} />
+              <Route path="library" element={<ComingSoon title="Legal Library" />} />
+              {/* Visibility & Reach -> existing advocate dashboard (profile + analytics/reach) */}
+              <Route path="profile" element={
+                <RequireAdvocateAuth><AdvocateDashboard /></RequireAdvocateAuth>
+              } />
+              <Route path="ecourt" element={<ComingSoon title="E-Court Services" />} />
+
               {/* Catch-all relative to dashboard */}
               <Route path="*" element={<Navigate to="/dashboard/home" replace />} />
             </Route>
@@ -180,6 +199,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </ErrorBoundary>
       </NotificationProvider>
     </GoogleOAuthProvider>
   );

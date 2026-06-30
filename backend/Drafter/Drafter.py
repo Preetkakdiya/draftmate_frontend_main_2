@@ -106,6 +106,113 @@ JWT_SECRET = os.getenv("JWT_SECRET", "draftmate_jwt_production_signing_key_2026"
 JWT_ALGORITHM = "HS256"
 
 
+# ---------------------------------------------------------------------------
+# Pydantic models (must be defined before helper functions that reference them)
+# ---------------------------------------------------------------------------
+
+class DraftCompileRequest(BaseModel):
+    case_context: Optional[str] = None
+    case_metadata_context: Optional[List[Dict[str, Any]]] = None
+    legal_documents: Optional[str] = None
+    document_type: str = "Legal Document"
+    file_target_name: str = "draftmate_draft.docx"
+
+
+class ForceSaveRequest(BaseModel):
+    document_key: str
+
+
+class IntakeAnalyzeRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    initial_prompt: str = Field(
+        default="",
+        validation_alias=AliasChoices("initial_prompt", "prompt", "case_context", "user_prompt"),
+    )
+    current_round_index: int = 0
+    accumulated_answers: Dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("accumulated_answers", "answers"),
+    )
+
+
+class ClarifyingOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    value: str
+
+
+class ClarifyingQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    question: str
+    type: str = "single"
+    options: List[ClarifyingOption] = Field(default_factory=list)
+    required: bool = True
+
+
+class DraftBasis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document_type: str
+    jurisdiction: str
+    representation_position: str
+    key_legal_positions: List[str] = Field(default_factory=list)
+
+
+class DraftSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    basis: DraftBasis
+    assumptions: List[str] = Field(default_factory=list)
+
+
+class IntakeAnalyzeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sufficiency_met: bool
+    current_round_index: int
+    next_round_index: int
+    questions: List[ClarifyingQuestion] = Field(default_factory=list)
+    draft_summary: Optional[DraftSummary] = None
+    validation_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CaseSearchRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    raw_text: str = Field(
+        default="",
+        validation_alias=AliasChoices("raw_text", "highlighted_text", "selection", "query", "text"),
+    )
+    document_vehicle: Optional[str] = None
+    jurisdiction_context: Optional[str] = None
+    limit: int = 8
+
+
+class CaseSearchItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    case_name: str
+    court: str
+    citation: str
+    relevance_justification: str
+    holding_summary: str
+    source_url: Optional[str] = None
+    docid: Optional[str] = None
+
+
+class CaseSearchResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tokens: Dict[str, str]
+    cases: List[CaseSearchItem] = Field(default_factory=list)
+    source: str = "indian_kanoon"
+
+
+
 async def verify_token(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header.")
@@ -838,107 +945,6 @@ def build_docx_with_controls(ai_data: dict, file_target_name: str) -> str:
     doc.save(output_path)
     return output_path
 
-
-class DraftCompileRequest(BaseModel):
-    case_context: Optional[str] = None
-    case_metadata_context: Optional[List[Dict[str, Any]]] = None
-    legal_documents: Optional[str] = None
-    document_type: str = "Legal Document"
-    file_target_name: str = "draftmate_draft.docx"
-
-
-class ForceSaveRequest(BaseModel):
-    document_key: str
-
-
-class IntakeAnalyzeRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-    initial_prompt: str = Field(
-        default="",
-        validation_alias=AliasChoices("initial_prompt", "prompt", "case_context", "user_prompt"),
-    )
-    current_round_index: int = 0
-    accumulated_answers: Dict[str, Any] = Field(
-        default_factory=dict,
-        validation_alias=AliasChoices("accumulated_answers", "answers"),
-    )
-
-
-class ClarifyingOption(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    label: str
-    value: str
-
-
-class ClarifyingQuestion(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    question: str
-    type: str = "single"
-    options: List[ClarifyingOption] = Field(default_factory=list)
-    required: bool = True
-
-
-class DraftBasis(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    document_type: str
-    jurisdiction: str
-    representation_position: str
-    key_legal_positions: List[str] = Field(default_factory=list)
-
-
-class DraftSummary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    basis: DraftBasis
-    assumptions: List[str] = Field(default_factory=list)
-
-
-class IntakeAnalyzeResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    sufficiency_met: bool
-    current_round_index: int
-    next_round_index: int
-    questions: List[ClarifyingQuestion] = Field(default_factory=list)
-    draft_summary: Optional[DraftSummary] = None
-    validation_metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class CaseSearchRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-    raw_text: str = Field(
-        default="",
-        validation_alias=AliasChoices("raw_text", "highlighted_text", "selection", "query", "text"),
-    )
-    document_vehicle: Optional[str] = None
-    jurisdiction_context: Optional[str] = None
-    limit: int = 8
-
-
-class CaseSearchItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    case_name: str
-    court: str
-    citation: str
-    relevance_justification: str
-    holding_summary: str
-    source_url: Optional[str] = None
-    docid: Optional[str] = None
-
-
-class CaseSearchResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    tokens: Dict[str, str]
-    cases: List[CaseSearchItem] = Field(default_factory=list)
-    source: str = "indian_kanoon"
 
 
 @app.post("/v2/draft/intake/analyze", response_model=IntakeAnalyzeResponse)

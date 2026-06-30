@@ -51,7 +51,28 @@ app.add_middleware(
 )
 
 if engine is not None:
-    Base.metadata.create_all(bind=engine)
+    # The DB may not accept connections the instant this service starts (e.g.
+    # Postgres still booting). Retry a few times so module import doesn't
+    # hard-crash, and don't take the whole service down if it stays unreachable
+    # — get_db() surfaces DB errors per-request instead of crash-looping.
+    import logging as _logging
+    import time as _time
+
+    from sqlalchemy.exc import OperationalError as _OperationalError
+
+    _log = _logging.getLogger("translator")
+    for _attempt in range(1, 11):
+        try:
+            Base.metadata.create_all(bind=engine)
+            break
+        except _OperationalError as _err:
+            _log.warning("DB not ready (attempt %s/10): %s", _attempt, _err)
+            _time.sleep(3)
+    else:
+        _log.error(
+            "Translator tables not initialised; DB still unreachable. Service "
+            "will start, but DB operations fail until the database is available."
+        )
 
 
 def get_db() -> Generator[Session, None, None]:
