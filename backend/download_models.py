@@ -2,6 +2,8 @@ import os
 import sys
 import urllib.request
 import zipfile
+import socket
+import time
 from huggingface_hub import snapshot_download
 
 def safe_snapshot_download(**kwargs):
