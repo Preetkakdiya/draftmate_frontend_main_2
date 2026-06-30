@@ -12,6 +12,32 @@ def safe_snapshot_download(**kwargs):
         return False
     return True
 
+# EasyOCR/HuggingFace downloads pull from CDNs that frequently reset the
+# connection mid-transfer. Give sockets a generous timeout and retry on failure.
+socket.setdefaulttimeout(300)
+
+MAX_RETRIES = 5
+RETRY_BACKOFF_SECONDS = 10
+
+
+def _with_retries(label, fn, cleanup=None):
+    """Run fn(), retrying on any exception with linear backoff."""
+    last_err = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return fn()
+        except Exception as err:  # noqa: BLE001 - network errors vary widely
+            last_err = err
+            print(f"⚠️ {label} failed (attempt {attempt}/{MAX_RETRIES}): {err}")
+            if cleanup:
+                cleanup()
+            if attempt < MAX_RETRIES:
+                wait = RETRY_BACKOFF_SECONDS * attempt
+                print(f"   retrying in {wait}s...")
+                time.sleep(wait)
+    raise RuntimeError(f"{label} failed after {MAX_RETRIES} attempts") from last_err
+
+
 def download_models():
     # Define paths relative to this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -74,6 +100,7 @@ def download_models():
             continue
 
     print("✅ Model download step finished (some models may be missing).")
+
 
 if __name__ == "__main__":
     try:
