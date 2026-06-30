@@ -1,5 +1,35 @@
 services:
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - BACKEND_API_URL=http://backend
+      - ONLYOFFICE_API_URL=http://onlyoffice-server
+      - VITE_CLIENT_ID=${VITE_CLIENT_ID}
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+    depends_on:
+      - backend
+    volumes:
+      - .:/app
+      - /app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: sync
+          path: ./public
+          target: /app/public
+        - action: sync
+          path: ./index.html
+          target: /app/index.html
+        - action: rebuild
+          path: package.json
+
   onlyoffice-server:
     image: onlyoffice/documentserver:latest
     env_file:
@@ -67,8 +97,8 @@ services:
       args:
         - VITE_CLIENT_ID=${VITE_CLIENT_ID}
     ports:
-      # host:container — nginx inside the image listens on 80 (see nginx.conf),
-      # despite the Dockerfile EXPOSE 8080. Map host 80 -> container 80.
+      # host:container — nginx inside the image listens on 80.
+      # Map host 80 -> container 80.
       - "80:80"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}

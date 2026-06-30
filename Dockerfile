@@ -71,5 +71,5 @@ RUN mkdir -p backend/Deep_research/lex_bot/data/uploads
 # Expose Nginx port (Main Entrypoint)
 EXPOSE 8080
 
-# Run supervisor to start all services
-CMD ["/usr/bin/supervisord"]
+# Initialize database and run supervisor to start all services
+CMD ["sh", "-c", "python backend/login_db/init_db.py && /usr/bin/supervisord"]

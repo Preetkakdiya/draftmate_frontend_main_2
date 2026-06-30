@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, MonitorPlay, Award, Target, ArrowRight, BookOpen, Clock } from 'lucide-react';
 
@@ -96,13 +97,17 @@ const FEATURES = [
 ];
 
 export default function LjAcademy() {
+    const location = useLocation();
+    const isDashboard = window.location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/dashboard');
+    console.log("LJ Academy Render: pathname =", window.location.pathname, "routerPath =", location.pathname, "isDashboard =", isDashboard);
+
     return (
         <LenisProvider>
             <main className="flex flex-col bg-[#F8FAFF] min-h-screen">
-                <Navbar />
+                {!isDashboard && <Navbar />}
 
                 {/* ── HERO SECTION ── */}
-                <section className="pt-32 pb-20 lg:pt-40 lg:pb-24 relative overflow-hidden">
+                <section className={`pb-20 lg:pb-24 relative overflow-hidden ${isDashboard ? 'pt-6' : 'pt-32 lg:pt-40'}`}>
                     {/* Background Glows */}
                     <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
                     <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-cyan-400/10 rounded-full blur-3xl pointer-events-none translate-x-1/3 translate-y-1/3" />
@@ -329,7 +334,7 @@ export default function LjAcademy() {
                 {/* ── FAQ SECTION (Reusing your global one) ── */}
                 {/* <FAQSection /> */}
 
-                <Footer />
+                {!isDashboard && <Footer />}
             </main>
         </LenisProvider>
     );
