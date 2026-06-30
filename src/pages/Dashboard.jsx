@@ -143,6 +143,57 @@ export default function Dashboard() {
                 if (fullName) setUserName(fullName);
             }
         };
+
+        const handleDraftUpdate = async () => {
+            try {
+                const token = localStorage.getItem('session_id');
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/list`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error("Failed to load drafts from database.");
+                }
+                const data = await response.json();
+                const savedDrafts = data.drafts || [];
+                const processedDrafts = savedDrafts.map((draft) => {
+                    const status = draft.status || 'In progress';
+                    const trackingParams = draft.trackingParams || {
+                        documentKey: draft.documentKey || draft.id || '',
+                        filename: ensureDocxFilename(draft.filename || draft.name || 'Untitled Draft'),
+                        source: draft.source || 'db_draft',
+                        folderId: draft.folderId ?? null,
+                    };
+
+                    return {
+                        id: draft.id,
+                        title: draft.name || trackingParams.filename || 'Untitled Draft',
+                        filename: ensureDocxFilename(draft.filename || draft.name || trackingParams.filename || 'Untitled Draft'),
+                        documentKey: draft.documentKey || draft.id || trackingParams.documentKey || '',
+                        modified: new Date(draft.lastModified || Date.now()).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        status,
+                        statusColor: buildStatusColor(status),
+                        content: draft.content,
+                        placeholders: draft.placeholders,
+                        rawName: draft.name,
+                        onlyofficeConfig: draft.onlyofficeConfig || null,
+                        variablesDetected: draft.variablesDetected || [],
+                        trackingParams,
+                    };
+                });
+
+                setAllDrafts(processedDrafts);
+            } catch (error) {
+                console.error('Failed to load drafts for dashboard', error);
+                setAllDrafts([]);
+            }
+        };
         loadProfile(); // Initial load
         window.addEventListener('user_profile_updated', loadProfile);
         return () => window.removeEventListener('user_profile_updated', loadProfile);
@@ -166,6 +217,15 @@ export default function Dashboard() {
         else if (view === 'Year') newDate.setFullYear(currentDate.getFullYear() + direction);
         else newDate.setDate(currentDate.getDate() + (direction * 7));
         setCurrentDate(newDate);
+    };
+
+    const saveDeskDraftRecord = (record) => {
+        // Trigger page refresh to reload drafts from backend PostgreSQL DB
+        window.dispatchEvent(new Event('my_drafts_updated'));
+    };
+
+    const handleEditDraft = (draft) => {
+        handleWorkspaceDraftOpen(draft);
     };
 
     const monthName = currentDate.toLocaleString('default', { month: 'long' });
@@ -640,6 +700,8 @@ function CreateEventModalTrigger({ onAdd }) {
 
         navigate('/dashboard/workspace', {
             state: {
+                draftId: draft.id,
+                id: draft.id,
                 documentKey,
                 filename,
                 onlyofficeConfig,

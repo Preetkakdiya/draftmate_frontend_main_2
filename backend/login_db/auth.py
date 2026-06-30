@@ -245,19 +245,70 @@ def startup_schema_sync():
 def read_root():
     return {"message": "Auth Service is running"}
 
+def resolve_and_provision_session(session_id: str, cur, conn) -> str:
+    """
+    Validates a session_id. If it's a non-UUID format and DEV_BYPASS_AUTH is true,
+    maps it to a deterministic UUID and auto-provisions a mock user/session.
+    Returns the user_id (as a string UUID) or raises HTTPException.
+    """
+    # 1. Parse or generate session UUID
+    try:
+        session_uuid = uuid.UUID(session_id)
+    except ValueError:
+        if os.getenv("DEV_BYPASS_AUTH") == "true" or os.getenv("DEV_BYPASS_AUTH", "false").lower() == "true":
+            import hashlib
+            session_uuid = uuid.UUID(hashlib.md5(session_id.encode('utf-8')).hexdigest())
+        else:
+            raise HTTPException(status_code=401, detail="Invalid session token format.")
+
+    # 2. Check if session exists in DB
+    cur.execute("SELECT user_id FROM sessions WHERE session_id = %s", (str(session_uuid),))
+    result = cur.fetchone()
+    if result:
+        return str(result[0])
+
+    # 3. If not found, check if we can auto-provision
+    if os.getenv("DEV_BYPASS_AUTH") == "true" or os.getenv("DEV_BYPASS_AUTH", "false").lower() == "true":
+        import hashlib
+        user_seed = f"user_{session_id}"
+        user_uuid = uuid.UUID(hashlib.md5(user_seed.encode('utf-8')).hexdigest())
+        
+        email = f"{session_id.replace('-session', '')}@example.com"
+        if "local-test" in session_id:
+            email = "local-test@example.com"
+        elif "bob" in session_id:
+            email = "bob@example.com"
+
+        # Check if user exists
+        cur.execute("SELECT id FROM users WHERE id = %s", (str(user_uuid),))
+        if not cur.fetchone():
+            cur.execute(
+                "INSERT INTO users (id, email, password_hash) VALUES (%s, %s, %s) ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id",
+                (str(user_uuid), email, "mock_hash")
+            )
+            res = cur.fetchone()
+            if res:
+                user_uuid = res[0]
+
+        # Insert session
+        cur.execute(
+            "INSERT INTO sessions (session_id, user_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+            (str(session_uuid), str(user_uuid))
+        )
+        conn.commit()
+        return str(user_uuid)
+
+    raise HTTPException(status_code=401, detail="Invalid session")
+
+
 @app.get("/verify_session/{session_id}")
 def verify_session(session_id: str):
     conn = get_db_connection()
     cur = conn.cursor()
     
     try:
-        cur.execute("SELECT user_id FROM sessions WHERE session_id = %s", (session_id,))
-        result = cur.fetchone()
-        
-        if not result:
-            raise HTTPException(status_code=401, detail="Invalid session")
-            
-        return {"valid": True, "user_id": result[0]}
+        user_id = resolve_and_provision_session(session_id, cur, conn)
+        return {"valid": True, "user_id": user_id}
         
     except HTTPException as he:
         raise he
@@ -496,7 +547,17 @@ def logout(model: LogoutModel):
     cur = conn.cursor()
     
     try:
-        cur.execute("DELETE FROM sessions WHERE session_id = %s", (model.session_id,))
+        session_id = model.session_id
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except ValueError:
+            if os.getenv("DEV_BYPASS_AUTH") == "true" or os.getenv("DEV_BYPASS_AUTH", "false").lower() == "true":
+                import hashlib
+                session_uuid = uuid.UUID(hashlib.md5(session_id.encode('utf-8')).hexdigest())
+            else:
+                raise HTTPException(status_code=401, detail="Invalid session token format.")
+                
+        cur.execute("DELETE FROM sessions WHERE session_id = %s", (session_uuid,))
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Session not found")
             
@@ -620,6 +681,394 @@ def reset_password(request: ResetPasswordRequest):
         conn.rollback()
         print(f"Reset password error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        cur.close()
+        conn.close()
+
+
+from typing import List, Dict, Any
+
+class DraftRegister(BaseModel):
+    draft_id: str
+    name: str
+    filename: str
+    document_key: str
+    created_by: str
+    variables_detected: Optional[List[Any]] = []
+    status: Optional[str] = "In progress"
+
+class DraftShare(BaseModel):
+    draft_id: str
+    email: str
+    access_level: Optional[str] = "edit"
+
+class FolderCreate(BaseModel):
+    id: str
+    name: str
+
+class FolderRename(BaseModel):
+    id: str
+    name: str
+
+class FolderDelete(BaseModel):
+    id: str
+
+class DraftDelete(BaseModel):
+    id: str
+
+class DraftUpdate(BaseModel):
+    id: str
+    folder_id: Optional[str] = None
+    status: Optional[str] = None
+    name: Optional[str] = None
+
+def get_user_id_from_header(authorization: Optional[str] = Header(None)) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header.")
+    session_id = authorization.split(" ", 1)[1].strip()
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing session token.")
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        return resolve_and_provision_session(session_id, cur, conn)
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/internal/draft/register")
+def register_draft(draft: DraftRegister):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        import json
+        variables_json = json.dumps(draft.variables_detected or [])
+        # Insert draft
+        cur.execute("""
+            INSERT INTO drafts (id, name, filename, document_key, created_by, variables_detected, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                filename = EXCLUDED.filename,
+                variables_detected = EXCLUDED.variables_detected,
+                updated_at = CURRENT_TIMESTAMP
+        """, (draft.draft_id, draft.name, draft.filename, draft.document_key, draft.created_by, variables_json, draft.status))
+        
+        # Ensure creator has access
+        cur.execute("""
+            INSERT INTO draft_access (draft_id, user_id, access_level)
+            VALUES (%s, %s, 'edit')
+            ON CONFLICT (draft_id, user_id) DO NOTHING
+        """, (draft.draft_id, draft.created_by))
+        
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback()
+        print(f"Register draft error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/internal/draft/touch/{draft_id}")
+def touch_draft(draft_id: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        import uuid
+        import hashlib
+        new_key = hashlib.sha256(str(uuid.uuid4()).encode('utf-8')).hexdigest()
+        cur.execute("UPDATE drafts SET updated_at = CURRENT_TIMESTAMP, document_key = %s WHERE id = %s", (new_key, draft_id))
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback()
+        print(f"Touch draft error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+@app.get("/internal/draft/verify_access/{draft_id}")
+def verify_draft_access(draft_id: str, user_id: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Check if user is owner
+        cur.execute("SELECT created_by FROM drafts WHERE id = %s", (draft_id,))
+        res = cur.fetchone()
+        if res and str(res[0]) == user_id:
+            return {"access_level": "edit"}
+            
+        # Check ACL
+        cur.execute("SELECT access_level FROM draft_access WHERE draft_id = %s AND user_id = %s", (draft_id, user_id))
+        res = cur.fetchone()
+        if res:
+            return {"access_level": res[0]}
+            
+        return {"access_level": "none"}
+    except Exception as e:
+        print(f"Verify draft access error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+@app.get("/internal/draft/get/{draft_id}")
+def get_draft_internal(draft_id: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, filename, document_key, created_by, folder_id, variables_detected, status FROM drafts WHERE id = %s", (draft_id,))
+        r = cur.fetchone()
+        if not r:
+            raise HTTPException(status_code=404, detail="Draft not found")
+        import json
+        return {
+            "id": str(r[0]),
+            "name": r[1],
+            "filename": r[2],
+            "documentKey": r[3],
+            "createdBy": str(r[4]),
+            "folderId": r[5],
+            "variablesDetected": r[6] if r[6] is not None else [],
+            "status": r[7]
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Get draft internal error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+@app.get("/v2/draft/list")
+def list_drafts(user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Get drafts the user has access to
+        cur.execute("""
+            SELECT DISTINCT d.id, d.name, d.filename, d.document_key, d.created_by, d.folder_id, d.variables_detected, d.status, d.created_at, d.updated_at
+            FROM drafts d
+            LEFT JOIN draft_access da ON d.id = da.draft_id
+            WHERE d.created_by = %s OR da.user_id = %s
+            ORDER BY d.updated_at DESC
+        """, (user_id, user_id))
+        
+        drafts_res = cur.fetchall()
+        drafts_list = []
+        for r in drafts_res:
+            drafts_list.append({
+                "id": str(r[0]),
+                "name": r[1],
+                "filename": r[2],
+                "documentKey": r[3],
+                "createdBy": str(r[4]),
+                "folderId": r[5],
+                "variablesDetected": r[6] if r[6] is not None else [],
+                "status": r[7],
+                "createdAt": r[8].isoformat() if r[8] else None,
+                "lastModified": r[9].isoformat() if r[9] else None,
+            })
+            
+        # Get folders
+        cur.execute("SELECT id, name, user_id, created_at FROM folders WHERE user_id = %s ORDER BY created_at ASC", (user_id,))
+        folders_res = cur.fetchall()
+        folders_list = []
+        for r in folders_res:
+            folders_list.append({
+                "id": r[0],
+                "name": r[1],
+                "userId": str(r[2]),
+                "createdAt": r[3].isoformat() if r[3] else None
+            })
+            
+        return {"drafts": drafts_list, "folders": folders_list}
+    except Exception as e:
+        print(f"List drafts error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve drafts")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/draft/share")
+def share_draft(share: DraftShare, user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Check permissions
+        cur.execute("SELECT created_by FROM drafts WHERE id = %s", (share.draft_id,))
+        owner_res = cur.fetchone()
+        if not owner_res:
+            raise HTTPException(status_code=404, detail="Draft not found")
+            
+        is_owner = str(owner_res[0]) == user_id
+        
+        if not is_owner:
+            # Check ACL edit permission
+            cur.execute("SELECT access_level FROM draft_access WHERE draft_id = %s AND user_id = %s", (share.draft_id, user_id))
+            acl_res = cur.fetchone()
+            if not acl_res or acl_res[0] != 'edit':
+                raise HTTPException(status_code=403, detail="You do not have permission to share this draft")
+                
+        # Find target user by email
+        cur.execute("SELECT id FROM users WHERE email = %s", (share.email.strip().lower(),))
+        target_res = cur.fetchone()
+        if not target_res:
+            raise HTTPException(status_code=404, detail="User with this email not found")
+            
+        target_user_id = target_res[0]
+        
+        # Add access record
+        cur.execute("""
+            INSERT INTO draft_access (draft_id, user_id, access_level)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (draft_id, user_id) DO UPDATE SET access_level = EXCLUDED.access_level
+        """, (share.draft_id, target_user_id, share.access_level))
+        
+        conn.commit()
+        return {"ok": True, "message": f"Draft shared successfully with {share.email}"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Share draft error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to share draft")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/draft/folder/create")
+def create_folder(folder: FolderCreate, user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO folders (id, name, user_id) VALUES (%s, %s, %s)", (folder.id, folder.name, user_id))
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback()
+        print(f"Create folder error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create folder")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/draft/folder/rename")
+def rename_folder(folder: FolderRename, user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE folders SET name = %s WHERE id = %s AND user_id = %s", (folder.name, folder.id, user_id))
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback()
+        print(f"Rename folder error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to rename folder")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/draft/folder/delete")
+def delete_folder(folder: FolderDelete, user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM folders WHERE id = %s AND user_id = %s", (folder.id, user_id))
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback()
+        print(f"Delete folder error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete folder")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/draft/delete")
+def delete_draft(draft: DraftDelete, user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Check permissions: only creator can delete
+        cur.execute("SELECT created_by FROM drafts WHERE id = %s", (draft.id,))
+        owner_res = cur.fetchone()
+        if not owner_res:
+            raise HTTPException(status_code=404, detail="Draft not found")
+            
+        if str(owner_res[0]) != user_id:
+            raise HTTPException(status_code=403, detail="Only the owner can delete this draft")
+            
+        cur.execute("DELETE FROM drafts WHERE id = %s", (draft.id,))
+        conn.commit()
+        return {"ok": True}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Delete draft error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete draft")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/draft/update")
+def update_draft(draft: DraftUpdate, user_id: str = Depends(get_user_id_from_header)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Verify access to edit this draft
+        cur.execute("SELECT created_by FROM drafts WHERE id = %s", (draft.id,))
+        owner_res = cur.fetchone()
+        if not owner_res:
+            raise HTTPException(status_code=404, detail="Draft not found")
+            
+        is_owner = str(owner_res[0]) == user_id
+        if not is_owner:
+            cur.execute("SELECT access_level FROM draft_access WHERE draft_id = %s AND user_id = %s", (draft.id, user_id))
+            acl_res = cur.fetchone()
+            if not acl_res or acl_res[0] != 'edit':
+                raise HTTPException(status_code=403, detail="You do not have permission to modify this draft")
+                
+        # Build update query
+        updates = []
+        params = []
+        
+        # Handle folder_id
+        if draft.folder_id is not None:
+            if draft.folder_id == "" or draft.folder_id.lower() == "null" or draft.folder_id == "none":
+                updates.append("folder_id = NULL")
+            else:
+                updates.append("folder_id = %s")
+                params.append(draft.folder_id)
+                
+        if draft.status is not None:
+            updates.append("status = %s")
+            params.append(draft.status)
+            
+        if draft.name is not None:
+            updates.append("name = %s")
+            params.append(draft.name)
+            
+        if updates:
+            updates.append("updated_at = CURRENT_TIMESTAMP")
+            query = f"UPDATE drafts SET {', '.join(updates)} WHERE id = %s"
+            params.append(draft.id)
+            cur.execute(query, tuple(params))
+            conn.commit()
+            
+        return {"ok": True}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Update draft error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update draft")
     finally:
         cur.close()
         conn.close()

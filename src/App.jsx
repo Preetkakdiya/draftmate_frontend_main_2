@@ -25,6 +25,8 @@ import AdvocateLogin from './pages/AdvocateLogin';
 import AdvocateSignup from './pages/AdvocateSignup';
 import AdvocateOnboarding from './pages/AdvocateOnboarding';
 import AdminDashboard from './pages/AdminDashboard';
+import TranslateDocumentPage from './pages/TranslateDocumentPage';
+import TranslateComparePage from './pages/TranslateComparePage';
 
 
 // Placeholder for other routes
@@ -62,8 +64,6 @@ import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
 import Pricing from './pages/Pricing';
 import Billing from './pages/billing';
-import TranslateComparePage from './pages/TranslateComparePage';
-import TranslateDocumentPage from './pages/TranslateDocumentPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const RequireAuth = ({ children }) => {
@@ -158,6 +158,7 @@ function App() {
               <Route path="home" element={<Dashboard />} />
               <Route path="editor" element={<Editor />} />
               <Route path="workspace" element={<OnlyOfficeWorkspace />} />
+              <Route path="translate" element={<TranslateDocumentPage />} />
               <Route path="pdf-editor" element={<PDFEditor />} />
               <Route path="tools" element={<Tools />} />
               <Route path="drafts" element={<MyDrafts />} />
@@ -175,7 +176,6 @@ function App() {
               <Route path="chat" element={<Placeholder title="AI Chat" />} />
 
               {/* Sidebar items — real pages */}
-              <Route path="translate" element={<TranslateDocumentPage />} />
               <Route path="academy" element={<LjAcademy />} />
 
               {/* Sidebar items — features not yet built (show Coming Soon

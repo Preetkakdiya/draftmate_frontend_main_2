@@ -10,6 +10,15 @@ services:
       - DEV_BYPASS_AUTH=true
       - JWT_HEADER=Authorization
       - JWT_IN_BODY=true
+    volumes:
+      - ./shared_drafts:/var/www/onlyoffice/Data/shared
+      - ./public/plugins/assistant:/var/www/onlyoffice/documentserver/sdkjs-plugins/assistant
+    ports:
+      - "8081:80"
+    extra_hosts:
+      - "drafter-service:host-gateway"
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
