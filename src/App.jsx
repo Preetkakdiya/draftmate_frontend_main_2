@@ -1,18 +1,44 @@
 import React from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import PDFEditor from './pages/PDFEditor';
 import MyDrafts from './pages/MyDrafts';
 import OnlyOfficeWorkspace from './pages/OnlyOfficeWorkspace';
-
 import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
 import ChatWithPDF from './pages/ChatWithPDF';
 import CaseSearch from './pages/CaseSearch';
 import LegalWorkflow from './pages/LegalWorkflow';
+import JudgmentsSaved from './pages/JudgmentsSaved';
+
+import LibraryDashboard from './pages/library/LibraryDashboard';
+import BareActs from './pages/library/BareActs';
+import ActDetails from './pages/library/ActDetails';
+import Judgments from './pages/library/Judgments';
+import JudgmentDetails from './pages/library/JudgmentDetails';
+import Bookmarks from './pages/library/Bookmarks';
+import Notes from './pages/library/Notes';
+import Forms from './pages/library/Forms';
+import FormDetails from './pages/library/FormDetails';
+import Dictionary from './pages/library/Dictionary';
+import TermDetails from './pages/library/TermDetails';
+import Diary from './pages/library/Diary';
+import DiaryEntry from './pages/library/DiaryEntry';
+import Calendar from './pages/library/Calendar';
+import EventDetails from './pages/library/EventDetails';
+import Hearings from './pages/library/Hearings';
+import HearingDetails from './pages/library/HearingDetails';
+import VideoLinks from './pages/library/VideoLinks';
+import Clients from './pages/library/Clients';
+import ClientDetails from './pages/library/ClientDetails';
+import Cases from './pages/library/Cases';
+import CaseDetails from './pages/library/CaseDetails';
+import CaseTracking from './pages/library/CaseTracking';
+import CaseTrackingDetails from './pages/library/CaseTrackingDetails';
+import IntegrationSettings from './pages/library/IntegrationSettings';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -73,6 +99,11 @@ const RequireAuth = ({ children }) => {
   }
   return children;
 };
+
+function LibraryRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/dashboard${location.pathname}${location.search}`} replace />;
+}
 
 function App() {
   // Requires a general user session
@@ -166,6 +197,40 @@ function App() {
               <Route path="chat-pdf" element={<ChatWithPDF />} />
               <Route path="case-search" element={<CaseSearch />} />
               <Route path="legal-workflow" element={<LegalWorkflow />} />
+              
+              {/* New Judgment Routes */}
+              <Route path="judgments" element={<Judgments />} />
+              <Route path="judgments/:judgmentId" element={<JudgmentDetails />} />
+              <Route path="judgments-saved" element={<Navigate to="/dashboard/library/judgments-saved" replace />} />
+              
+              {/* Library Routes */}
+              <Route path="library" element={<LibraryDashboard />} />
+              <Route path="library/bare-acts" element={<BareActs />} />
+              <Route path="library/acts/:actId" element={<ActDetails />} />
+              <Route path="library/judgments" element={<Navigate to="/dashboard/judgments" replace />} />
+              <Route path="library/judgments/:judgmentId" element={<Navigate to="/dashboard/judgments/:judgmentId" replace />} />
+              <Route path="library/judgments-saved" element={<JudgmentsSaved />} />
+              <Route path="library/bookmarks" element={<Bookmarks />} />
+              <Route path="library/notes" element={<Notes />} />
+              <Route path="library/forms" element={<Forms />} />
+              <Route path="library/forms/:formId" element={<FormDetails />} />
+              <Route path="library/dictionary" element={<Dictionary />} />
+              <Route path="library/dictionary/:termId" element={<TermDetails />} />
+              <Route path="library/diary" element={<Diary />} />
+              <Route path="library/diary/:entryId" element={<DiaryEntry />} />
+              <Route path="library/calendar" element={<Calendar />} />
+              <Route path="library/calendar/:eventId" element={<EventDetails />} />
+              <Route path="library/hearings" element={<Hearings />} />
+              <Route path="library/hearings/:hearingId" element={<HearingDetails />} />
+              <Route path="library/video-links" element={<VideoLinks />} />
+              <Route path="library/clients" element={<Clients />} />
+              <Route path="library/clients/:clientId" element={<ClientDetails />} />
+              <Route path="library/cases" element={<Cases />} />
+              <Route path="library/cases/:caseId" element={<CaseDetails />} />
+              <Route path="library/case-tracking" element={<CaseTracking />} />
+              <Route path="library/case-tracking/:trackingId" element={<CaseTrackingDetails />} />
+              <Route path="library/integrations/ecourts" element={<IntegrationSettings />} />
+
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
               <Route path="billing" element={<Billing/>}/>
@@ -194,6 +259,9 @@ function App() {
 
             {/* Payment Verification Route */}
             <Route path="/payment-status" element={<PaymentStatus />} />
+
+            {/* Redirect /library paths to /dashboard/library paths so direct links work */}
+            <Route path="/library/*" element={<LibraryRedirect />} />
 
             {/* Global catch-all redirect to Landing */}
             <Route path="*" element={<Navigate to="/" replace />} />
