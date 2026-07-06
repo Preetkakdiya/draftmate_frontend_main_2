@@ -6,12 +6,12 @@ import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import PDFEditor from './pages/PDFEditor';
 import MyDrafts from './pages/MyDrafts';
-
 import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
 import ChatWithPDF from './pages/ChatWithPDF';
 import CaseSearch from './pages/CaseSearch';
 import LegalWorkflow from './pages/LegalWorkflow';
+import JudgmentsSaved from './pages/JudgmentsSaved';
 
 import LibraryDashboard from './pages/library/LibraryDashboard';
 import BareActs from './pages/library/BareActs';
@@ -165,12 +165,18 @@ function App() {
               <Route path="case-search" element={<CaseSearch />} />
               <Route path="legal-workflow" element={<LegalWorkflow />} />
               
+              {/* New Judgment Routes */}
+              <Route path="judgments" element={<Judgments />} />
+              <Route path="judgments/:judgmentId" element={<JudgmentDetails />} />
+              <Route path="judgments-saved" element={<Navigate to="/dashboard/library/judgments-saved" replace />} />
+              
               {/* Library Routes */}
               <Route path="library" element={<LibraryDashboard />} />
               <Route path="library/bare-acts" element={<BareActs />} />
               <Route path="library/acts/:actId" element={<ActDetails />} />
-              <Route path="library/judgments" element={<Judgments />} />
-              <Route path="library/judgments/:judgmentId" element={<JudgmentDetails />} />
+              <Route path="library/judgments" element={<Navigate to="/dashboard/judgments" replace />} />
+              <Route path="library/judgments/:judgmentId" element={<Navigate to="/dashboard/judgments/:judgmentId" replace />} />
+              <Route path="library/judgments-saved" element={<JudgmentsSaved />} />
               <Route path="library/bookmarks" element={<Bookmarks />} />
               <Route path="library/notes" element={<Notes />} />
               <Route path="library/forms" element={<Forms />} />

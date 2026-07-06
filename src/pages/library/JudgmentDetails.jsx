@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { mockJudgments } from '../../data/mockJudgments';
 import { judgmentService } from '../../services/library/judgmentService';
 import { notesService } from '../../services/library/notesService';
 import ExplainDrawer from '../../components/library/ExplainDrawer';
 import NoteDrawer from '../../components/library/NoteDrawer';
+import { getMetadata, getJudgment, downloadDocument } from '../../services/library/judgmentApi';
 
 const DetailSection = ({ icon, title, children, accent = 'blue' }) => {
   const accentMap = {
@@ -29,21 +30,102 @@ const DetailSection = ({ icon, title, children, accent = 'blue' }) => {
 
 const JudgmentDetails = () => {
   const { judgmentId } = useParams();
-  const judgment = mockJudgments.find(j => j.id === judgmentId);
+  const location = useLocation();
+  const [judgment, setJudgment] = useState(null);
+  const [fullText, setFullText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [isExplainOpen, setIsExplainOpen] = useState(false);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [apiError, setApiError] = useState(null);
+
+  // Load judgment from API or fall back to mock
+  useEffect(() => {
+    const loadJudgment = async () => {
+      setIsLoading(true);
+      setApiError(null);
+      try {
+        // First check for judgment in router state
+        const stateJudgment = location.state?.judgment;
+        if (stateJudgment && stateJudgment.id === judgmentId) {
+          setJudgment(stateJudgment);
+          const textData = await getJudgment(judgmentId);
+          if (textData?.data?.text) {
+            setFullText(textData.data.text);
+          }
+        } else {
+          // Then check if it's a mock judgment
+          const mock = mockJudgments.find(j => j.id === judgmentId);
+          if (mock) {
+            setJudgment(mock);
+          } else {
+            // Try API
+            const metadata = await getMetadata(judgmentId);
+            if (metadata) {
+              setJudgment(metadata);
+              const textData = await getJudgment(judgmentId);
+              if (textData?.data?.text) {
+                setFullText(textData.data.text);
+              }
+            } else {
+              setApiError('Judgment not found');
+            }
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        // Fallback to mock if exists
+        const mock = mockJudgments.find(j => j.id === judgmentId);
+        if (mock) {
+          setJudgment(mock);
+        } else {
+          setApiError('Failed to load judgment');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (judgmentId) loadJudgment();
+  }, [judgmentId, location.state]);
 
   useEffect(() => {
     if (judgment) judgmentService.isSaved(judgment.id).then(setIsSaved);
   }, [judgment?.id]);
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="px-6 py-4 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#151f2e]">
+          <div className="flex items-center gap-4 max-w-5xl mx-auto">
+            <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse"></div>
+            <div className="flex-1">
+              <div className="w-32 h-4 bg-slate-100 rounded-full mb-2 animate-pulse"></div>
+              <div className="w-full h-8 bg-slate-100 rounded-lg animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 p-6 md:p-8 flex items-center justify-center">
+          <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (apiError) {
+    return (
+      <div className="p-8 text-center h-full flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{apiError}</h2>
+        <Link to="/dashboard/judgments" className="mt-4 text-primary hover:underline">Return to Judgments</Link>
+      </div>
+    );
+  }
+
   if (!judgment) {
     return (
       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Judgment Not Found</h2>
-        <Link to="/dashboard/library/judgments" className="mt-4 text-primary hover:underline">Return to Library</Link>
+        <Link to="/dashboard/judgments" className="mt-4 text-primary hover:underline">Return to Judgments</Link>
       </div>
     );
   }
@@ -128,7 +210,7 @@ const JudgmentDetails = () => {
       {/* ── Header ── */}
       <div className="px-6 py-4 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#151f2e] flex-shrink-0 z-10">
         <div className="flex items-start gap-4 max-w-5xl mx-auto">
-          <Link to="/dashboard/library/judgments" className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors flex-shrink-0 mt-1">
+          <Link to="/dashboard/judgments" className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors flex-shrink-0 mt-1">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <div className="flex-1 min-w-0">
@@ -138,7 +220,7 @@ const JudgmentDetails = () => {
               <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">{judgment.citation}</span>
             </div>
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">{judgment.title}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{judgment.bench} • {judgment.year}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{judgment.bench || (judgment.judges?.length > 0 ? `Bench: ${judgment.judges.join(', ')}` : 'Indian Kanoon Judgment')} • {judgment.year || judgment.date}</p>
           </div>
 
           {/* Actions */}
@@ -151,6 +233,10 @@ const JudgmentDetails = () => {
             <button onClick={handleCopy} title="Copy" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <span className="material-symbols-outlined text-[18px]">content_copy</span>
               <span className="hidden md:inline">Copy</span>
+            </button>
+            <button onClick={() => downloadDocument(judgment.id, judgment.pdfUrl)} title="Download" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span className="hidden md:inline">Download</span>
             </button>
             <button onClick={handleShare} title="Share" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <span className="material-symbols-outlined text-[18px]">share</span>
@@ -174,47 +260,67 @@ const JudgmentDetails = () => {
 
           {/* Parties & Judges */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider mb-2">Parties</p>
-              <p className="text-sm text-slate-800 dark:text-slate-200"><span className="font-semibold">Petitioner:</span> {judgment.parties.petitioner}</p>
-              <p className="text-sm text-slate-800 dark:text-slate-200 mt-1"><span className="font-semibold">Respondent:</span> {judgment.parties.respondent}</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800">
+            {judgment.parties && (judgment.parties.petitioner || judgment.parties.respondent) && (
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider mb-2">Parties</p>
+                <p className="text-sm text-slate-800"><span className="font-semibold">Petitioner:</span> {judgment.parties?.petitioner || 'N/A'}</p>
+                <p className="text-sm text-slate-800 mt-1"><span className="font-semibold">Respondent:</span> {judgment.parties?.respondent || 'N/A'}</p>
+              </div>
+            )}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700">
               <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider mb-2">Judges</p>
-              <ul className="space-y-0.5">
-                {judgment.judges.map((j, i) => (
-                  <li key={i} className="text-sm text-slate-800 dark:text-slate-200">{j}</li>
-                ))}
-              </ul>
+              {judgment.judges?.length > 0 ? (
+                <ul className="space-y-0.5">
+                  {judgment.judges.map((j, i) => (
+                    <li key={i} className="text-sm text-slate-800">{j}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-500">No judges listed</p>
+              )}
             </div>
           </div>
 
-          <DetailSection icon="⚖️" title="Legal Issue" accent="blue">
-            {judgment.legalIssue}
-          </DetailSection>
+          {/* Summary */}
+          {judgment.summary && (
+            <DetailSection icon="📖" title="Summary" accent="amber">
+              {judgment.summary}
+            </DetailSection>
+          )}
 
-          <DetailSection icon="🏛" title="Ratio Decidendi (Binding Principle)" accent="purple">
-            <p className="font-medium italic">{judgment.ratiodecidendi}</p>
-          </DetailSection>
+          {/* Ratio Decidendi */}
+          {judgment.ratiodecidendi && (
+            <DetailSection icon="🏛" title="Ratio Decidendi (Binding Principle)" accent="purple">
+              <p className="font-medium italic">{judgment.ratiodecidendi}</p>
+            </DetailSection>
+          )}
 
-          <DetailSection icon="📖" title="Summary" accent="amber">
-            {judgment.summary}
-          </DetailSection>
+          {/* Full Text if available */}
+          {fullText && (
+            <DetailSection icon="📄" title="Full Judgment Text" accent="slate">
+              <div className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                {fullText}
+              </div>
+            </DetailSection>
+          )}
 
-          <DetailSection icon="📋" title="Key Principles" accent="emerald">
-            <ul className="space-y-2">
-              {judgment.keyPrinciples.map((p, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                  <span>{p}</span>
-                </li>
-              ))}
-            </ul>
-          </DetailSection>
+          {/* Key Principles (only if available) */}
+          {judgment.keyPrinciples && judgment.keyPrinciples.length > 0 && (
+            <DetailSection icon="📋" title="Key Principles" accent="emerald">
+              <ul className="space-y-2">
+                {judgment.keyPrinciples.map((p, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    <span className="text-slate-700">{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </DetailSection>
+          )}
 
-          {/* Tags & Related Acts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800">
+          {/* Tags */}
+          {judgment.tags && judgment.tags.length > 0 && (
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700">
               <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider mb-3">Tags</p>
               <div className="flex flex-wrap gap-2">
                 {judgment.tags.map(tag => (
@@ -222,19 +328,11 @@ const JudgmentDetails = () => {
                 ))}
               </div>
             </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider mb-3">Related Acts</p>
-              <ul className="space-y-1">
-                {judgment.relatedActs.map(act => (
-                  <li key={act} className="text-sm text-primary hover:underline cursor-pointer">{act}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          )}
 
         </div>
       </div>
-      <ExplainDrawer isOpen={isExplainOpen} onClose={() => setIsExplainOpen(false)} content={judgment} type="judgment" />
+      <ExplainDrawer isOpen={isExplainOpen} onClose={() => setIsExplainOpen(false)} content={judgment} type="judgment" fullText={fullText} />
       <NoteDrawer isOpen={isNoteOpen} onClose={() => setIsNoteOpen(false)} />
     </div>
   );

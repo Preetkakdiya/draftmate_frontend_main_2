@@ -145,9 +145,9 @@ class BookmarkFolder(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    __table_args__ = (
-        {"postgresql_include": ["user_id", "name"]},
-    )
+    # __table_args__ = (
+    #     {"postgresql_include": ["user_id", "name"]},
+    # )
 
 
 class Bookmark(Base):

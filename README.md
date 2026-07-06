@@ -325,4 +325,8 @@ For support, please:
 
 <p align="center">
   <strong>DraftMate - Legal Practice, Simplified.</strong>
+<<<<<<< HEAD
 </p>
+=======
+</p>
+>>>>>>> 79bca21 (feat: implement Library Service, Judgment Library, Bare Acts API, AI integration, and Integration Settings)

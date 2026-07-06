@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockBareActs } from '../../data/mockBareActs';
+import { bareActsApi } from '../../services/library/bareActsApi';
 import SectionToolbar from '../../components/library/SectionToolbar';
 import NoteDrawer from '../../components/library/NoteDrawer';
 import ExplainDrawer from '../../components/library/ExplainDrawer';
 
 const ActDetails = () => {
   const { actId } = useParams();
-  const act = mockBareActs.find(a => a.id === actId);
+  const [act, setAct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  const [activeChapter, setActiveChapter] = useState(act?.chapters?.[0]?.id || null);
+  const [activeChapter, setActiveChapter] = useState(null);
   
   // Drawer State
   const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
@@ -17,6 +19,24 @@ const ActDetails = () => {
 
   const [isExplainDrawerOpen, setIsExplainDrawerOpen] = useState(false);
   const [activeSectionForExplain, setActiveSectionForExplain] = useState(null);
+
+  useEffect(() => {
+    const loadAct = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await bareActsApi.getActById(actId);
+        setAct(data);
+        setActiveChapter(data?.chapters?.[0]?.id || null);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'Failed to load act');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAct();
+  }, [actId]);
 
   const handleOpenNote = (section) => {
     setActiveSectionForNote(section);
@@ -27,6 +47,25 @@ const ActDetails = () => {
     setActiveSectionForExplain(section);
     setIsExplainDrawerOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center h-full flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Loading Act...</h2>
+        <p className="text-slate-500 dark:text-slate-400 mt-2">Please wait</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center h-full flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Failed to Load</h2>
+        <p className="text-slate-500 dark:text-slate-400 mt-2">{error}</p>
+        <Link to="/dashboard/library/bare-acts" className="mt-4 text-primary hover:underline">Return to Library</Link>
+      </div>
+    );
+  }
 
   if (!act) {
     return (

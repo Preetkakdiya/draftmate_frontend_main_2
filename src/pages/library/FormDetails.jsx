@@ -85,7 +85,37 @@ const FormDetails = () => {
   };
 
   const handleDownload = () => {
-    toast.success("Download started (placeholder)");
+    if (!form) return;
+    
+    // Convert newlines to <br> for Word HTML
+    const formattedContent = form.preview.replace(/\n/g, '<br>');
+    
+    // Create Word HTML with proper formatting
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${form.name}</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.6; }
+          pre { white-space: pre-wrap; font-family: 'Times New Roman', serif; font-size: 12pt; }
+        </style>
+      </head>
+      <body>`;
+    const footer = "</body></html>";
+    const sourceHTML = header + formattedContent + footer;
+
+    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+    const fileDownload = document.createElement("a");
+    document.body.appendChild(fileDownload);
+    fileDownload.href = source;
+    fileDownload.download = `${form.name.replace(/\s+/g, '_')}.doc`;
+    fileDownload.click();
+    document.body.removeChild(fileDownload);
+    
+    toast.success("Download started!");
   };
 
   if (loading) {
