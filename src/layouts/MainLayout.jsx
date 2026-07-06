@@ -10,7 +10,12 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path === '/dashboard/judgments') {
+      return location.pathname === path || location.pathname.startsWith(path + '/');
+    }
+    return location.pathname === path;
+  };
 
   // Force Light Mode
   useEffect(() => {
@@ -87,6 +92,7 @@ const MainLayout = () => {
               <NavItem to="/dashboard/tools" icon="build" label="Tools" />
               <NavItem to="/dashboard/drafts" icon="article" label="My Drafts" />
               <NavItem to="/dashboard/research" icon="balance" label="AI Research" />
+              <NavItem to="/dashboard/judgments" icon="gavel" label="Judgments" />
               <NavItem to="/dashboard/legal-workflow" icon="gavel" label="Legal Assistant" />
               <NavItem to="/dashboard/library" icon="local_library" label="Library" />
               <NavItem to="/dashboard/settings" icon="settings" label="Settings" />

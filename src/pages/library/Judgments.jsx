@@ -1,6 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import JudgmentCard from '../../components/library/JudgmentCard';
-import { mockJudgments, judgmentCategories, judgmentCourts } from '../../data/mockJudgments';
+import { judgmentCategories, judgmentCourts } from '../../data/mockJudgments';
+import { searchJudgments } from '../../services/library/judgmentApi';
+import { judgmentService } from '../../services/library/judgmentService';
+import { Link } from 'react-router-dom';
 
 const Judgments = () => {
   const [searchTerm, setSearchTerm]           = useState('');
@@ -8,22 +11,43 @@ const Judgments = () => {
   const [selectedCourt, setSelectedCourt]     = useState('All');
   const [activeTab, setActiveTab]             = useState('all'); // 'all' | 'saved'
   const [savedRefresh, setSavedRefresh]       = useState(0);
+  const [judgments, setJudgments]             = useState([]);
+  const [isLoading, setIsLoading]             = useState(false);
+  const [apiError, setApiError]               = useState(null);
 
+  // Fetch from API when search term changes
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!searchTerm.trim()) {
+        setJudgments([]);
+        return;
+      }
+      setIsLoading(true);
+      setApiError(null);
+      try {
+        const results = await searchJudgments(searchTerm);
+        setJudgments(results);
+      } catch (e) {
+        setApiError('Failed to load judgments');
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [searchTerm]);
+
+  // Keep existing filtering for categories/courts
   const filteredJudgments = useMemo(() => {
-    return mockJudgments.filter(j => {
-      const q = searchTerm.toLowerCase();
-      const matchesSearch =
-        !q ||
-        j.title.toLowerCase().includes(q) ||
-        j.citation.toLowerCase().includes(q) ||
-        j.tags.some(t => t.toLowerCase().includes(q)) ||
-        j.parties.petitioner.toLowerCase().includes(q) ||
-        j.parties.respondent.toLowerCase().includes(q);
-      const matchesCategory = selectedCategory === 'All' || j.category === selectedCategory;
-      const matchesCourt    = selectedCourt === 'All' || j.court === selectedCourt;
-      return matchesSearch && matchesCategory && matchesCourt;
-    });
-  }, [searchTerm, selectedCategory, selectedCourt]);
+    let filtered = judgments;
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(j => j.category === selectedCategory);
+    }
+    if (selectedCourt !== 'All') {
+      filtered = filtered.filter(j => j.court === selectedCourt);
+    }
+    return filtered;
+  }, [judgments, selectedCategory, selectedCourt]);
 
   return (
     <div className="p-6 md:p-8 h-full overflow-y-auto flex flex-col">
@@ -39,8 +63,8 @@ const Judgments = () => {
           </div>
 
           {/* Search */}
-          <div className="w-full md:w-96 relative">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+          <div className="w-full md:w-96 relative z-10">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-20">search</span>
             <input
               type="text"
               placeholder="Search by party, citation, or keyword..."
@@ -103,14 +127,27 @@ const Judgments = () => {
 
         {/* ── Judgment Grid ── */}
         {activeTab === 'all' ? (
-          filteredJudgments.length > 0 ? (
+          isLoading ? (
+            <div className="flex justify-center p-12">
+              <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+            </div>
+          ) : apiError ? (
+            <EmptyState 
+              message="Failed to load judgments." 
+              sub="Please try again or check your connection." 
+              action={{ label: 'Retry', onClick: () => setSearchTerm(s => s) }} 
+            />
+          ) : filteredJudgments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredJudgments.map(j => (
                 <JudgmentCard key={j.id} judgment={j} onSaveToggle={() => setSavedRefresh(p => p + 1)} />
               ))}
             </div>
           ) : (
-            <EmptyState message="No judgments match your search." sub="Try a different keyword, court, or category." />
+            <EmptyState 
+              message={searchTerm.trim() ? "No judgments match your search." : "Start typing to search for judgments."} 
+              sub={searchTerm.trim() ? "Try a different keyword, court, or category." : "Search for cases from Indian Kanoon."} 
+            />
           )
         ) : (
           <SavedJudgments key={savedRefresh} />
@@ -121,9 +158,6 @@ const Judgments = () => {
 };
 
 // ── Saved Tab ──────────────────────────────────────────────────────────────
-import { useEffect } from 'react';
-import { judgmentService } from '../../services/library/judgmentService';
-import { Link } from 'react-router-dom';
 
 const SavedJudgments = () => {
   const [savedList, setSavedList] = useState([]);
@@ -158,7 +192,7 @@ const SavedJudgments = () => {
               <span className="material-symbols-outlined text-[16px]">delete</span>
             </button>
           </div>
-          <Link to={`/dashboard/library/judgments/${j.id}`} className="font-bold text-slate-900 dark:text-white text-base leading-snug hover:text-primary transition-colors mb-1 line-clamp-2">{j.title}</Link>
+          <Link to={`/dashboard/judgments/${j.id}`} state={{ judgment: j }} className="font-bold text-slate-900 dark:text-white text-base leading-snug hover:text-primary transition-colors mb-1 line-clamp-2">{j.title}</Link>
           <p className="text-xs font-mono text-slate-500 mb-2">{j.citation}</p>
           <p className="text-xs text-slate-400">Saved {new Date(j.savedAt).toLocaleDateString()}</p>
         </div>
@@ -168,13 +202,21 @@ const SavedJudgments = () => {
 };
 
 // ── Empty State ────────────────────────────────────────────────────────────
-const EmptyState = ({ message, sub }) => (
+const EmptyState = ({ message, sub, action }) => (
   <div className="flex flex-col items-center justify-center py-20 text-center">
     <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
       <span className="material-symbols-outlined text-slate-400 text-3xl">gavel</span>
     </div>
     <h3 className="text-lg font-bold text-slate-900 dark:text-white">{message}</h3>
     <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm">{sub}</p>
+    {action && (
+      <button 
+        onClick={action.onClick} 
+        className="mt-4 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
+      >
+        {action.label}
+      </button>
+    )}
   </div>
 );
 

@@ -10,13 +10,6 @@ const libraryCards = [
     color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
   },
   {
-    title: 'Judgments',
-    icon: 'gavel',
-    path: '/dashboard/library/judgments',
-    description: 'Search and save important Supreme Court and High Court judgments.',
-    color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400',
-  },
-  {
     title: 'Bookmarks',
     icon: 'bookmark',
     path: '/dashboard/library/bookmarks',
@@ -43,6 +36,13 @@ const libraryCards = [
     path: '/dashboard/library/dictionary',
     description: 'Quick reference for legal terminology and Latin maxims.',
     color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
+  },
+  {
+    title: 'Saved Judgments',
+    icon: 'bookmark',
+    path: '/dashboard/library/judgments-saved',
+    description: 'Access your bookmarked judgments and custom collections.',
+    color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
   },
   {
     title: 'Lawyer Diary',

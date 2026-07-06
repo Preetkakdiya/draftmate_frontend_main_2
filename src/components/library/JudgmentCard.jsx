@@ -41,7 +41,8 @@ const JudgmentCard = ({ judgment, onSaveToggle }) => {
 
   return (
     <Link
-      to={`/dashboard/library/judgments/${judgment.id}`}
+      to={`/dashboard/judgments/${judgment.id}`}
+      state={{ judgment }}
       className="flex flex-col p-5 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all group"
     >
       {/* Top row */}

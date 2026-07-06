@@ -25,7 +25,7 @@ export const mockBareActs = [
         subtitle: "Preliminary",
         sections: [
           { number: "1", title: "Short title, commencement and application", content: "This Act may be called the Bharatiya Nyaya Sanhita, 2023..." },
-          { number: "2", title: "Definitions", content: "In this Sanhita, unless the context otherwise requires..." },
+          { number: "2", title: "Definitions", content: "In this Sanhita, unless the context otherwise requires..." }
         ]
       },
       {
@@ -34,7 +34,7 @@ export const mockBareActs = [
         subtitle: "Of Punishments",
         sections: [
           { number: "4", title: "Punishments", content: "The punishments to which offenders are liable under the provisions of this Sanhita are..." },
-          { number: "5", title: "Commutation of sentence", content: "Appropriate Government may commute sentence..." },
+          { number: "5", title: "Commutation of sentence", content: "Appropriate Government may commute sentence..." }
         ]
       }
     ]

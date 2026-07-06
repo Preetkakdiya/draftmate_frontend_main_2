@@ -1,12 +1,15 @@
 // aiExplainService.js
-// Future-ready service layer for the AI Explanation system.
-// Currently uses mock responses.
-// To connect a real AI backend, replace the body of `explainSection()` with
-// a fetch() call to Lex Bot, Deep Research Service, OpenAI, Claude or Gemini.
+// AI Explanation service that uses existing Lex Bot/Deep Research Service for sections,
+// and Gemini directly for Indian Kanoon judgments!
+import { api } from '../api';
 
 const SAVED_EXPLANATIONS_KEY = 'draftmate_saved_explanations';
+const JUDGMENT_SUMMARY_CACHE_KEY = 'draftmate_judgment_summary_cache';
 
-// ─── Mock Response Database ────────────────────────────────────────────────
+// Session cache for judgment summaries (to avoid regenerating in same session)
+const summaryCache = new Map();
+
+// Mock explanations database for backward compatibility
 const mockExplanations = {
   // IPC Section 420
   'ipc-420': {
@@ -22,70 +25,9 @@ const mockExplanations = {
       'Maximum punishment is 7 years imprisonment.',
     ],
   },
-  // BNS Section 1
-  'bns-1': {
-    simpleMeaning: 'This section gives the Act its official name — "Bharatiya Nyaya Sanhita, 2023" — and states from which date the law came into force. It also defines which geographic areas and persons the law covers.',
-    legalApplicability: 'Applicable across the entire territory of India, including the State of Jammu & Kashmir. Applies to all Indian citizens and to all persons committing offences within Indian territory.',
-    punishment: 'This is a preliminary section and does not itself prescribe any punishment. It merely lays the foundation and jurisdiction for the rest of the Act.',
-    judicialInterpretation: 'Courts have consistently held that "commencement" provisions are strictly construed — no liability can arise for acts committed before the Act\'s notified date. Reference: R v. Inhabitants of St Mary, Whitechapel (1848).',
-    practicalExample: 'If a person commits an offence on 30th June 2024 (after the BNS came into force), they will be prosecuted under the BNS, not the old Indian Penal Code (IPC 1860).',
-    keyTakeaways: [
-      'The BNS officially replaced the Indian Penal Code (IPC), 1860.',
-      'It came into force on 1st July 2024.',
-      'Applies to all of India including Jammu & Kashmir.',
-      'Acts committed before the commencement date are still tried under the IPC.',
-    ],
-  },
-  // BNS Section 2
-  'bns-2': {
-    simpleMeaning: 'This section is the dictionary of the entire Act. It defines key terms used throughout the BNS so that there is no ambiguity in their interpretation.',
-    legalApplicability: 'The definitions in this section control the meaning of every term used in the BNS. Courts are bound to use these definitions unless the context otherwise requires.',
-    punishment: 'No punishment prescribed. This is a definitional section only.',
-    judicialInterpretation: 'Courts apply the principle of "strict construction" for penal statutes. If a definition is ambiguous, the benefit of doubt goes to the accused. See: Heydon\'s Case (1584).',
-    practicalExample: 'The term "document" as defined in this section would include a WhatsApp message or a digital PDF, making them valid evidence under the BNS.',
-    keyTakeaways: [
-      'Definitions section — foundational to the entire Act.',
-      '"Document" includes electronic records.',
-      '"Person" includes companies and other legal entities.',
-      'Definitions apply unless context specifically excludes them.',
-    ],
-  },
-  // Constitution Article 21
-  'constitution-21': {
-    simpleMeaning: 'Article 21 guarantees that no person can be deprived of their right to life or personal liberty except by a procedure that is established by law. This is one of the most fundamental rights in the Indian Constitution.',
-    legalApplicability: 'Available to all persons — both citizens and non-citizens — in India. It covers a wide spectrum of rights beyond just physical survival, including the right to dignity, privacy, livelihood, education, and a speedy trial.',
-    punishment: 'This article does not prescribe a punishment. It is a Constitutional right. Violation by the State entitles the victim to seek constitutional remedies under Articles 32 or 226.',
-    judicialInterpretation: [
-      'Maneka Gandhi v. Union of India (1978): Expanded "procedure established by law" to require the procedure be fair, just, and reasonable.',
-      'K.S. Puttaswamy v. Union of India (2017): Right to Privacy declared a fundamental right under Article 21.',
-      'Olga Tellis v. Bombay Municipal Corporation (1985): Right to livelihood is part of the right to life.',
-    ].join(' '),
-    practicalExample: 'If police detain a person without following due process (no FIR, no produced before a magistrate within 24 hours), the detained person can file a Writ of Habeas Corpus under Article 32, invoking Article 21.',
-    keyTakeaways: [
-      'One of the most expansive rights in Indian jurisprudence.',
-      'Applies to all persons, including non-citizens.',
-      'Includes right to privacy, dignity, livelihood, and a speedy trial.',
-      'The procedure of deprivation must be fair, just, and reasonable (post-Maneka Gandhi).',
-      'Can only be restricted by a law — not by executive action alone.',
-    ],
-  },
-  // Contract Act Section 3
-  'contract-3': {
-    simpleMeaning: 'This section explains how a proposal (offer) is communicated, how acceptance of a proposal is communicated, and how revocation of a proposal or acceptance is done — all in the context of forming a valid contract.',
-    legalApplicability: 'Governs the moment a legally binding offer or acceptance comes into existence. This is critical for determining when a contract is formed and its enforceability.',
-    punishment: 'No punishment — this is a contract formation section, not a penal provision.',
-    judicialInterpretation: 'Postal Rule: In Household Fire Insurance Co. v. Grant (1879), an acceptance sent by post is complete when the letter is posted, not when received — a principle adopted in Indian law.',
-    practicalExample: 'If Company A sends an email offer to Company B, and Company B replies "We accept" — the contract is formed at the moment Company B sends the acceptance email, not when Company A reads it.',
-    keyTakeaways: [
-      'Communication of proposal is complete when the other party receives it.',
-      'Communication of acceptance is complete when sent (against the proposer) and when received (against the acceptor).',
-      'Either party can revoke before the acceptance is communicated.',
-      'The "postal rule" applies to acceptance by post in India.',
-    ],
-  },
 };
 
-// Default/fallback explanation for sections without specific mocks
+// Default/fallback explanation for sections
 const generateGenericExplanation = (act, section) => ({
   simpleMeaning: `Section ${section.number} of the ${act.name} (${act.shortName}) titled "${section.title}" deals with foundational provisions of the Act. The section establishes legal norms and obligations that are binding on persons within the jurisdiction of this legislation.`,
   legalApplicability: `This section applies to all persons and entities governed by the ${act.name}. Courts are required to interpret this section in light of the broader objectives of the Act, as well as settled judicial precedents in this area of law.`,
@@ -101,41 +43,338 @@ const generateGenericExplanation = (act, section) => ({
   ],
 });
 
+/**
+ * Helper function to parse structured judgment summary from AI response
+ */
+function parseJudgmentSummary(text) {
+  // Try to extract sections using common patterns
+  const sections = {
+    caseFacts: '',
+    legalIssues: '',
+    courtReasoning: '',
+    finalDecision: '',
+    legalPrinciples: '',
+    practicalImpact: '',
+    keyTakeaways: [],
+  };
+  
+  const sectionPatterns = {
+    caseFacts: /(?:\d+\.\s*)?(?:case\s*facts|facts\s*of\s*the\s*case)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:legal\s*issues|legal\s*questions|court\s*reasoning|ratio\s*decidendi|final\s*decision|judgment|legal\s*principles|practical\s*impact|key\s*takeaways|$))/i,
+    legalIssues: /(?:\d+\.\s*)?(?:legal\s*issues|legal\s*questions|questions\s*of\s*law)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:case\s*facts|court\s*reasoning|ratio\s*decidendi|final\s*decision|judgment|legal\s*principles|practical\s*impact|key\s*takeaways|$))/i,
+    courtReasoning: /(?:\d+\.\s*)?(?:court\s*reasoning|ratio\s*decidendi|the\s*court\s*held)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:case\s*facts|legal\s*issues|final\s*decision|judgment|legal\s*principles|practical\s*impact|key\s*takeaways|$))/i,
+    finalDecision: /(?:\d+\.\s*)?(?:final\s*decision|judgment|order|conclusion)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:case\s*facts|legal\s*issues|court\s*reasoning|ratio\s*decidendi|legal\s*principles|key\s*takeaways|$))/i,
+    legalPrinciples: /(?:\d+\.\s*)?(?:legal\s*principles|legal\s*standards|principles\s*of\s*law)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:case\s*facts|legal\s*issues|court\s*reasoning|ratio\s*decidendi|final\s*decision|legal\s*principles|key\s*takeaways|$))/i,
+    practicalImpact: /(?:\d+\.\s*)?(?:practical\s*impact|significance|implications)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:case\s*facts|legal\s*issues|court\s*reasoning|ratio\s*decidendi|final\s*decision|legal\s*principles|key\s*takeaways|$))/i,
+  };
+
+  // Apply patterns
+  for (const [key, pattern] of Object.entries(sectionPatterns)) {
+    const match = text.match(pattern);
+    if (match && match[1].trim()) {
+      sections[key] = match[1].trim();
+    }
+  }
+
+  // If no sections parsed, use whole text as case facts
+  if (!sections.caseFacts.trim()) {
+    sections.caseFacts = text.trim();
+  }
+
+  // Extract key takeaways (bullet points or numbered lists)
+  const takeawayPatterns = [
+    /\*\s+(.*)/g,
+    /-\s+(.*)/g,
+    /\d+\.\s+(.*)/g,
+  ];
+
+  for (const pattern of takeawayPatterns) {
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length > 0) {
+      sections.keyTakeaways = matches.map(m => m[1].trim()).filter(Boolean);
+      break;
+    }
+  }
+
+  return sections;
+}
+
+/**
+ * Helper function to parse structured section explanation from AI response
+ */
+function parseSectionExplanation(text) {
+  const sections = {
+    simpleMeaning: '',
+    legalApplicability: '',
+    punishment: '',
+    judicialInterpretation: '',
+    practicalExample: '',
+    keyTakeaways: [],
+  };
+
+  const sectionPatterns = {
+    simpleMeaning: /(?:\d+\.\s*)?(?:simple\s*meaning|plain\s*language|explanation)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:legal\s*applicability|applicability|punishment|consequences|judicial\s*interpretation|practical\s*example|key\s*takeaways|$))/i,
+    legalApplicability: /(?:\d+\.\s*)?(?:legal\s*applicability|applicability|scope)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:simple\s*meaning|punishment|consequences|judicial\s*interpretation|practical\s*example|key\s*takeaways|$))/i,
+    punishment: /(?:\d+\.\s*)?(?:punishment|consequences|penalties)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:simple\s*meaning|legal\s*applicability|judicial\s*interpretation|practical\s*example|key\s*takeaways|$))/i,
+    judicialInterpretation: /(?:\d+\.\s*)?(?:judicial\s*interpretation|court\s*interpretation|case\s*law)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:simple\s*meaning|legal\s*applicability|punishment|practical\s*example|key\s*takeaways|$))/i,
+    practicalExample: /(?:\d+\.\s*)?(?:practical\s*example|example|scenario)[\s:：\-]*([\s\S]*?)(?=(?:\d+\.\s*)?(?:simple\s*meaning|legal\s*applicability|punishment|judicial\s*interpretation|key\s*takeaways|$))/i,
+  };
+
+  // Apply patterns
+  for (const [key, pattern] of Object.entries(sectionPatterns)) {
+    const match = text.match(pattern);
+    if (match && match[1].trim()) {
+      sections[key] = match[1].trim();
+    }
+  }
+
+  // Extract key takeaways (bullet points or numbered lists)
+  const takeawayPatterns = [
+    /\*\s+(.*)/g,
+    /-\s+(.*)/g,
+    /\d+\.\s+(.*)/g,
+  ];
+
+  for (const pattern of takeawayPatterns) {
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length > 0) {
+      sections.keyTakeaways = matches.map(m => m[1].trim()).filter(Boolean);
+      break;
+    }
+  }
+
+  // If any sections are empty, fill them with generic text
+  if (!sections.simpleMeaning) sections.simpleMeaning = text;
+  if (!sections.legalApplicability) sections.legalApplicability = 'This section applies as per the provisions of the Act.';
+  if (!sections.punishment) sections.punishment = 'Please refer to the specific provisions of the Act for penalties.';
+  if (!sections.judicialInterpretation) sections.judicialInterpretation = 'Courts have interpreted this section in various cases; consult a qualified lawyer for details.';
+  if (!sections.practicalExample) sections.practicalExample = 'For specific examples, please refer to judicial precedents.';
+  if (sections.keyTakeaways.length === 0) {
+    sections.keyTakeaways = [
+      'This is an important provision of the Act.',
+      'Consult a qualified legal professional for advice.',
+    ];
+  }
+
+  return sections;
+}
+
+/**
+ * Helper function to call Gemini API directly for judgment summarization
+ */
+async function callGeminiAPI(prompt) {
+  const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyBoeifSuiyad7PJJbWzhZwzdYcgGbm-upY';
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+  const requestBody = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 4096
+    }
+  };
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(`Gemini API error: ${response.status} ${errorData?.error?.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  
+  // Extract text from response
+  if (data.candidates && data.candidates.length > 0) {
+    const candidate = data.candidates[0];
+    if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+      return candidate.content.parts[0].text || '';
+    }
+  }
+  
+  throw new Error('No valid response from Gemini API');
+}
+
 // ─── Service Functions ─────────────────────────────────────────────────────
 
 export const aiExplainService = {
   /**
    * Fetches an AI explanation for a given section.
-   * Future: replace body with API call to Lex Bot / OpenAI / Claude / Gemini.
    *
    * @param {object} act - The Act object
    * @param {object} section - The Section object
+   * @param {boolean} forceRegenerate - Whether to force a fresh generation
    * @returns {Promise<object>} - The explanation object
    */
-  explainSection: async (act, section) => {
-    // Simulate network latency (1.2s – 2.5s for realistic feel)
-    const delay = 1200 + Math.random() * 1300;
-    await new Promise(r => setTimeout(r, delay));
-
+  explainSection: async (act, section, forceRegenerate = false) => {
     const key = `${act.id}-${section.number}`;
-    const explanation = mockExplanations[key] || generateGenericExplanation(act, section);
+    
+    // Check cache first unless forced to regenerate
+    if (!forceRegenerate && summaryCache.has(key)) {
+      return summaryCache.get(key);
+    }
 
-    return {
-      ...explanation,
-      generatedAt: new Date().toISOString(),
-      model: 'DraftMate AI (Mock)',
-      actId: act.id,
-      actName: act.name,
-      sectionNumber: section.number,
-      sectionTitle: section.title,
-    };
+    try {
+      // Use Gemini directly to generate explanation
+      const prompt = `
+        Explain Section ${section.number} of the ${act.name} (${act.shortName}).
+        
+        Section Title: ${section.title}
+        Section Text: ${section.content}
+        
+        Please provide a detailed explanation in the following structure:
+        
+        1. Simple Meaning - Explain the section in plain, simple language
+        2. Legal Applicability - Where and how this section applies legally
+        3. Punishment/Consequences - Any penalties or legal consequences
+        4. Judicial Interpretation - How courts have interpreted this section (if known)
+        5. Practical Example - A real-world scenario where this section would apply
+        6. Key Takeaways - 3-5 bullet points summarizing the most important things
+        
+        Please make sure each section is clearly labeled and easy to read.
+      `.trim();
+      
+      const explanationText = await callGeminiAPI(prompt);
+      
+      // Parse into structured object
+      const structuredExplanation = parseSectionExplanation(explanationText);
+      
+      const explanation = {
+        ...structuredExplanation,
+        generatedAt: new Date().toISOString(),
+        model: 'Gemini 2.5 Flash',
+        actId: act.id,
+        actName: act.name,
+        sectionNumber: section.number,
+        sectionTitle: section.title,
+      };
+      
+      // Cache the result
+      summaryCache.set(key, explanation);
+      
+      return explanation;
+    } catch (error) {
+      console.warn('Gemini unavailable, falling back to generic explanation:', error);
+      
+      // Fallback to generic explanation
+      const explanation = generateGenericExplanation(act, section);
+      const result = {
+        ...explanation,
+        generatedAt: new Date().toISOString(),
+        model: 'DraftMate AI (Fallback)',
+        actId: act.id,
+        actName: act.name,
+        sectionNumber: section.number,
+        sectionTitle: section.title,
+      };
+      summaryCache.set(key, result);
+      return result;
+    }
   },
 
   /**
-   * Regenerates explanation (in production: triggers a new API call with different seed/temperature).
+   * Generates AI summary for an Indian Kanoon judgment using Gemini directly.
+   *
+   * @param {object} judgment - The judgment object (from search results)
+   * @param {string} fullText - Full text of the judgment
+   * @param {boolean} forceRegenerate - Whether to force a fresh generation
+   * @returns {Promise<object>} - The summary object
+   */
+  summarizeJudgment: async (judgment, fullText, forceRegenerate = false) => {
+    const key = `judgment-${judgment.id}`;
+
+    // Check cache first unless forced to regenerate
+    if (!forceRegenerate && summaryCache.has(key)) {
+      return summaryCache.get(key);
+    }
+
+    try {
+      // Prepare the query for Gemini
+      const context = fullText || judgment.summary || '';
+      
+      const prompt = `
+        Please summarize the following judgment in detail, structured in these sections:
+        
+        1. Case Facts - Brief facts of the case
+        2. Legal Issues - Key legal questions before the court
+        3. Court Reasoning/Ratio Decidendi - The court's legal reasoning
+        4. Final Decision - What the court ultimately decided
+        5. Legal Principles - Key legal principles established
+        6. Practical Impact - Significance of this judgment
+        7. Key Takeaways - 3-5 main takeaways as bullet points
+        
+        Judgment Title: ${judgment.title}
+        Citation: ${judgment.citation}
+        Court: ${judgment.court}
+        Date/Year: ${judgment.date || judgment.year || 'N/A'}
+        
+        Judgment Text:
+        ${context}
+      `.trim();
+
+      const summaryText = await callGeminiAPI(prompt);
+      
+      // Parse into structured summary
+      const structuredSummary = parseJudgmentSummary(summaryText);
+      
+      const result = {
+        ...structuredSummary,
+        generatedAt: new Date().toISOString(),
+        model: 'Gemini 2.5 Flash',
+        judgmentId: judgment.id,
+        judgmentTitle: judgment.title,
+      };
+      
+      // Cache the result
+      summaryCache.set(key, result);
+      
+      return result;
+    } catch (error) {
+      console.error('Failed to generate judgment summary with Gemini:', error);
+      
+      // Fallback: create a basic summary from available data
+      const fallback = {
+        caseFacts: judgment.summary || 'No detailed facts available',
+        legalIssues: 'Legal issues not summarized',
+        courtReasoning: judgment.ratiodecidendi || judgment.summary || 'No detailed reasoning available',
+        finalDecision: `Delivered by ${judgment.court} ${judgment.year ? `in ${judgment.year}` : ''}.`,
+        legalPrinciples: 'Legal principles not summarized',
+        practicalImpact: 'Practical impact not summarized',
+        keyTakeaways: [
+          'This is an important judgment from the Indian legal system',
+          'Consult a legal professional for detailed analysis',
+        ],
+        generatedAt: new Date().toISOString(),
+        model: 'DraftMate AI (Fallback)',
+        judgmentId: judgment.id,
+        judgmentTitle: judgment.title,
+      };
+      
+      summaryCache.set(key, fallback);
+      return fallback;
+    }
+  },
+
+  /**
+   * Regenerates explanation (triggers a fresh generation).
    */
   regenerateExplanation: async (act, section) => {
-    return aiExplainService.explainSection(act, section);
+    return aiExplainService.explainSection(act, section, true);
+  },
+
+  /**
+   * Regenerates judgment summary (triggers a fresh generation).
+   */
+  regenerateJudgmentSummary: async (judgment, fullText) => {
+    return aiExplainService.summarizeJudgment(judgment, fullText, true);
   },
 
   /**
@@ -144,9 +383,12 @@ export const aiExplainService = {
   saveExplanation: async (explanation) => {
     await new Promise(r => setTimeout(r, 100));
     const saved = JSON.parse(localStorage.getItem(SAVED_EXPLANATIONS_KEY) || '[]');
-    const key = `${explanation.actId}-${explanation.sectionNumber}`;
+    const key = explanation.sectionNumber ? `${explanation.actId}-${explanation.sectionNumber}` : explanation.judgmentId;
     // Remove old version if exists
-    const updated = saved.filter(e => `${e.actId}-${e.sectionNumber}` !== key);
+    const updated = saved.filter(e => {
+      const existingKey = e.sectionNumber ? `${e.actId}-${e.sectionNumber}` : e.judgmentId;
+      return existingKey !== key;
+    });
     updated.unshift({ ...explanation, savedAt: new Date().toISOString() });
     localStorage.setItem(SAVED_EXPLANATIONS_KEY, JSON.stringify(updated));
     return true;
