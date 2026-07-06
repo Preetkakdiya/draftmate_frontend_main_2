@@ -14,6 +14,8 @@ import {
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/home" },
   { icon: Scale, label: "Legal Research", path: "/dashboard/research" },
+  { icon: Gavel, label: "Judgments", path: "/dashboard/judgments" },
+  { icon: BookOpen, label: "Legal Assistant", path: "/dashboard/legal-workflow" },
   { icon: FolderOpen, label: "Document Management", path: "/dashboard/cases" },
   { icon: FileText, label: "My Drafts", path: "/dashboard/drafts" },
   { icon: Languages, label: "Translations", path: "/dashboard/translate" },
