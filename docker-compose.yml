@@ -60,26 +60,7 @@ services:
     ports:
       - "3310:3310"
 
-  db:
-    # Pinned to 15 to match the existing postgres_data volume (initialised by
-    # PostgreSQL 15). Postgres refuses to start on a data dir from an older
-    # major version, so don't bump this without migrating/recreating the volume.
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB:-lex_bot_db}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # Init SQL runs once on first boot (empty volume)
-      - ./docker-initdb:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -183,7 +164,6 @@ services:
           path: requirements.txt
 
 volumes:
-  postgres_data:
   qdrant_data:
   translator_original_data:
   translator_translated_data:
