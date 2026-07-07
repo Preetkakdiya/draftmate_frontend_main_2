@@ -5,11 +5,11 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 // ── Navigation links ─────────────────────────────────────────────────────────
 // Note: We've removed Law Jurist and FAQs from this array as they require special routing logic handled below.
 const NAV_LINKS = [
-  { label: "Features",     href: "#features"  },
-  { label: "Blogs",        href: "#blogs"     },
-  // { label: "About",        href: "#about"     },
-  // { label: "Pricing",      href: "#pricing"   },
-  { label: "How it Works", href: "#steps"     },
+  { label: "Features",     href: "/features"      },
+  { label: "Blogs",        href: "/blogs"         },
+  // { label: "About",        href: "/about"         },
+  // { label: "Pricing",      href: "/pricing"       },
+  { label: "How it Works", href: "/how-it-works"  },
 ];
 
 const ACADEMY_STYLE = {
