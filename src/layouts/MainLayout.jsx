@@ -3,20 +3,13 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { API_CONFIG } from '../services/endpoints';
-<<<<<<< HEAD
-import {
-  Search, Bell, LayoutDashboard, FileText, Scale, FolderOpen,
-  Languages, Library, GraduationCap, Eye, Gavel, Wrench,
-  Settings, Menu, X, ChevronLeft, ChevronRight, LogOut,
-  CreditCard, HelpCircle, Gift, Bug, Copy, Share2, UploadCloud
-=======
+
 import ErrorBoundary from '../components/ErrorBoundary';
 import {
   Search, Bell, LayoutDashboard, FileText, Scale, FolderOpen,
   Languages, Library, GraduationCap, Eye, Gavel, Wrench,
   Settings, Menu, X, Zap, ChevronLeft, ChevronRight, LogOut,
   CreditCard, HelpCircle, BookOpen, MessageSquare, Gift, Bug, Copy, Share2, UploadCloud
->>>>>>> 25b494dbfa31bdf5a12bb2e92dea746157d8e470
 } from 'lucide-react';
 
 const SIDEBAR_ITEMS = [
