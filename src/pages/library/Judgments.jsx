@@ -150,7 +150,7 @@ const Judgments = () => {
             />
           )
         ) : (
-          <SavedJudgments key={savedRefresh} />
+          <SavedJudgments key={savedRefresh} onBrowse={() => setActiveTab('all')} />
         )}
       </div>
     </div>
@@ -159,7 +159,7 @@ const Judgments = () => {
 
 // ── Saved Tab ──────────────────────────────────────────────────────────────
 
-const SavedJudgments = () => {
+const SavedJudgments = ({ onBrowse }) => {
   const [savedList, setSavedList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -178,7 +178,7 @@ const SavedJudgments = () => {
     <EmptyState
       message="No saved judgments yet."
       sub="Browse the library and click the bookmark icon to save important cases here."
-      action={{ label: 'Browse Judgments', onClick: () => {} }}
+      action={{ label: 'Browse Judgments', onClick: onBrowse }}
     />
   );
 
