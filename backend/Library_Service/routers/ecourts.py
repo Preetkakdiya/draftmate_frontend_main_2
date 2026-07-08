@@ -1,4 +1,4 @@
- """
+"""
 e-Courts India FastAPI Router
 
 Exposes e-Courts service methods as REST endpoints.

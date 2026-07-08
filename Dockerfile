@@ -53,6 +53,10 @@ RUN pip install --upgrade pip && \
 # Copy all backend code (including pre-downloaded models if present)
 COPY backend/ backend/
 
+# Copy bareacts data needed by Library Service
+COPY src/data/bareacts/ src/data/bareacts/
+
+
 # Pre-download models if they are missing (e.g. for local development builds)
 RUN if [ ! -d "backend/models/embedding" ] || [ ! -d "backend/models/rerank" ]; then python backend/download_models.py; fi
 
