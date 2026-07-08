@@ -64,6 +64,14 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
         },
+        '/workflow': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
+        '/advocate-api': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
         '/onlyoffice': {
           target: onlyofficeTarget,
           changeOrigin: true,
