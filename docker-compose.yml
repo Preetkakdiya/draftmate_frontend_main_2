@@ -77,6 +77,11 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_CLIENT_ID=${VITE_CLIENT_ID}
+    env_file:
+      - .env
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       # host:container — nginx inside the image listens on 80.
       # Map host 80 -> container 80.
