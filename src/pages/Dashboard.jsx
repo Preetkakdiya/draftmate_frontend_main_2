@@ -143,6 +143,57 @@ export default function Dashboard() {
                 if (fullName) setUserName(fullName);
             }
         };
+
+        const handleDraftUpdate = async () => {
+            try {
+                const token = localStorage.getItem('session_id');
+                const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/list`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error("Failed to load drafts from database.");
+                }
+                const data = await response.json();
+                const savedDrafts = data.drafts || [];
+                const processedDrafts = savedDrafts.map((draft) => {
+                    const status = draft.status || 'In progress';
+                    const trackingParams = draft.trackingParams || {
+                        documentKey: draft.documentKey || draft.id || '',
+                        filename: ensureDocxFilename(draft.filename || draft.name || 'Untitled Draft'),
+                        source: draft.source || 'db_draft',
+                        folderId: draft.folderId ?? null,
+                    };
+
+                    return {
+                        id: draft.id,
+                        title: draft.name || trackingParams.filename || 'Untitled Draft',
+                        filename: ensureDocxFilename(draft.filename || draft.name || trackingParams.filename || 'Untitled Draft'),
+                        documentKey: draft.documentKey || draft.id || trackingParams.documentKey || '',
+                        modified: new Date(draft.lastModified || Date.now()).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        status,
+                        statusColor: buildStatusColor(status),
+                        content: draft.content,
+                        placeholders: draft.placeholders,
+                        rawName: draft.name,
+                        onlyofficeConfig: draft.onlyofficeConfig || null,
+                        variablesDetected: draft.variablesDetected || [],
+                        trackingParams,
+                    };
+                });
+
+                setAllDrafts(processedDrafts);
+            } catch (error) {
+                console.error('Failed to load drafts for dashboard', error);
+                setAllDrafts([]);
+            }
+        };
         loadProfile(); // Initial load
         window.addEventListener('user_profile_updated', loadProfile);
         return () => window.removeEventListener('user_profile_updated', loadProfile);
@@ -166,6 +217,15 @@ export default function Dashboard() {
         else if (view === 'Year') newDate.setFullYear(currentDate.getFullYear() + direction);
         else newDate.setDate(currentDate.getDate() + (direction * 7));
         setCurrentDate(newDate);
+    };
+
+    const saveDeskDraftRecord = (record) => {
+        // Trigger page refresh to reload drafts from backend PostgreSQL DB
+        window.dispatchEvent(new Event('my_drafts_updated'));
+    };
+
+    const handleEditDraft = (draft) => {
+        handleWorkspaceDraftOpen(draft);
     };
 
     const monthName = currentDate.toLocaleString('default', { month: 'long' });
@@ -627,6 +687,126 @@ function CreateEventModalTrigger({ onAdd }) {
         setTime("");
 
         setOpen(false);
+    };
+
+    const handleWorkspaceDraftOpen = (draft) => {
+        const filename = ensureDocxFilename(draft.filename || draft.title || draft.rawName || 'Untitled Draft');
+        const documentKey = draft.documentKey || draft.id || filename;
+        const onlyofficeConfig = buildWorkspaceConfig({
+            ...draft,
+            filename,
+            documentKey,
+        });
+
+        navigate('/dashboard/workspace', {
+            state: {
+                draftId: draft.id,
+                id: draft.id,
+                documentKey,
+                filename,
+                onlyofficeConfig,
+                variablesDetected: draft.variablesDetected || [],
+                trackingParams: draft.trackingParams || {
+                    documentKey,
+                    filename,
+                    source: draft.trackingParams?.source || 'my_desk',
+                    folderId: draft.trackingParams?.folderId ?? null,
+                },
+            },
+        });
+    };
+
+    const handleCreateNewDraft = () => {
+        setIsDraftingModalOpen(true);
+    };
+
+    const handleExistingDocumentClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const ext = `.${(file.name.split('.').pop() || '').toLowerCase()}`;
+        if (!['.docx', '.pdf'].includes(ext)) {
+            toast.error('Only .docx and .pdf files are supported.');
+            event.target.value = '';
+            return;
+        }
+
+        const sessionId = localStorage.getItem('session_id');
+        if (!sessionId) {
+            toast.error('Please sign in again before uploading a document.');
+            event.target.value = '';
+            return;
+        }
+
+        setIsUploadingDocument(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('session_id', sessionId);
+
+            const response = await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/upload`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${sessionId}`,
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                let detail = 'Failed to upload document.';
+                try {
+                    const errorData = await response.json();
+                    detail = errorData?.detail || detail;
+                } catch {
+                    detail = response.statusText || detail;
+                }
+                throw new Error(detail);
+            }
+
+            const data = await response.json();
+
+            saveDeskDraftRecord({
+                id: data.documentKey,
+                name: data.filename,
+                filename: data.filename,
+                documentKey: data.documentKey,
+                onlyofficeConfig: data,
+                variablesDetected: data.variablesDetected || [],
+                status: 'In progress',
+                source: 'dashboard_upload',
+                trackingParams: {
+                    source: 'dashboard_upload',
+                    documentKey: data.documentKey,
+                    filename: data.filename,
+                    uploadedAt: new Date().toISOString(),
+                },
+            });
+
+            navigate('/dashboard/workspace', {
+                state: {
+                    documentKey: data.documentKey,
+                    filename: data.filename,
+                    onlyofficeConfig: data,
+                    variablesDetected: data.variablesDetected || [],
+                    trackingParams: {
+                        source: 'dashboard_upload',
+                        documentKey: data.documentKey,
+                        filename: data.filename,
+                    },
+                },
+            });
+        } catch (error) {
+            console.error('Upload failed:', error);
+            toast.error(error.message || 'Failed to upload and open document.');
+        } finally {
+            setIsUploadingDocument(false);
+            event.target.value = '';
+        }
     };
 
     return (

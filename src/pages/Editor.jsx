@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import EditorToolbar from '../components/EditorToolbar';
@@ -1494,13 +1495,23 @@ const Editor = () => {
             settings: editorSettings,
             status: saveStatus,
             lastModified: new Date().toISOString(),
-            folderId: existingDraft?.folderId ?? null  // ← preserve folder membership
+            folderId: existingDraft?.folderId ?? null,  // preserve folder membership
+            documentKey: location.state?.documentKey || existingDraft?.documentKey || null,
+            filename: location.state?.filename || existingDraft?.filename || `${draftName || 'Untitled Draft'}.docx`,
+            onlyofficeConfig: location.state?.onlyofficeConfig || existingDraft?.onlyofficeConfig || null,
+            variablesDetected: location.state?.variablesDetected || existingDraft?.variablesDetected || [],
+            trackingParams: location.state?.trackingParams || existingDraft?.trackingParams || {
+                source: location.state?.documentKey ? 'workspace' : 'editor',
+                documentKey: location.state?.documentKey || existingDraft?.documentKey || draftId,
+                filename: location.state?.filename || existingDraft?.filename || `${draftName || 'Untitled Draft'}.docx`,
+            },
         };
 
         const otherDrafts = existingDrafts.filter(d => d.id !== draftId);
         const updatedDrafts = [...otherDrafts, draftData];
 
         localStorage.setItem('my_drafts', JSON.stringify(updatedDrafts));
+        window.dispatchEvent(new Event('my_drafts_updated'));
         toast.success(`Draft saved as ${saveStatus}!`);
     };
 

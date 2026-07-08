@@ -3,11 +3,20 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { API_CONFIG } from '../services/endpoints';
+<<<<<<< HEAD
 import {
   Search, Bell, LayoutDashboard, FileText, Scale, FolderOpen,
   Languages, Library, GraduationCap, Eye, Gavel, Wrench,
   Settings, Menu, X, ChevronLeft, ChevronRight, LogOut,
   CreditCard, HelpCircle, Gift, Bug, Copy, Share2, UploadCloud
+=======
+import ErrorBoundary from '../components/ErrorBoundary';
+import {
+  Search, Bell, LayoutDashboard, FileText, Scale, FolderOpen,
+  Languages, Library, GraduationCap, Eye, Gavel, Wrench,
+  Settings, Menu, X, Zap, ChevronLeft, ChevronRight, LogOut,
+  CreditCard, HelpCircle, BookOpen, MessageSquare, Gift, Bug, Copy, Share2, UploadCloud
+>>>>>>> 25b494dbfa31bdf5a12bb2e92dea746157d8e470
 } from 'lucide-react';
 
 const SIDEBAR_ITEMS = [
@@ -244,7 +253,7 @@ export default function MainLayout() {
             {/* 🔥 CORRECT NESTING: Main container for Search and Icons */}
             {isDashboardRoute && (
               <div className="flex items-center justify-between flex-1 w-full animate-fade-in-up">
-                
+
                 {/* 1. Search Bar Div */}
                 <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-slate-100/50 hover:bg-slate-100 transition-colors border border-slate-200/60 rounded-full flex-1 max-w-lg mr-4 group focus-within:bg-white focus-within:border-blue-400 focus-within:shadow-[0_0_0_4px_rgba(37,99,235,0.1)]">
                   <Search className="w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -310,7 +319,7 @@ export default function MainLayout() {
                     <Bell onClick={() => navigate('/dashboard/notifications')} className="w-4 h-4" />
                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
                   </button>
-                  
+
                 </div>
               </div>
             )}
@@ -320,8 +329,11 @@ export default function MainLayout() {
         </header>
 
         <main className={`flex-1 overflow-y-auto pb-12 px-4 md:px-8 custom-scrollbar pt-24 ${!isDashboardRoute ? 'lg:pt-6' : ''}`}>
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
+
 
         {/* ── REFER & EARN MODAL ── */}
         <AnimatePresence>

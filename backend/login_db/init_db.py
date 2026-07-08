@@ -96,6 +96,44 @@ def init_db():
         );
         """)
         
+        # Create folders table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS folders (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        # Create drafts table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS drafts (
+            id UUID PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            document_key VARCHAR(255) NOT NULL UNIQUE,
+            created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            folder_id VARCHAR(50) REFERENCES folders(id) ON DELETE SET NULL,
+            variables_detected JSONB DEFAULT '[]'::jsonb,
+            status VARCHAR(50) DEFAULT 'In progress',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        # Create draft_access table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS draft_access (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            draft_id UUID NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            access_level VARCHAR(20) DEFAULT 'edit',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(draft_id, user_id)
+        );
+        """)
+
         conn.commit()
         print("✅ Tables created successfully.")
 
