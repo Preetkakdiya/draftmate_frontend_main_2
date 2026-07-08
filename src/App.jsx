@@ -25,6 +25,8 @@ import AdvocateSignup from './pages/AdvocateSignup';
 import AdvocateOnboarding from './pages/AdvocateOnboarding';
 import AdminDashboard from './pages/AdminDashboard';
 
+import SitePolicy from './components/landing/sections/SitePolicy';
+
 
 // Placeholder for other routes
 const Placeholder = ({ title }) => (
@@ -50,6 +52,8 @@ import About from './pages/About';
 import Landing from './pages/Landing';
 import Features from './pages/Features';
 import HowItWorks from './pages/HowItWorks';
+import Blogs from './pages/Blogs';
+import BlogPost from './pages/BlogPost';
 import FAQs from './pages/FAQs';
 import Disclaimer from './pages/Disclaimer';
 import PrivacyPolicy from './pages/Privacy';
@@ -112,12 +116,15 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={<Onboarding />} />
-
+            
+            <Route path="/cookie-policy" element={<SitePolicy />} />
             {/* Public pages */}
             <Route path="/features" element={<Features />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/about" element={<About />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/blogs" element={<Blogs />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -138,7 +145,7 @@ function App() {
             <Route path="/academy" element={<LjAcademy />} />
             <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
 
-            <Route path="/dashboard" element={<RequireAuth><MainLayout /></RequireAuth>}>
+            <Route path="/dashboard" element={<MainLayout />}>
               <Route path="home" element={<Dashboard />} />
               <Route path="editor" element={<Editor />} />
               <Route path="pdf-editor" element={<PDFEditor />} />
