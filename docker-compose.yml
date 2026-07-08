@@ -158,6 +158,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - /app/backend/models
+      - ./src/data/bareacts:/app/src/data/bareacts
     develop:
       watch:
         - action: sync
