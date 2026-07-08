@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import PDFEditor from './pages/PDFEditor';
 import MyDrafts from './pages/MyDrafts';
+import OnlyOfficeWorkspace from './pages/OnlyOfficeWorkspace';
 
 import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
@@ -24,6 +25,8 @@ import AdvocateLogin from './pages/AdvocateLogin';
 import AdvocateSignup from './pages/AdvocateSignup';
 import AdvocateOnboarding from './pages/AdvocateOnboarding';
 import AdminDashboard from './pages/AdminDashboard';
+import TranslateDocumentPage from './pages/TranslateDocumentPage';
+import TranslateComparePage from './pages/TranslateComparePage';
 
 import SitePolicy from './components/landing/sections/SitePolicy';
 
@@ -65,6 +68,15 @@ import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
 import Pricing from './pages/Pricing';
 import Billing from './pages/billing';
+import ErrorBoundary from './components/ErrorBoundary';
+
+const RequireAuth = ({ children }) => {
+  const profile = localStorage.getItem('user_profile');
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
 
 function App() {
   // Requires a general user session
@@ -104,6 +116,7 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_CLIENT_ID}>
       <NotificationProvider>
+        <ErrorBoundary>
         <BrowserRouter>
           <Toaster position="top-center" richColors />
           <ScrollToTop />
@@ -145,9 +158,14 @@ function App() {
             <Route path="/academy" element={<LjAcademy />} />
             <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
 
-            <Route path="/dashboard" element={<MainLayout />}>
+            {/* Comparison view moved outside MainLayout for a full-screen experience */}
+            <Route path="/dashboard/translate/compare/:jobId" element={<RequireAuth><TranslateComparePage /></RequireAuth>} />
+
+            <Route path="/dashboard" element={<RequireAuth><MainLayout /></RequireAuth>}>
               <Route path="home" element={<Dashboard />} />
               <Route path="editor" element={<Editor />} />
+              <Route path="workspace" element={<OnlyOfficeWorkspace />} />
+              <Route path="translate" element={<TranslateDocumentPage />} />
               <Route path="pdf-editor" element={<PDFEditor />} />
               <Route path="tools" element={<Tools />} />
               <Route path="drafts" element={<MyDrafts />} />
@@ -163,6 +181,20 @@ function App() {
                 <RequireAdvocateAuth><AdvocateDashboard /></RequireAdvocateAuth>
               } />
               <Route path="chat" element={<Placeholder title="AI Chat" />} />
+
+              {/* Sidebar items — real pages */}
+              <Route path="academy" element={<LjAcademy />} />
+
+              {/* Sidebar items — features not yet built (show Coming Soon
+                  instead of silently redirecting to the dashboard) */}
+              <Route path="cases" element={<ComingSoon title="Document Management" />} />
+              <Route path="library" element={<ComingSoon title="Legal Library" />} />
+              {/* Visibility & Reach -> existing advocate dashboard (profile + analytics/reach) */}
+              <Route path="profile" element={
+                <RequireAdvocateAuth><AdvocateDashboard /></RequireAdvocateAuth>
+              } />
+              <Route path="ecourt" element={<ComingSoon title="E-Court Services" />} />
+
               {/* Catch-all relative to dashboard */}
               <Route path="*" element={<Navigate to="/dashboard/home" replace />} />
             </Route>
@@ -174,6 +206,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </ErrorBoundary>
       </NotificationProvider>
     </GoogleOAuthProvider>
   );
