@@ -152,6 +152,7 @@ services:
         condition: service_started
     volumes:
       - ./backend:/app/backend
+      - /app/backend/models
     develop:
       watch:
         - action: sync

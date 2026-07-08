@@ -213,7 +213,7 @@ export const API_CONFIG = {
 
     // Service: backend/Library_Service (Port 8008) — routed via /library-api/
     LIBRARY: {
-        BASE_URL: import.meta.env.VITE_LIBRARY_API_BASE_URL || 'http://localhost:8010',
+        BASE_URL: import.meta.env.VITE_LIBRARY_API_BASE_URL || '/library-api',
         ENDPOINTS: {
             // Indian Kanoon endpoints
             INDIAN_KANOON: {
