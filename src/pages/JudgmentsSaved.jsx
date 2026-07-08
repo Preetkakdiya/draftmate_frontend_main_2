@@ -144,7 +144,7 @@ const EmptyState = ({ onBrowse }) => {
       </p>
       <Link
         to="/dashboard/judgments"
-        onClick={onBrowse}
+        onClick={onBrowse || (() => {})}
         className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
       >
         Browse Judgments
