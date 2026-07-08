@@ -60,6 +60,10 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
         },
+        '/library-api': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
         '/onlyoffice': {
           target: onlyofficeTarget,
           changeOrigin: true,
