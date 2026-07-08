@@ -217,9 +217,10 @@ class IndianKanoonService:
             
             docs = data.get("docs", [])
             normalized = [self._normalize_judgment(doc) for doc in docs]
+            filtered = [j for j in normalized if self._is_clean_judgment(j)]
             
-            logger.info(f"Found {len(normalized)} results for query: {query[:100]}")
-            return normalized
+            logger.info(f"Found {len(normalized)} raw results, returning {len(filtered)} clean results for query: {query[:100]}")
+            return filtered
         except IndianKanoonAPIError:
             logger.exception(f"Search failed for query: {query[:100]}")
             return []
@@ -333,3 +334,26 @@ class IndianKanoonService:
         """
         logger.info(f"Searching by act: {act_name}")
         return await self.search_judgments(act_name, page=1)
+
+    def _is_clean_judgment(self, j: NormalizedJudgment) -> bool:
+        """
+        Check if a normalized judgment has clean, readable titles and summaries.
+        Filters out entries corrupted by incorrect PDF extraction or RTF tags.
+        """
+        title = j.title or ""
+        summary = j.summary or ""
+        
+        # Check for RTF/formatting tags or consecutive hashes/symbols that show corruption
+        corruption_patterns = ["#CJ##", "aJ#####", "h8kT#", "##aJ", "###", "C.J.#", "a.J.#"]
+        for pattern in corruption_patterns:
+            if pattern in title or pattern in summary:
+                return False
+                
+        # Check for excessive corrupted characters (like Latin-1 symbols or control chars) in title
+        # Allow spaces, standard alphanumeric, standard English punctuation
+        clean_chars_count = sum(1 for c in title if c.isalnum() or c.isspace() or c in ".,-()[]/\":';&_@*+?!=%")
+        total_chars = len(title)
+        if total_chars > 0 and (clean_chars_count / total_chars) < 0.9:
+            return False
+            
+        return True
