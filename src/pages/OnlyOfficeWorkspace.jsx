@@ -19,9 +19,7 @@ const OnlyOfficeWorkspace = () => {
   const caseGenerationAbortRef = useRef(null);
   const caseParagraphTextRef = useRef('');
   const chatEndRef = useRef(null);
-  const composerTextareaRef = useRef(null);
-  const [composerExpanded, setComposerExpanded] = useState(false);
-  const [composerHasValue, setComposerHasValue] = useState(false);
+
   const selectionPollRef = useRef(null);
   const selectionPollPausedUntilRef = useRef(0);
 
@@ -59,7 +57,6 @@ const OnlyOfficeWorkspace = () => {
   const [currentStatus, setCurrentStatus] = useState('In progress');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [sidebarInput, setSidebarInput] = useState('');
 
   // Dynamic config and sharing states
   const [dynamicConfig, setDynamicConfig] = useState(null);
@@ -97,18 +94,7 @@ const OnlyOfficeWorkspace = () => {
     };
   }, [isDragging]);
 
-  useEffect(() => {
-    const el = composerTextareaRef.current;
-    if (!el) return;
 
-    const minHeight = 24;
-    const maxHeight = 160;
-    el.style.height = '0px';
-    const nextHeight = Math.min(el.scrollHeight || minHeight, maxHeight);
-    el.style.height = `${nextHeight}px`;
-    setComposerExpanded(nextHeight > 42);
-    setComposerHasValue(Boolean(inputMessage.trim()));
-  }, [inputMessage]);
 
   const { documentKey, filename, onlyofficeConfig, variablesDetected } = useMemo(() => {
     const state = location?.state || {};
@@ -495,7 +481,10 @@ const OnlyOfficeWorkspace = () => {
       ? buildEnhancementPrompt(enhanceSelectionText.trim(), queryText.trim())
       : queryText;
 
-    if (!customQuery) setInputMessage('');
+    if (!customQuery) {
+      setInputMessage('');
+      setEnhanceSelectionText('');
+    }
 
     const userMsg = {
       role: 'user',
@@ -1243,30 +1232,51 @@ const OnlyOfficeWorkspace = () => {
 
             {/* Bottom Controls Bar for AI Assistant */}
             <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex flex-col gap-2">
-              {/* Secondary Chat Input Bar */}
+              {/* Selected Text Preview for Enhancement */}
+              {enhanceSelectionText && (
+                <div className="rounded-xl border border-[#B9D9EB] bg-white p-2.5 shadow-sm mb-1 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      <Quote className="h-3 w-3" />
+                      <span>Enhancing Selected Text</span>
+                    </div>
+                    <div className="mt-1 text-xs text-slate-600 truncate">
+                      {enhanceSelectionText}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnhanceSelectionText('')}
+                    className="text-[10px] font-bold text-red-500 hover:text-red-700 transition-colors uppercase shrink-0"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+
+              {/* Chat Input Bar */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (sidebarInput.trim()) {
-                    handleSendMessage(sidebarInput.trim());
-                    setSidebarInput('');
+                  if (inputMessage.trim()) {
+                    handleSendMessage();
                   }
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#B9D9EB] shadow-sm w-full"
               >
                 <input
                   type="text"
-                  value={sidebarInput}
-                  onChange={(e) => setSidebarInput(e.target.value)}
-                  placeholder="your legal research..."
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder={enhanceSelectionText ? "Write enhancement instructions..." : "your legal research..."}
                   disabled={isChatLoading}
-                  className="flex-1 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm text-slate-800 placeholder:text-slate-455"
+                  className="flex-1 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm text-slate-800 placeholder:text-slate-400 font-sans"
                 />
                 <button
                   type="submit"
-                  disabled={isChatLoading || !sidebarInput.trim()}
+                  disabled={isChatLoading || !inputMessage.trim()}
                   className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
-                    sidebarInput.trim()
+                    inputMessage.trim()
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'text-slate-400 cursor-not-allowed'
                   }`}
@@ -1343,102 +1353,7 @@ const OnlyOfficeWorkspace = () => {
       </aside>
       )}
 
-      {/* Floating expanding chat input bar */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-3 pointer-events-none select-none" style={{ width: 'min(760px, calc(100vw - 2rem))' }}>
-        {enhanceSelectionText ? (
-          <div className="pointer-events-auto w-full rounded-2xl border border-[#B9D9EB] bg-white shadow-xl overflow-hidden">
-            <div className="flex items-start justify-between gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  <Quote className="h-3.5 w-3.5" />
-                  Selected text
-                </div>
-                <div className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words max-h-20 overflow-hidden">
-                  {enhanceSelectionText}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEnhanceSelectionText('')}
-                className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        ) : null}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (composerHasValue) {
-              handleSendMessage();
-              setActiveTab('chat');
-            }
-          }}
-          className={`pointer-events-auto w-full flex items-end gap-3 bg-[#f0f4f9] border border-[#d8e1ea] shadow-[0_12px_30px_rgba(15,23,42,0.08)] px-4 py-3.5 transition-all duration-300 ${
-            composerExpanded ? 'rounded-[20px]' : 'rounded-full'
-          }`}
-        >
-          {/* Left Column (fixed height side column, bottom anchored) */}
-          <div className="flex h-10 items-center justify-center shrink-0">
-            <button
-              type="button"
-              disabled
-              title="Attachments coming soon"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d8e1ea] bg-white/80 text-slate-500 opacity-70"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
 
-          <textarea
-            ref={composerTextareaRef}
-            rows={1}
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (composerHasValue) {
-                  handleSendMessage();
-                  setActiveTab('chat');
-                }
-              }
-            }}
-            placeholder={enhanceSelectionText ? 'Write enhancement instructions...' : 'Ask your AI...'}
-            disabled={isChatLoading}
-            style={{
-              height: '24px',
-              minHeight: '24px',
-              maxHeight: '160px',
-            }}
-            className="flex-1 resize-none overflow-y-auto bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-[15px] leading-6 text-slate-800 placeholder:text-slate-400 font-sans"
-          />
-
-          {/* Right Column (fixed height side column, bottom anchored) */}
-          <div className="flex h-10 items-center justify-end gap-2 shrink-0">
-            <button
-              type="button"
-              disabled
-              title="Voice input coming soon"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d8e1ea] bg-white/80 text-slate-500 opacity-70"
-            >
-              <Mic className="h-4 w-4" />
-            </button>
-            <button
-              type="submit"
-              disabled={isChatLoading || !inputMessage.trim()}
-              className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold transition-all duration-200 ${
-                inputMessage.trim()
-                  ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 opacity-100'
-                  : 'bg-slate-900/10 text-slate-500 opacity-50 cursor-not-allowed'
-              } ${isChatLoading ? 'cursor-wait opacity-70' : ''}`}
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
-      </div>
       {isDragging && (
         <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
       )}
