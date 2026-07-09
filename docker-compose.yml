@@ -152,6 +152,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - ADVOCATE_PROFILE_PORT=8007
       - NOTIFICATION_SERVICE_URL=http://127.0.0.1:8015
+      - SHARED_STORAGE_PATH=/app/shared_drafts
     depends_on:
       qdrant:
         condition: service_started
@@ -159,6 +160,7 @@ services:
       - ./backend:/app/backend
       - /app/backend/models
       - ./src/data/bareacts:/app/src/data/bareacts
+      - ./shared_drafts:/app/shared_drafts
     develop:
       watch:
         - action: sync
