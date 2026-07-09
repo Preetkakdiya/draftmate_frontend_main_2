@@ -38,7 +38,6 @@ import Cases from './pages/library/Cases';
 import CaseDetails from './pages/library/CaseDetails';
 import CaseTracking from './pages/library/CaseTracking';
 import CaseTrackingDetails from './pages/library/CaseTrackingDetails';
-import IntegrationSettings from './pages/library/IntegrationSettings';
 
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
@@ -236,7 +235,6 @@ function App() {
               <Route path="library/cases/:caseId" element={<CaseDetails />} />
               <Route path="library/case-tracking" element={<CaseTracking />} />
               <Route path="library/case-tracking/:trackingId" element={<CaseTrackingDetails />} />
-              <Route path="library/integrations/ecourts" element={<IntegrationSettings />} />
 
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<HelpCenter />} />
