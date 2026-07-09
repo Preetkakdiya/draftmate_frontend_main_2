@@ -137,10 +137,7 @@ async def _handle_drafting(session: dict, session_key: str) -> list:
         })
 
         # Build editor URL
-        if session.get("source") == "web":
-            editor_url = f"/dashboard/editor?draft={draft_id}"
-        else:
-            editor_url = f"{settings.frontend_url}/dashboard/editor?draft={draft_id}"
+        editor_url = f"/dashboard/editor?draft={draft_id}"
 
         messages.append(TextMessage(body="your draft is ready! 📝"))
         messages.append(Delay(seconds=1.0))
