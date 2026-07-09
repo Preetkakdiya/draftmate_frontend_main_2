@@ -83,6 +83,11 @@ export default defineConfig(({ mode }) => {
               proxyReq.setHeader('X-Forwarded-Host', `${host}/onlyoffice`);
               proxyReq.setHeader('X-Forwarded-Proto', 'http');
             });
+            proxy.on('proxyReqWs', (proxyReq, req, socket, options, head) => {
+              const host = req.headers.host || 'localhost:5173';
+              proxyReq.setHeader('X-Forwarded-Host', `${host}/onlyoffice`);
+              proxyReq.setHeader('X-Forwarded-Proto', 'http');
+            });
           }
         }
       }
