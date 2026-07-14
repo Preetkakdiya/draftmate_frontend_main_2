@@ -916,10 +916,10 @@ const ResearchChat = () => {
                             </div>
                         )}
 
-                        <div className="relative flex items-end gap-2 bg-white border border-slate-200 rounded-[28px] shadow-lg shadow-slate-200/40 focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-300 transition-all p-2 pl-3">
+                        <div className="relative flex items-center gap-2 bg-white border border-slate-200 rounded-[28px] shadow-lg shadow-slate-200/40 focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-300 transition-all p-2 pl-3">
 
                             {/* Plus Menu (Dropdown logic) */}
-                            <div className="relative mb-1">
+                            <div className="relative">
                                 <button
                                     onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)}
                                     className={`flex-none p-2 rounded-full transition-colors ${isPlusMenuOpen ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:bg-slate-100'}`}
@@ -958,7 +958,7 @@ const ResearchChat = () => {
                             />
 
                             {/* Dynamic Model & Thinking Selector */}
-                            <div className="relative mb-1.5 flex items-center">
+                            <div className="relative flex items-center">
                                 <button
                                     onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
                                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold transition-colors mr-2 whitespace-nowrap"
