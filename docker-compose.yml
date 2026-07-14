@@ -154,6 +154,7 @@ services:
       - ADVOCATE_PROFILE_PORT=8007
       - NOTIFICATION_SERVICE_URL=http://127.0.0.1:8015
       - SHARED_STORAGE_PATH=/app/shared_drafts
+      - SARVAM_API_KEY=${SARVAM_API_KEY}
     depends_on:
       qdrant:
         condition: service_started
