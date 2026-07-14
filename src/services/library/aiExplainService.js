@@ -163,7 +163,7 @@ function parseSectionExplanation(text) {
  */
 async function callGeminiAPI(prompt) {
   const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyBoeifSuiyad7PJJbWzhZwzdYcgGbm-upY';
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
   const requestBody = {
     contents: [{
@@ -250,7 +250,7 @@ export const aiExplainService = {
       const explanation = {
         ...structuredExplanation,
         generatedAt: new Date().toISOString(),
-        model: 'Gemini 2.5 Flash',
+        model: 'Gemini 1.5 Flash',
         actId: act.id,
         actName: act.name,
         sectionNumber: section.number,
@@ -328,7 +328,7 @@ export const aiExplainService = {
       const result = {
         ...structuredSummary,
         generatedAt: new Date().toISOString(),
-        model: 'Gemini 2.5 Flash',
+        model: 'Gemini 1.5 Flash',
         judgmentId: judgment.id,
         judgmentTitle: judgment.title,
       };

@@ -173,9 +173,9 @@ const JudgmentDetails = () => {
           '',
           `SUMMARY\n${judgment.summary}`,
           '',
-          `KEY PRINCIPLES\n${judgment.keyPrinciples.map((p,i) => `${i+1}. ${p}`).join('\n')}`,
+          `KEY PRINCIPLES\n${(judgment.keyPrinciples || []).map((p,i) => `${i+1}. ${p}`).join('\n')}`,
         ].join('\n'),
-        tags: [judgment.category, judgment.court, ...judgment.tags.slice(0, 3)],
+        tags: [judgment.category, judgment.court, ...(judgment.tags || []).slice(0, 3)],
         linkedActId: null,
         linkedActName: null,
       });
