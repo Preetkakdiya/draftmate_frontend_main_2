@@ -101,9 +101,8 @@ export default function LjAcademy() {
     const isDashboard = window.location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/dashboard');
     console.log("LJ Academy Render: pathname =", window.location.pathname, "routerPath =", location.pathname, "isDashboard =", isDashboard);
 
-    return (
-        <LenisProvider>
-            <main className="flex flex-col bg-[#F8FAFF] min-h-screen">
+    const content = (
+        <main className="flex flex-col bg-[#F8FAFF] min-h-screen">
                 {!isDashboard && <Navbar />}
 
                 {/* ── HERO SECTION ── */}
@@ -336,6 +335,11 @@ export default function LjAcademy() {
 
                 {!isDashboard && <Footer />}
             </main>
-        </LenisProvider>
     );
+
+    // Only use Lenis smooth-scroll on the public landing page.
+    // Inside the dashboard the scroll container is a nested div, not window —
+    // Lenis blocks touch/finger scrolling while the scrollbar still works.
+    if (isDashboard) return content;
+    return <LenisProvider>{content}</LenisProvider>;
 }
