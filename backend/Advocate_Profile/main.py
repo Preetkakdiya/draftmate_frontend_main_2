@@ -75,14 +75,16 @@ def health_check():
             conn.close()
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-ALLOWED_ORIGINS = (
-    ["*"]
-    if ENVIRONMENT == "development"
-    else [
-        os.getenv("FRONTEND_URL_PROD", "https://draftmate.ai"),
-        os.getenv("FRONTEND_URL_DEV", "http://localhost:5173"),
-    ]
-)
+ALLOWED_ORIGINS = [
+    "*",
+    "https://app.draftmate.in",
+    "http://app.draftmate.in",
+    "https://draftmate.in",
+    "http://draftmate.in",
+    "https://www.draftmate.in",
+    os.getenv("FRONTEND_URL_PROD", "https://app.draftmate.in"),
+    os.getenv("FRONTEND_URL_DEV", "http://localhost:5173"),
+]
 
 app.add_middleware(
     CORSMiddleware,
