@@ -209,7 +209,7 @@
                 var label = escapeXml(labelMatch[1]);
                 var val = convertUrlsToLinksInHtml(formatCaseNamesInHtml(escapeXml(labelMatch[2])));
                 htmlBlocks.push(
-                    '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; text-align: justify;">' +
+                    '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: justify; text-justify: inter-word; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
                     '<strong style="font-weight: bold; color: #000000;">' + label + ':</strong> ' + (val || '&nbsp;') +
                     '</p>'
                 );
@@ -221,13 +221,13 @@
                 var isMainTitle = /^(IN THE|SUPREME COURT|HIGH COURT|BEFORE THE|PETITION|MEMORANDUM|DEED|AGREEMENT|SPECIAL LEAVE|RECORD OF PROCEEDINGS)\b/i.test(paraText.trim());
                 if (isMainTitle) {
                     htmlBlocks.push(
-                        '<h1 style="font-size: 14pt; font-weight: bold; color: #000000; margin-top: 14pt; margin-bottom: 6pt; line-height: 1.3; text-align: center;">' +
+                        '<h1 style="font-size: 14pt; font-weight: bold; color: #000000; margin-top: 14pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; line-height: 1.3; text-align: center; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
                         formattedHeader +
                         '</h1>'
                     );
                 } else {
                     htmlBlocks.push(
-                        '<h3 style="font-size: 11.5pt; font-weight: bold; color: #000000; margin-top: 10pt; margin-bottom: 4pt; line-height: 1.3; text-align: left;">' +
+                        '<h3 style="font-size: 11.5pt; font-weight: bold; color: #000000; margin-top: 10pt; margin-bottom: 4pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; line-height: 1.3; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
                         formattedHeader +
                         '</h3>'
                     );
@@ -237,7 +237,7 @@
 
             var formattedBody = convertUrlsToLinksInHtml(formatCaseNamesInHtml(escaped));
             htmlBlocks.push(
-                '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; text-align: justify;">' +
+                '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: justify; text-justify: inter-word; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
                 formattedBody +
                 '</p>'
             );
@@ -257,7 +257,7 @@
         });
         flushPara();
 
-        return '<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827;">\n' + htmlBlocks.join('\n') + '\n</div>';
+        return '<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n' + htmlBlocks.join('\n') + '\n</div>';
     }
 
     function applyAutoFormat() {
@@ -284,6 +284,21 @@
                 } else {
                     window.Asc.plugin.executeMethod('PasteText', [cleaned]);
                 }
+
+                try {
+                    window.Asc.plugin.callCommand(function() {
+                        var oDocument = Api.GetDocument();
+                        var aParagraphs = oDocument.GetAllParagraphs();
+                        if (aParagraphs && aParagraphs.length > 0) {
+                            for (var i = 0; i < aParagraphs.length; i++) {
+                                if (aParagraphs[i] && typeof aParagraphs[i].SetIndRight === 'function') {
+                                    aParagraphs[i].SetIndRight(0);
+                                }
+                            }
+                        }
+                    }, false);
+                } catch (indentErr) {}
+
                 postToParent({
                     type: 'ONLYOFFICE_AUTOFORMAT_DONE',
                     applied: true

@@ -319,23 +319,23 @@ export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
   console.log('[MarkdownToDocHtml] --- Step 2: Detected AST Structure ---', ast);
 
   // Render HTML using single dedicated legal document typography and structure
-  let htmlResult = `<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827;">\n`;
+  let htmlResult = `<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n`;
 
   ast.forEach((node) => {
     if (node.type === 'heading') {
       const fontSize = node.level === 1 ? '14pt' : node.level === 2 ? '12.5pt' : '11.5pt';
       const marginTop = node.level === 1 ? '14pt' : node.level === 2 ? '12pt' : '10pt';
       const textAlign = node.level === 1 ? 'center' : 'left';
-      htmlResult += `<h${node.level} style="font-size: ${fontSize}; font-weight: bold; color: #000000; margin-top: ${marginTop}; margin-bottom: 6pt; line-height: 1.3; text-align: ${textAlign};">${formatInlineText(node.text, sources)}</h${node.level}>\n`;
+      htmlResult += `<h${node.level} style="font-size: ${fontSize}; font-weight: bold; color: #000000; margin-top: ${marginTop}; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; line-height: 1.3; text-align: ${textAlign}; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(node.text, sources)}</h${node.level}>\n`;
     } else if (node.type === 'paragraph') {
-      htmlResult += `<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; text-align: justify;">${formatInlineText(node.text, sources)}</p>\n`;
+      htmlResult += `<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: justify; text-justify: inter-word; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(node.text, sources)}</p>\n`;
     } else if (node.type === 'blockquote') {
-      htmlResult += `<blockquote style="font-size: 11pt; font-style: italic; border-left: 3px solid #64748b; padding-left: 10pt; margin-top: 4pt; margin-bottom: 6pt; color: #334155;">${formatInlineText(node.text, sources)}</blockquote>\n`;
+      htmlResult += `<blockquote style="font-size: 11pt; font-style: italic; border-left: 3px solid #64748b; padding-left: 10pt; margin-top: 4pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; color: #334155; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(node.text, sources)}</blockquote>\n`;
     } else if (node.type === 'ul' || node.type === 'ol') {
       const tag = node.type;
-      htmlResult += `<${tag} style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; padding-left: 18pt;">\n`;
+      htmlResult += `<${tag} style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 18pt; padding-right: 0pt; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n`;
       node.items.forEach((item) => {
-        htmlResult += `  <li style="margin-bottom: 3pt;">${formatInlineText(item.text, sources)}</li>\n`;
+        htmlResult += `  <li style="margin-bottom: 3pt; margin-right: 0pt; box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(item.text, sources)}</li>\n`;
       });
       htmlResult += `</${tag}>\n`;
     }
