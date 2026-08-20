@@ -8,6 +8,8 @@ const libraryCards = [
     path: '/dashboard/library/bare-acts',
     description: 'Browse comprehensive Indian Bare Acts with AI explanations.',
     color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+    barColor: 'bg-blue-600',
+    hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
   },
   {
     title: 'Bookmarks',
@@ -15,6 +17,8 @@ const libraryCards = [
     path: '/dashboard/library/bookmarks',
     description: 'Access your saved legal provisions and customized folders.',
     color: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
+    barColor: 'bg-purple-600',
+    hoverText: 'group-hover:text-purple-600 dark:group-hover:text-purple-400',
   },
   {
     title: 'Notes',
@@ -22,6 +26,8 @@ const libraryCards = [
     path: '/dashboard/library/notes',
     description: 'Review your personalized annotations and case summaries.',
     color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
+    barColor: 'bg-emerald-600',
+    hoverText: 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
   },
   {
     title: 'Forms',
@@ -29,6 +35,8 @@ const libraryCards = [
     path: '/dashboard/library/forms',
     description: 'Generate reusable legal forms and templates instantly.',
     color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
+    barColor: 'bg-orange-600',
+    hoverText: 'group-hover:text-orange-600 dark:group-hover:text-orange-400',
   },
   {
     title: 'Legal Dictionary',
@@ -36,6 +44,8 @@ const libraryCards = [
     path: '/dashboard/library/dictionary',
     description: 'Quick reference for legal terminology and Latin maxims.',
     color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
+    barColor: 'bg-rose-600',
+    hoverText: 'group-hover:text-rose-600 dark:group-hover:text-rose-400',
   },
   {
     title: 'Saved Judgments',
@@ -43,6 +53,8 @@ const libraryCards = [
     path: '/dashboard/library/judgments-saved',
     description: 'Access your bookmarked judgments and custom collections.',
     color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
+    barColor: 'bg-amber-600',
+    hoverText: 'group-hover:text-amber-600 dark:group-hover:text-amber-400',
   },
   {
     title: 'Client Management',
@@ -50,6 +62,8 @@ const libraryCards = [
     path: '/dashboard/library/diary',
     description: 'Manage your hearings, case schedule, and daily practice.',
     color: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400',
+    barColor: 'bg-cyan-600',
+    hoverText: 'group-hover:text-cyan-600 dark:group-hover:text-cyan-400',
   },
   {
     title: 'Court Calendar',
@@ -57,6 +71,8 @@ const libraryCards = [
     path: '/dashboard/library/calendar',
     description: 'Visualize your hearings, deadlines, and legal events with Month/Week/Day views.',
     color: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400',
+    barColor: 'bg-violet-600',
+    hoverText: 'group-hover:text-violet-600 dark:group-hover:text-violet-400',
   },
   {
     title: 'Hearing Tracker',
@@ -64,6 +80,8 @@ const libraryCards = [
     path: '/dashboard/library/hearings',
     description: 'Manage your hearings with timeline view and complete litigation tracking.',
     color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
+    barColor: 'bg-rose-600',
+    hoverText: 'group-hover:text-rose-600 dark:group-hover:text-rose-400',
   },
   {
     title: 'Video Links',
@@ -71,6 +89,8 @@ const libraryCards = [
     path: '/dashboard/library/video-links',
     description: 'Manage virtual court hearing links and one-click join.',
     color: 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400',
+    barColor: 'bg-teal-600',
+    hoverText: 'group-hover:text-teal-600 dark:group-hover:text-teal-400',
   },
   {
     title: 'Clients',
@@ -78,10 +98,9 @@ const libraryCards = [
     path: '/dashboard/library/clients',
     description: 'Manage your client relationships and CRM.',
     color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400',
+    barColor: 'bg-indigo-600',
+    hoverText: 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400',
   },
-
-
-
 ];
 
 const LibraryDashboard = () => {
@@ -98,20 +117,23 @@ const LibraryDashboard = () => {
             <Link
               key={index}
               to={card.path}
-              className="flex flex-col p-6 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm transition-all group"
+              className="relative flex flex-col p-6 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${card.color}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${card.color} group-hover:scale-110 transition-transform duration-300`}>
                 <span className="material-symbols-outlined text-[24px]">{card.icon}</span>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+              <h3 className={`text-lg font-bold text-slate-900 dark:text-white ${card.hoverText} transition-colors`}>
                 {card.title}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 flex-1">
                 {card.description}
               </p>
-              <div className="mt-4 flex items-center text-sm font-medium text-slate-400 group-hover:text-primary transition-colors">
-                Open <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
+              <div className={`mt-4 flex items-center text-sm font-medium text-slate-400 ${card.hoverText} transition-colors`}>
+                Open <span className="material-symbols-outlined text-[18px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
               </div>
+
+              {/* Dynamic Bottom Hover Strip Line */}
+              <div className={`absolute bottom-0 left-0 right-0 h-[4px] rounded-b-2xl scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left ${card.barColor}`} />
             </Link>
           ))}
         </div>

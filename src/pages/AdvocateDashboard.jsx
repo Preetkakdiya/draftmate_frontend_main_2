@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { calculateProfileCompletion } from '../utils/profileHelpers';
+import { calculateProfileCompletion, copyToClipboard } from '../utils/profileHelpers';
 import ShareProfileModal from '../components/Advocate/ShareProfileModal';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';

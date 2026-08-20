@@ -4,9 +4,12 @@ import { ArrowLeft } from 'lucide-react';
 import { notesService } from '../../services/library/notesService';
 import { toast } from 'sonner';
 
+import ConfirmModal from '../../components/ui/ConfirmModal';
+
 const Notes = () => {
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteNoteId, setDeleteNoteId] = useState(null);
 
   useEffect(() => {
     loadNotes();
@@ -16,7 +19,6 @@ const Notes = () => {
     setIsLoading(true);
     try {
       const n = await notesService.getNotes();
-      // Sort newest first
       setNotes(n.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
     } catch (e) {
       toast.error('Failed to load notes');
@@ -25,14 +27,16 @@ const Notes = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this note?')) return;
+  const confirmDeleteNote = async () => {
+    if (!deleteNoteId) return;
     try {
-      await notesService.deleteNote(id);
-      setNotes(prev => prev.filter(n => n.id !== id));
+      await notesService.deleteNote(deleteNoteId);
+      setNotes(prev => prev.filter(n => n.id !== deleteNoteId));
       toast.success('Note deleted');
     } catch (e) {
       toast.error('Failed to delete note');
+    } finally {
+      setDeleteNoteId(null);
     }
   };
 
@@ -73,7 +77,7 @@ const Notes = () => {
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">{note.title}</h3>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
-                      onClick={() => handleDelete(note.id)}
+                      onClick={() => setDeleteNoteId(note.id)}
                       className="w-7 h-7 flex items-center justify-center rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                       title="Delete Note"
                     >
@@ -114,6 +118,17 @@ const Notes = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteNoteId}
+        onClose={() => setDeleteNoteId(null)}
+        onConfirm={confirmDeleteNote}
+        title="Delete Note"
+        message="Are you sure you want to delete this note? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 };

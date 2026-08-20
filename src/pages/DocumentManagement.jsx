@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { caseService } from '../services/library/caseService';
 import DraftingModal from '../components/DraftingModal';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { API_CONFIG } from '../services/endpoints';
 import './DocumentManagement.css';
 
@@ -118,17 +119,29 @@ const DocumentManagement = () => {
     }
   };
 
-  const handleDeleteCase = async (id, e) => {
+  const [confirmModalState, setConfirmModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+  });
+
+  const handleDeleteCase = (id, e) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this folder? All inner files will be deleted.')) {
-      try {
-        await caseService.deleteCase(id);
-        toast.success('Folder deleted');
-        loadCases();
-      } catch {
-        toast.error('Failed to delete folder');
+    setConfirmModalState({
+      isOpen: true,
+      title: 'Delete Folder',
+      message: 'Are you sure you want to delete this folder? All inner files will be deleted.',
+      onConfirm: async () => {
+        try {
+          await caseService.deleteCase(id);
+          toast.success('Folder deleted');
+          loadCases();
+        } catch {
+          toast.error('Failed to delete folder');
+        }
       }
-    }
+    });
   };
 
   const handleStartRenameCase = (caseId, title, e) => {
@@ -138,53 +151,61 @@ const DocumentManagement = () => {
     setIsFolderModalOpen(true);
   };
 
-  const handleDeleteFolder = async (folderId, e) => {
+  const handleDeleteFolder = (folderId, e) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this folder? All documents inside will be moved to root.")) {
-      try {
-        await caseService.deleteCaseFolder(selectedCaseId, folderId);
-        toast.success("Folder deleted");
-        if (currentFolderId === folderId) setCurrentFolderId(null);
-        loadCases();
-      } catch (err) {
-        toast.error("Failed to delete folder");
+    setConfirmModalState({
+      isOpen: true,
+      title: 'Delete Folder',
+      message: 'Are you sure you want to delete this folder? All documents inside will be moved to root.',
+      onConfirm: async () => {
+        try {
+          await caseService.deleteCaseFolder(selectedCaseId, folderId);
+          toast.success("Folder deleted");
+          if (currentFolderId === folderId) setCurrentFolderId(null);
+          loadCases();
+        } catch (err) {
+          toast.error("Failed to delete folder");
+        }
       }
-    }
+    });
   };
 
-  const handleDeleteDocument = async (docId, e) => {
+  const handleDeleteDocument = (docId, e) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to remove this document?")) {
-      try {
-        await caseService.deleteCaseDocument(selectedCaseId, docId);
-
-        // Record deleted document ID to prevent auto-sync resurrection
+    setConfirmModalState({
+      isOpen: true,
+      title: 'Remove Document',
+      message: 'Are you sure you want to remove this document?',
+      onConfirm: async () => {
         try {
-          const deletedIds = JSON.parse(localStorage.getItem('draftmate_deleted_doc_ids') || '[]');
-          if (!deletedIds.includes(String(docId))) {
-            deletedIds.push(String(docId));
-            localStorage.setItem('draftmate_deleted_doc_ids', JSON.stringify(deletedIds));
-          }
-        } catch (e) {}
+          await caseService.deleteCaseDocument(selectedCaseId, docId);
 
-        // Instantly update state without reloading
-        setCases(prevCases => {
-          return prevCases.map(c => {
-            if (c.documents) {
-              return {
-                ...c,
-                documents: c.documents.filter(d => String(d.id) !== String(docId))
-              };
+          try {
+            const deletedIds = JSON.parse(localStorage.getItem('draftmate_deleted_doc_ids') || '[]');
+            if (!deletedIds.includes(String(docId))) {
+              deletedIds.push(String(docId));
+              localStorage.setItem('draftmate_deleted_doc_ids', JSON.stringify(deletedIds));
             }
-            return c;
-          });
-        });
+          } catch (e) {}
 
-        toast.success("Document removed");
-      } catch (err) {
-        toast.error("Failed to remove document");
+          setCases(prevCases => {
+            return prevCases.map(c => {
+              if (c.documents) {
+                return {
+                  ...c,
+                  documents: c.documents.filter(d => String(d.id) !== String(docId))
+                };
+              }
+              return c;
+            });
+          });
+
+          toast.success("Document removed");
+        } catch (err) {
+          toast.error("Failed to remove document");
+        }
       }
-    }
+    });
   };
 
   const handleDragStart = (e, docId) => {
@@ -1041,6 +1062,17 @@ const DocumentManagement = () => {
         </div>
       )}
 
+      {/* Dedicated Custom Delete / Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModalState.isOpen}
+        onClose={() => setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: null })}
+        onConfirm={confirmModalState.onConfirm}
+        title={confirmModalState.title}
+        message={confirmModalState.message}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 };

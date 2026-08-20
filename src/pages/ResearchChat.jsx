@@ -16,6 +16,7 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 // keeping logo just in case, though mostly using icons now
 import lawJuristLogo from '../assets/draftmate_logo.png';
 import DraftingModal from '../components/DraftingModal';
+import ConfirmModal from '../components/ui/ConfirmModal';
 // Shared citation utilities
 import { processCitations, CitationLink } from '../utils/citationUtils';
 
@@ -411,10 +412,15 @@ const ResearchChat = () => {
         }
     };
 
-    const handleDeleteSession = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this chat history?")) {
-            return;
-        }
+    const [deleteSessionModal, setDeleteSessionModal] = useState({ isOpen: false, sessionId: null });
+
+    const handleDeleteSession = (id) => {
+        setDeleteSessionModal({ isOpen: true, sessionId: id });
+    };
+
+    const confirmDeleteSession = async () => {
+        const id = deleteSessionModal.sessionId;
+        if (!id) return;
 
         const userProfileStr = localStorage.getItem('user_profile');
         let userId = 'default_user';
@@ -1190,7 +1196,17 @@ const ResearchChat = () => {
                 />
             )}
 
-
+            {/* Dedicated Custom Delete Chat Confirmation Modal */}
+            <ConfirmModal
+                isOpen={deleteSessionModal.isOpen}
+                onClose={() => setDeleteSessionModal({ isOpen: false, sessionId: null })}
+                onConfirm={confirmDeleteSession}
+                title="Delete Chat"
+                message="Are you sure you want to delete this chat history? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="danger"
+            />
         </div>
     );
 };
