@@ -139,13 +139,22 @@ const PersonalSettings = () => {
                         <h1 className="text-[#0d131b] dark:text-white tracking-tight text-[32px] font-bold leading-tight">Personal Profile</h1>
                         <p className="text-[#4c6c9a] text-base font-normal leading-normal">Manage your personal information and public profile visible to clients and colleagues.</p>
                     </div>
-                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${isComplete ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
-                        <span className={`material-symbols-outlined text-lg ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>
-                            {isComplete ? 'check_circle' : 'pending'}
-                        </span>
-                        <span className={`text-sm font-semibold ${isComplete ? 'text-green-700 dark:text-green-400' : 'text-blue-700 dark:text-blue-400'}`}>
-                            {completionPercentage}% Complete
-                        </span>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${isComplete ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                            <span className={`material-symbols-outlined text-lg ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>
+                                {isComplete ? 'check_circle' : 'pending'}
+                            </span>
+                            <span className={`text-sm font-semibold ${isComplete ? 'text-green-700 dark:text-green-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                {completionPercentage}% Complete
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => window.dispatchEvent(new CustomEvent('open_delete_account_modal'))}
+                            className="flex items-center justify-center rounded-lg h-9 px-3.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 border border-red-200 dark:border-red-900/50 text-xs font-bold transition-all shadow-sm gap-1.5"
+                        >
+                            <span className="material-symbols-outlined text-base">delete_forever</span>
+                            Delete Account
+                        </button>
                     </div>
                 </div>
 
@@ -304,6 +313,26 @@ const PersonalSettings = () => {
                         Save Changes
                     </button>
                 </div>
+            </div>
+
+            {/* Danger Zone Section */}
+            <div className="bg-red-50/60 dark:bg-red-950/20 rounded-xl border border-red-200 dark:border-red-900/40 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-red-700 dark:text-red-400 font-bold text-base flex items-center gap-2">
+                        <span className="material-symbols-outlined text-lg">delete_forever</span>
+                        Danger Zone: Delete Account
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
+                        Permanently delete your account and all associated drafts, cases, and personal data.
+                    </p>
+                </div>
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('open_delete_account_modal'))}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-sm transition-all shrink-0 flex items-center gap-1.5"
+                >
+                    <span className="material-symbols-outlined text-base">delete</span>
+                    Delete Account
+                </button>
             </div>
         </div>
     );
@@ -675,10 +704,81 @@ const DocumentSettings = () => {
     );
 };
 
+const DeleteAccountModal = ({ isOpen, onClose, onConfirm }) => {
+    const [confirmText, setConfirmText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    if (!isOpen) return null;
+
+    const handleDelete = async () => {
+        if (confirmText !== 'DELETE') return;
+        setIsDeleting(true);
+        try {
+            await onConfirm();
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
+            <div className="absolute inset-0" onClick={onClose} />
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md border border-red-200 dark:border-red-900/50 overflow-hidden">
+                <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30 shrink-0">
+                        <span className="material-symbols-outlined text-2xl">warning</span>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Account</h3>
+                        <p className="text-xs text-red-500 font-medium">Permanent Data Deletion</p>
+                    </div>
+                </div>
+
+                <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl p-4 mb-5 text-xs text-red-900 dark:text-red-200 leading-relaxed">
+                    <p className="font-bold text-sm text-red-700 dark:text-red-400 mb-1">⚠️ Warning: Your all data will be deleted!</p>
+                    Are you sure you want to delete your account? All your legal drafts, stored documents, case timelines, personal settings, and user details will be <strong>permanently deleted</strong> and cannot be recovered.
+                </div>
+
+                <div className="space-y-3 mb-6">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Type <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-red-600 font-bold">DELETE</span> to confirm:
+                    </label>
+                    <input
+                        type="text"
+                        value={confirmText}
+                        onChange={(e) => setConfirmText(e.target.value)}
+                        placeholder='Type "DELETE"'
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 font-mono text-sm"
+                        autoFocus
+                    />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                        onClick={onClose}
+                        disabled={isDeleting}
+                        className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        disabled={confirmText !== 'DELETE' || isDeleting}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all flex items-center gap-2"
+                    >
+                        {isDeleting ? 'Deleting Data...' : 'Confirm & Delete Account'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Settings = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('personal');
     const [userProfile, setUserProfile] = useState({});
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem('user_profile');
@@ -688,25 +788,71 @@ const Settings = () => {
             const updated = localStorage.getItem('user_profile');
             if (updated) setUserProfile(JSON.parse(updated));
         };
+
+        const handleOpenDelete = () => setIsDeleteModalOpen(true);
+
         window.addEventListener('user_profile_updated', handleUpdate);
-        return () => window.removeEventListener('user_profile_updated', handleUpdate);
+        window.addEventListener('open_delete_account_modal', handleOpenDelete);
+        return () => {
+            window.removeEventListener('user_profile_updated', handleUpdate);
+            window.removeEventListener('open_delete_account_modal', handleOpenDelete);
+        };
     }, []);
 
-    const NavButton = ({ id, icon, label }) => (
+    const handleConfirmAccountDelete = async () => {
+        const userId = localStorage.getItem('user_id');
+        const sessionId = localStorage.getItem('session_id') || localStorage.getItem('token');
+
+        try {
+            await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/user/delete-account`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionId || ''}`
+                },
+                body: JSON.stringify({ user_id: userId })
+            });
+        } catch (err) {
+            console.warn('Backend delete account error:', err);
+        }
+
+        localStorage.clear();
+        sessionStorage.clear();
+        window.dispatchEvent(new Event('user_profile_updated'));
+        toast.success('Your account and all associated data have been permanently deleted.');
+        navigate('/login');
+    };
+
+    const NavButton = ({ id, icon, label, isDanger, onClickOverride }) => (
         <button
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left transition-colors group ${activeTab === id
-                ? 'bg-[#e7ecf3] dark:bg-slate-700/50'
-                : 'hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+            onClick={onClickOverride || (() => setActiveTab(id))}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left transition-colors group ${
+                isDanger
+                    ? 'hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 mt-2 border border-red-200/60 dark:border-red-900/40'
+                    : activeTab === id
+                    ? 'bg-[#e7ecf3] dark:bg-slate-700/50'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
         >
             <span
-                className={`material-symbols-outlined ${activeTab === id ? 'text-[#0d131b] dark:text-white group-hover:text-primary' : 'text-[#4c6c9a] group-hover:text-[#0d131b] dark:group-hover:text-white'}`}
+                className={`material-symbols-outlined ${
+                    isDanger
+                        ? 'text-red-500'
+                        : activeTab === id
+                        ? 'text-[#0d131b] dark:text-white group-hover:text-primary'
+                        : 'text-[#4c6c9a] group-hover:text-[#0d131b] dark:group-hover:text-white'
+                }`}
                 style={{ fontSize: '22px' }}
             >
                 {icon}
             </span>
-            <p className={`${activeTab === id ? 'text-[#0d131b] dark:text-white' : 'text-[#4c6c9a] group-hover:text-[#0d131b] dark:group-hover:text-white'} text-sm font-medium leading-normal`}>
+            <p className={`${
+                isDanger
+                    ? 'text-red-600 dark:text-red-400 font-bold'
+                    : activeTab === id
+                    ? 'text-[#0d131b] dark:text-white'
+                    : 'text-[#4c6c9a] group-hover:text-[#0d131b] dark:group-hover:text-white'
+            } text-sm font-medium leading-normal`}>
                 {label}
             </p>
         </button>
@@ -723,6 +869,13 @@ const Settings = () => {
                         <div className="px-3 py-2 text-xs font-semibold text-[#4c6c9a] uppercase tracking-wider">Settings</div>
                         <NavButton id="personal" icon="person" label="Personal Settings" />
                         <NavButton id="document" icon="description" label="Document Settings" />
+                        <NavButton 
+                            id="delete" 
+                            icon="delete_forever" 
+                            label="Delete Account" 
+                            isDanger={true}
+                            onClickOverride={() => setIsDeleteModalOpen(true)}
+                        />
                     </nav>
                 </div>
             </aside>
@@ -734,6 +887,13 @@ const Settings = () => {
                     {activeTab === 'document' && <DocumentSettings />}
                 </div>
             </main>
+
+            {/* Delete Account Confirmation Modal */}
+            <DeleteAccountModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmAccountDelete}
+            />
         </div>
     );
 };

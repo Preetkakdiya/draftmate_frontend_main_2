@@ -477,9 +477,9 @@ const OnlyOfficeWorkspace = () => {
             iframe.contentWindow.postMessage(payload, '*');
             sent = true;
           }
-        } catch (e) {}
+        } catch (e) { }
       });
-    } catch (e) {}
+    } catch (e) { }
     return sent;
   };
 
@@ -525,7 +525,7 @@ const OnlyOfficeWorkspace = () => {
       if (e.data.type === 'ONLYOFFICE_SELECTION_STATE' || e.data.type === 'ONLYOFFICE_SELECTION_CHANGED') {
         const selectedText = String(e.data.text || '').trim();
         setSelectionPreview(selectedText);
-        
+
         if (!selectedText) {
           dismissedSelectionTextRef.current = '';
           setShowAutoFormatPopup(false);
@@ -620,7 +620,7 @@ const OnlyOfficeWorkspace = () => {
         const sessionId = localStorage.getItem('session_id');
         const headers = { 'Content-Type': 'application/json' };
         if (sessionId) headers.Authorization = `Bearer ${sessionId}`;
-        
+
         fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/forcesave`, {
           method: 'POST',
           headers,
@@ -984,9 +984,9 @@ const OnlyOfficeWorkspace = () => {
     } else if (actionType === 'rephrase') {
       const TONE_INSTRUCTIONS = {
         'Humanize': 'Rewrite the text in a warm, natural, and human tone — approachable yet professional, removing cold legal jargon while preserving all legal facts and citations.',
-        'Formal':   'Rewrite the text in strict, authoritative, and formal legal language — precise terminology, structured sentences, suitable for court filings and official legal notices.',
+        'Formal': 'Rewrite the text in strict, authoritative, and formal legal language — precise terminology, structured sentences, suitable for court filings and official legal notices.',
         'Academic': 'Rewrite the text in a scholarly, citation-rich, and objective academic tone — suitable for legal research memos, opinions, and journal-style analysis.',
-        'Simple':   'Rewrite the text in clear, plain, and simple language — easy for a non-lawyer to understand, while preserving all key legal facts and citations.',
+        'Simple': 'Rewrite the text in clear, plain, and simple language — easy for a non-lawyer to understand, while preserving all key legal facts and citations.',
       };
       const toneInstruction = selectedTone && TONE_INSTRUCTIONS[selectedTone]
         ? TONE_INSTRUCTIONS[selectedTone]
@@ -1044,9 +1044,9 @@ const OnlyOfficeWorkspace = () => {
 
     const TONE_STYLE = {
       'Humanize': 'in a warm, natural, and human tone — approachable yet professional',
-      'Formal':   'in strict, authoritative, and formal legal language',
+      'Formal': 'in strict, authoritative, and formal legal language',
       'Academic': 'in a scholarly, citation-rich, and objective academic tone',
-      'Simple':   'in clear, plain, and simple language easy for a non-lawyer to understand',
+      'Simple': 'in clear, plain, and simple language easy for a non-lawyer to understand',
     };
     const toneClause = selectedTone && TONE_STYLE[selectedTone]
       ? ` Write the output ${TONE_STYLE[selectedTone]}.`
@@ -1283,8 +1283,8 @@ const OnlyOfficeWorkspace = () => {
     const targetId = draftId || documentKey;
     const shareUrl = `${window.location.origin}/drafter/v2/draft/pdf/${encodeURIComponent(targetId || 'doc')}/${encodeURIComponent(docTitle)}`;
 
-    let senderEmail = 'preetkakadiya184@gmail.com';
-    let senderName = 'Preet Kakadiya';
+    let senderEmail = 'Draftmate25@gmail.com ';
+    let senderName = 'Draftmate AI ';
     try {
       const keys = ['user_profile', 'lawyer_profile', 'user', 'user_data'];
       for (const k of keys) {
@@ -1301,7 +1301,7 @@ const OnlyOfficeWorkspace = () => {
       if (!senderEmail && localStorage.getItem('user_email')) {
         senderEmail = localStorage.getItem('user_email');
       }
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       const token = localStorage.getItem('session_id') || localStorage.getItem('token');
@@ -1335,8 +1335,8 @@ const OnlyOfficeWorkspace = () => {
     }
   };
 
-  const downloadUrl = draftId 
-    ? `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${draftId}/${filename || 'document.docx'}` 
+  const downloadUrl = draftId
+    ? `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${draftId}/${filename || 'document.docx'}`
     : `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${filename || 'document.docx'}`;
 
   return (
@@ -1359,15 +1359,14 @@ const OnlyOfficeWorkspace = () => {
                     onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                     className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-[#B9D9EB] text-xs font-semibold text-slate-700 shadow-sm transition-colors"
                   >
-                    <span className={`w-2.5 h-2.5 rounded-full ${
-                      currentStatus === 'In progress' ? 'bg-yellow-400' :
-                      currentStatus === 'Review' ? 'bg-red-500' :
-                      currentStatus === 'Completed' ? 'bg-green-500' : 'bg-yellow-400'
-                    }`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${currentStatus === 'In progress' ? 'bg-yellow-400' :
+                        currentStatus === 'Review' ? 'bg-red-500' :
+                          currentStatus === 'Completed' ? 'bg-green-500' : 'bg-yellow-400'
+                      }`} />
                     <span>
                       {currentStatus === 'In progress' ? 'In Progress' :
-                       currentStatus === 'Review' ? 'Work under Review' :
-                       currentStatus === 'Completed' ? 'Draft Completed' : 'In Progress'}
+                        currentStatus === 'Review' ? 'Work under Review' :
+                          currentStatus === 'Completed' ? 'Draft Completed' : 'In Progress'}
                     </span>
                     <span className="material-symbols-outlined text-xs text-slate-400">arrow_drop_down</span>
                   </button>
@@ -1458,9 +1457,8 @@ const OnlyOfficeWorkspace = () => {
                 style={{
                   transform: `translate3d(${popupPosRef.current.x}px, ${popupPosRef.current.y}px, 0)`,
                 }}
-                className={`fixed top-16 right-80 z-[9999] ${
-                  popupSize === 'small' ? 'w-[480px]' : popupSize === 'medium' ? 'w-[560px]' : 'w-[680px]'
-                } rounded-xl bg-white border border-gray-200 shadow-2xl transition-[width] duration-200`}
+                className={`fixed top-16 right-80 z-[9999] ${popupSize === 'small' ? 'w-[480px]' : popupSize === 'medium' ? 'w-[560px]' : 'w-[680px]'
+                  } rounded-xl bg-white border border-gray-200 shadow-2xl transition-[width] duration-200`}
               >
 
                 {/* Header — Draggable */}
@@ -1617,11 +1615,11 @@ const OnlyOfficeWorkspace = () => {
                 {activeAction && (
                   <div className="px-4 pb-2 pt-1">
                     <p className="text-xs text-blue-700 font-medium bg-blue-50/80 rounded-lg px-3 py-2 leading-relaxed">
-                      {activeAction === 'enhance'  && '✦ Enhancing selected text for clarity, legal precision, and grammatical accuracy.'}
+                      {activeAction === 'enhance' && '✦ Enhancing selected text for clarity, legal precision, and grammatical accuracy.'}
                       {activeAction === 'rephrase' && `↺ Rephrasing selected text${selectedTone ? ` in ${selectedTone} tone` : ' in formal legal tone'}. Use the Tone dropdown to change style.`}
-                      {activeAction === 'format'   && '⊞ Auto-formatting document structure — applying legal typography, headings, and spacing.'}
-                      {activeAction === 'summarize'&& '≡ Summarizing selected text into a concise executive legal summary.'}
-                      {activeAction === 'custom'   && (selectedTone
+                      {activeAction === 'format' && '⊞ Auto-formatting document structure — applying legal typography, headings, and spacing.'}
+                      {activeAction === 'summarize' && '≡ Summarizing selected text into a concise executive legal summary.'}
+                      {activeAction === 'custom' && (selectedTone
                         ? `✎ Applying your custom instruction in ${selectedTone} tone — both will be combined.`
                         : '✎ Applying your custom instruction to the selected text.'
                       )}
@@ -1645,11 +1643,11 @@ const OnlyOfficeWorkspace = () => {
                         }
                       }}
                       placeholder={
-                        activeAction === 'enhance'  ? 'e.g. Make it more concise and assertive...' :
-                        activeAction === 'rephrase' ? 'e.g. Use simpler words for client communication...' :
-                        activeAction === 'summarize'? 'e.g. Focus only on financial clauses...' :
-                        activeAction === 'format'   ? 'e.g. Add numbered headings and sub-clauses...' :
-                        'Type a custom instruction for the selected text...'
+                        activeAction === 'enhance' ? 'e.g. Make it more concise and assertive...' :
+                          activeAction === 'rephrase' ? 'e.g. Use simpler words for client communication...' :
+                            activeAction === 'summarize' ? 'e.g. Focus only on financial clauses...' :
+                              activeAction === 'format' ? 'e.g. Add numbered headings and sub-clauses...' :
+                                'Type a custom instruction for the selected text...'
                       }
                       className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 placeholder:text-sm outline-none focus:border-blue-500 focus:bg-white transition-[border-color,background-color] resize-none overflow-hidden min-h-[88px] leading-relaxed font-normal"
                     />
@@ -1738,250 +1736,245 @@ const OnlyOfficeWorkspace = () => {
             >
               <span className="material-symbols-outlined text-base">first_page</span>
             </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('chat')}
-            className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${
-              activeTab === 'chat'
-                ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
-                : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
-            }`}
-          >
-            <span className="material-symbols-outlined align-middle mr-1.5 text-base">smart_toy</span>
-            AI Assistant
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('case')}
-            className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${
-              activeTab === 'case'
-                ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
-                : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
-            }`}
-          >
-            <span className="material-symbols-outlined align-middle mr-1.5 text-base">gavel</span>
-            Case Assistant
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('variables')}
-            className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${
-              activeTab === 'variables'
-                ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
-                : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
-            }`}
-          >
-            <span className="material-symbols-outlined align-middle mr-1.5 text-base">schema</span>
-            Variables ({variablesDetected.length})
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('chat')}
+              className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${activeTab === 'chat'
+                  ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
+                  : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
+                }`}
+            >
+              <span className="material-symbols-outlined align-middle mr-1.5 text-base">smart_toy</span>
+              AI Assistant
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('case')}
+              className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${activeTab === 'case'
+                  ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
+                  : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
+                }`}
+            >
+              <span className="material-symbols-outlined align-middle mr-1.5 text-base">gavel</span>
+              Case Assistant
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('variables')}
+              className={`flex-1 py-4 text-center text-xs font-semibold border-b-2 transition-all duration-200 ${activeTab === 'variables'
+                  ? 'border-blue-600 text-blue-800 bg-[#E3F0F7]'
+                  : 'border-transparent text-slate-500 hover:text-slate-805 hover:bg-[#CDE3F0]/55'
+                }`}
+            >
+              <span className="material-symbols-outlined align-middle mr-1.5 text-base">schema</span>
+              Variables ({variablesDetected.length})
+            </button>
+          </div>
 
-        {/* Tab Panel: Variables */}
-        {activeTab === 'variables' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#E3F0F7]">
-            <div className="px-1 py-2">
-              <div className="text-xs text-slate-650">
-                Variables automatically detected from document placeholders. Click any variable tag to redirect cursor directly to its location.
+          {/* Tab Panel: Variables */}
+          {activeTab === 'variables' && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#E3F0F7]">
+              <div className="px-1 py-2">
+                <div className="text-xs text-slate-650">
+                  Variables automatically detected from document placeholders. Click any variable tag to redirect cursor directly to its location.
+                </div>
               </div>
-            </div>
-            {variablesDetected.length === 0 ? (
-              <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm text-center text-slate-600 text-xs">
-                No variables detected in this document.
-              </div>
-            ) : (
-              variablesDetected.map((variable, idx) => {
-                const name = String(variable || '');
-                return (
-                  <div
-                    key={`${name}-${idx}`}
-                    onClick={() => handleNavigateToVariable(name)}
-                    className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold truncate text-slate-800 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-base text-blue-500">location_on</span>
+              {variablesDetected.length === 0 ? (
+                <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm text-center text-slate-600 text-xs">
+                  No variables detected in this document.
+                </div>
+              ) : (
+                variablesDetected.map((variable, idx) => {
+                  const name = String(variable || '');
+                  return (
+                    <div
+                      key={`${name}-${idx}`}
+                      onClick={() => handleNavigateToVariable(name)}
+                      className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold truncate text-slate-800 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-base text-blue-500">location_on</span>
+                            {name}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Click to jump cursor to this variable in editor.
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1">
+                          Replacement Tag
+                        </div>
+                        <div className="select-all font-mono text-xs rounded-lg bg-slate-50 border border-[#B9D9EB] px-3 py-2 text-slate-700">
                           {name}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          Click to jump cursor to this variable in editor.
-                        </div>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1">
-                        Replacement Tag
-                      </div>
-                      <div className="select-all font-mono text-xs rounded-lg bg-slate-50 border border-[#B9D9EB] px-3 py-2 text-slate-700">
-                        {name}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* Tab Panel: AI Assistant Chat */}
-        {activeTab === 'chat' && (
-          <div className="flex-1 flex flex-col min-h-0 bg-[#E3F0F7]">
-            {/* Conversation Thread */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex flex-col max-w-[85%] rounded-xl p-3.5 text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white ml-auto shadow-sm'
-                      : 'bg-white border border-[#B9D9EB] text-slate-800 mr-auto shadow-sm'
-                  }`}
-                >
-                  {msg.role === 'user' ? (
-                    <div className="whitespace-pre-wrap leading-relaxed">{msg.content || '...'}</div>
-                  ) : (
-                    <div className="prose dark:prose-invert prose-sm max-w-none text-slate-800 leading-relaxed space-y-2">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ href, children }) => (
-                            <CitationLink href={href} sources={msg.sources} compact={true}>
-                              {children}
-                            </CitationLink>
-                          )
-                        }}
-                      >
-                        {processCitations(msg.content, msg.sources)}
-                      </ReactMarkdown>
-                    </div>
-                  )}
-
-                  {msg.role === 'assistant' && !msg.isStreaming && msg.content && (
-                    <div className="mt-3.5 pt-2.5 border-t border-[#E3F0F7] flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleInsertText(msg.content, msg.sources)}
-                        className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-wider"
-                      >
-                        <span className="material-symbols-outlined text-sm">input</span>
-                        Insert into Document
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {/* VLC / Spotify Style Continuous Progress Bar */}
-              <SmoothVlcProgressBar statusMessage={statusMessage} isLoading={isChatLoading} />
-
-              <div ref={chatEndRef} />
+                  );
+                })
+              )}
             </div>
+          )}
 
-            {/* Bottom Controls Bar for AI Assistant */}
-            <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex flex-col gap-2">
-              {/* Secondary Chat Input Bar */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (sidebarInput.trim()) {
-                    handleSendMessage(sidebarInput.trim());
-                    setSidebarInput('');
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#B9D9EB] shadow-sm w-full"
-              >
-                <input
-                  type="text"
-                  value={sidebarInput}
-                  onChange={(e) => setSidebarInput(e.target.value)}
-                  placeholder="your legal research..."
-                  disabled={isChatLoading}
-                  className="flex-1 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm text-slate-800 placeholder:text-slate-455"
-                />
-                <button
-                  type="submit"
-                  disabled={isChatLoading || !sidebarInput.trim()}
-                  className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
-                    sidebarInput.trim()
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">send</span>
-                </button>
-              </form>
+          {/* Tab Panel: AI Assistant Chat */}
+          {activeTab === 'chat' && (
+            <div className="flex-1 flex flex-col min-h-0 bg-[#E3F0F7]">
+              {/* Conversation Thread */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`flex flex-col max-w-[85%] rounded-xl p-3.5 text-sm ${msg.role === 'user'
+                        ? 'bg-blue-600 text-white ml-auto shadow-sm'
+                        : 'bg-white border border-[#B9D9EB] text-slate-800 mr-auto shadow-sm'
+                      }`}
+                  >
+                    {msg.role === 'user' ? (
+                      <div className="whitespace-pre-wrap leading-relaxed">{msg.content || '...'}</div>
+                    ) : (
+                      <div className="prose dark:prose-invert prose-sm max-w-none text-slate-800 leading-relaxed space-y-2">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            a: ({ href, children }) => (
+                              <CitationLink href={href} sources={msg.sources} compact={true}>
+                                {children}
+                              </CitationLink>
+                            )
+                          }}
+                        >
+                          {processCitations(msg.content, msg.sources)}
+                        </ReactMarkdown>
+                      </div>
+                    )}
 
-              <button
-                type="button"
-                onClick={handleExplainSelection}
-                className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-[#B9D9EB] text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
-                title="Select text in ONLYOFFICE and click here to explain it"
-              >
-                <span className="material-symbols-outlined text-base mr-1.5">school</span>
-                Explain Selection
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Panel: Case Assistant */}
-        {activeTab === 'case' && (
-          <div className="flex-1 flex flex-col min-h-0 bg-[#E3F0F7]">
-            {/* Case Cards Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3 px-1">
-                  <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold flex items-center gap-2">
-                    <span>Case Law Assistant</span>
-                    {caseCards.length > 0 && (
-                      <span className="text-[11px] text-slate-500 font-normal lowercase">({caseCards.length} result{caseCards.length === 1 ? '' : 's'})</span>
+                    {msg.role === 'assistant' && !msg.isStreaming && msg.content && (
+                      <div className="mt-3.5 pt-2.5 border-t border-[#E3F0F7] flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleInsertText(msg.content, msg.sources)}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-wider"
+                        >
+                          <span className="material-symbols-outlined text-sm">input</span>
+                          Insert into Document
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {caseCardsLoading ? (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Searching
-                      </div>
-                    ) : null}
-                    {caseCards.length > 0 ? (
-                      <button
-                        type="button"
-                        onClick={clearCaseState}
-                        className="text-[11px] text-slate-500 hover:text-slate-800 transition-colors"
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
+                ))}
 
-                {renderCaseCards()}
+                {/* VLC / Spotify Style Continuous Progress Bar */}
+                <SmoothVlcProgressBar statusMessage={statusMessage} isLoading={isChatLoading} />
 
-                {!caseCards.length && !caseCardsLoading && (
-                  <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm text-center text-slate-600 text-xs">
-                    <span className="material-symbols-outlined text-3xl text-slate-400 block mb-2">find_in_page</span>
-                    Highlight text in the editor and click <strong>Find Relevant Cases</strong> below to perform legal research.
-                  </div>
-                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Bottom Controls Bar for AI Assistant */}
+              <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex flex-col gap-2">
+                {/* Secondary Chat Input Bar */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (sidebarInput.trim()) {
+                      handleSendMessage(sidebarInput.trim());
+                      setSidebarInput('');
+                    }
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#B9D9EB] shadow-sm w-full"
+                >
+                  <input
+                    type="text"
+                    value={sidebarInput}
+                    onChange={(e) => setSidebarInput(e.target.value)}
+                    placeholder="your legal research..."
+                    disabled={isChatLoading}
+                    className="flex-1 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm text-slate-800 placeholder:text-slate-455"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isChatLoading || !sidebarInput.trim()}
+                    className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${sidebarInput.trim()
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'text-slate-400 cursor-not-allowed'
+                      }`}
+                  >
+                    <span className="material-symbols-outlined text-base">send</span>
+                  </button>
+                </form>
+
+                <button
+                  type="button"
+                  onClick={handleExplainSelection}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-[#B9D9EB] text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  title="Select text in ONLYOFFICE and click here to explain it"
+                >
+                  <span className="material-symbols-outlined text-base mr-1.5">school</span>
+                  Explain Selection
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Bottom Controls Bar for Case Assistant */}
-            <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex">
-              <button
-                type="button"
-                onClick={handleFindRelevantCases}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
-                title="Find case law relevant to the selected text"
-              >
-                <Gavel size={16} />
-                Find Relevant Cases
-              </button>
+          {/* Tab Panel: Case Assistant */}
+          {activeTab === 'case' && (
+            <div className="flex-1 flex flex-col min-h-0 bg-[#E3F0F7]">
+              {/* Case Cards Scroll Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold flex items-center gap-2">
+                      <span>Case Law Assistant</span>
+                      {caseCards.length > 0 && (
+                        <span className="text-[11px] text-slate-500 font-normal lowercase">({caseCards.length} result{caseCards.length === 1 ? '' : 's'})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {caseCardsLoading ? (
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Searching
+                        </div>
+                      ) : null}
+                      {caseCards.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={clearCaseState}
+                          className="text-[11px] text-slate-500 hover:text-slate-800 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {renderCaseCards()}
+
+                  {!caseCards.length && !caseCardsLoading && (
+                    <div className="rounded-xl border border-[#B9D9EB] bg-white p-4 shadow-sm text-center text-slate-600 text-xs">
+                      <span className="material-symbols-outlined text-3xl text-slate-400 block mb-2">find_in_page</span>
+                      Highlight text in the editor and click <strong>Find Relevant Cases</strong> below to perform legal research.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Controls Bar for Case Assistant */}
+              <div className="shrink-0 p-4 border-t border-[#B9D9EB] bg-[#CDE3F0]/60 flex">
+                <button
+                  type="button"
+                  onClick={handleFindRelevantCases}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  title="Find case law relevant to the selected text"
+                >
+                  <Gavel size={16} />
+                  Find Relevant Cases
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </aside>
+          )}
+        </aside>
       )}
 
       {isDragging && (

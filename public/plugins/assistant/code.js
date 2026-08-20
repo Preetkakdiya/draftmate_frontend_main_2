@@ -288,8 +288,56 @@
         setTimeout(resetAllParagraphRightIndents, 800);
     }
 
-    function applyAutoFormat() {
+    function detectCourtPresetFromText(text) {
+        var sample = String(text || '').slice(0, 4000).toUpperCase();
+
+        if (/HIGH COURT OF DELHI|DELHI HIGH COURT|IN THE HIGH COURT OF DELHI|TIS HAZARI|PATIALA HOUSE|KARKARDOOMA|ROHINI COURT|DWARKA COURT|SAKET COURT/i.test(sample)) {
+            return {
+                id: 'delhi_hc', name: 'Delhi High Court & District Courts', paper: 'A4',
+                widthDxa: 11906, heightDxa: 16838, fontFamily: 'Times New Roman',
+                bodyFontSize: 28, headingFontSize: 32, quoteFontSize: 24, lineSpacing: 360,
+                marginTopDxa: 1134, marginBottomDxa: 1134, marginLeftDxa: 2268, marginRightDxa: 2268, alignment: 'justify'
+            };
+        }
+
+        if (/PUNJAB AND HARYANA|PUNJAB & HARYANA|HIGH COURT OF PUNJAB|CHANDIGARH HIGH COURT|HIGH COURT AT CHANDIGARH/i.test(sample)) {
+            return {
+                id: 'punjab_haryana_hc', name: 'Punjab & Haryana High Court', paper: 'A4',
+                widthDxa: 11906, heightDxa: 16838, fontFamily: 'Times New Roman',
+                bodyFontSize: 28, headingFontSize: 32, quoteFontSize: 24, lineSpacing: 480,
+                marginTopDxa: 1800, marginBottomDxa: 1080, marginLeftDxa: 1800, marginRightDxa: 1800, alignment: 'justify'
+            };
+        }
+
+        if (/HIMACHAL PRADESH|HIGH COURT OF HIMACHAL|HIGH COURT AT SHIMLA/i.test(sample)) {
+            return {
+                id: 'hp_hc', name: 'Himachal Pradesh High Court', paper: 'A4',
+                widthDxa: 11906, heightDxa: 16838, fontFamily: 'Times New Roman',
+                bodyFontSize: 32, headingFontSize: 36, quoteFontSize: 28, lineSpacing: 360,
+                marginTopDxa: 1134, marginBottomDxa: 1134, marginLeftDxa: 2268, marginRightDxa: 2268, alignment: 'justify'
+            };
+        }
+
+        if (/DISTRICT & SESSIONS|DISTRICT COURT|NCLT|TRIBUNAL|CONSUMER COMMISSION|FAMILY COURT|BEFORE THE LEARNED/i.test(sample)) {
+            return {
+                id: 'district_court', name: 'Generic District Court / Tribunal', paper: 'A4',
+                widthDxa: 11906, heightDxa: 16838, fontFamily: 'Times New Roman',
+                bodyFontSize: 28, headingFontSize: 32, quoteFontSize: 24, lineSpacing: 360,
+                marginTopDxa: 1440, marginBottomDxa: 1440, marginLeftDxa: 2160, marginRightDxa: 1440, alignment: 'justify'
+            };
+        }
+
+        return {
+            id: 'supreme_court', name: 'Supreme Court of India', paper: 'A4',
+            widthDxa: 11906, heightDxa: 16838, fontFamily: 'Times New Roman',
+            bodyFontSize: 28, headingFontSize: 32, quoteFontSize: 24, lineSpacing: 360,
+            marginTopDxa: 1134, marginBottomDxa: 1134, marginLeftDxa: 2268, marginRightDxa: 2268, alignment: 'justify'
+        };
+    }
+
+    function applyAutoFormat(courtPreset) {
         getSelectedText(function(selectedText) {
+            var preset = courtPreset || detectCourtPresetFromText(selectedText);
             var cleaned = formatPlainText(selectedText);
 
             if (!cleaned.trim()) {
@@ -304,23 +352,69 @@
             suppressSelectionSyncUntil = Date.now() + 1500;
             lastSelectionSnapshot = '';
 
-            var htmlPayload = formatLegalDocumentHtml(selectedText);
-
             try {
-                if (htmlPayload) {
-                    window.Asc.plugin.executeMethod('PasteHtml', [htmlPayload]);
-                } else {
-                    window.Asc.plugin.executeMethod('PasteText', [cleaned]);
-                }
+                window.Asc.scope.preset = preset;
+                window.Asc.plugin.callCommand(function() {
+                    var pConfig = Asc.scope.preset || {};
+                    var oDocument = Api.GetDocument();
+                    if (!oDocument) return;
 
-                scheduleIndentReset();
+                    try {
+                        var oSection = oDocument.GetFinalSection();
+                        if (oSection && pConfig.marginLeftDxa) {
+                            oSection.SetPageSize(pConfig.widthDxa || 11906, pConfig.heightDxa || 16838);
+                            oSection.SetPageMargins(
+                                pConfig.marginLeftDxa,
+                                pConfig.marginTopDxa,
+                                pConfig.marginRightDxa,
+                                pConfig.marginBottomDxa
+                            );
+                        }
+                    } catch(e) {}
+
+                    var oRange = oDocument.GetRangeBySelect();
+                    var aParagraphs = (oRange && typeof oRange.GetAllParagraphs === 'function') ? oRange.GetAllParagraphs() : oDocument.GetAllParagraphs();
+                    if (!aParagraphs || !aParagraphs.length) {
+                        aParagraphs = oDocument.GetAllParagraphs();
+                    }
+
+                    if (aParagraphs && aParagraphs.length) {
+                        for (var i = 0; i < aParagraphs.length; i++) {
+                            var p = aParagraphs[i];
+                            if (p) {
+                                try { p.SetIndRight(0); } catch(e) {}
+                                try { p.SetIndLeft(0); } catch(e) {}
+                                try { p.SetIndFirstLine(0); } catch(e) {}
+                                try { p.SetFontFamily(pConfig.fontFamily || "Times New Roman"); } catch(e) {}
+                                try { p.SetAlign(pConfig.alignment || "justify"); } catch(e) {}
+                                try { p.SetSpacingAfter(120); } catch(e) {}
+
+                                try {
+                                    var text = p.GetText() || "";
+                                    var trimmed = text.trim();
+                                    if (trimmed.length > 0 && trimmed.length <= 60 && !/[.!?]$/.test(trimmed) && trimmed === trimmed.toUpperCase()) {
+                                        p.SetBold(true);
+                                        p.SetFontSize(pConfig.headingFontSize || 32);
+                                        var isTitle = /^(IN THE|SUPREME COURT|HIGH COURT|BEFORE THE|PETITION|RECORD OF PROCEEDINGS)\b/i.test(trimmed);
+                                        if (isTitle) {
+                                            p.SetAlign("center");
+                                            p.SetFontSize((pConfig.headingFontSize || 32) + 4);
+                                        }
+                                    } else {
+                                        p.SetFontSize(pConfig.bodyFontSize || 28);
+                                    }
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                }, false);
 
                 postToParent({
                     type: 'ONLYOFFICE_AUTOFORMAT_DONE',
                     applied: true
                 });
             } catch (error) {
-                console.warn('[ONLYOFFICE Plugin] PasteHtml auto-format failed, falling back to PasteText:', error);
+                console.warn('[ONLYOFFICE Plugin] Native court auto-format failed, falling back to PasteText:', error);
                 try {
                     window.Asc.plugin.executeMethod('PasteText', [cleaned]);
                     scheduleIndentReset();
@@ -490,7 +584,7 @@
                 } catch (e) {}
             }
         } else if (event.data.type === 'ONLYOFFICE_AUTO_FORMAT_SELECTION') {
-            applyAutoFormat();
+            applyAutoFormat(event.data.courtPreset || event.data.preset);
         } else if (event.data.type === 'ONLYOFFICE_ENHANCE_WITH_AI') {
             requestEnhanceSelection();
         } else if (event.data.type === 'ONLYOFFICE_DETECT_VARIABLES') {

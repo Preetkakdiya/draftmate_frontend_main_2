@@ -4,9 +4,9 @@ import DraftingModal from '../components/DraftingModal';
 import axios from 'axios';
 import { API_CONFIG } from '../services/endpoints';
 import { toast } from 'sonner';
-import { 
-  Plus, UploadCloud, FolderClosed, Users, FileSignature, 
-  Sparkles, Search, CheckCircle, PencilRuler, HelpCircle 
+import {
+    Plus, UploadCloud, FolderClosed, Users, FileSignature,
+    Sparkles, Search, CheckCircle, PencilRuler, HelpCircle
 } from 'lucide-react';
 import './DraftingLanding.css';
 
@@ -148,7 +148,7 @@ const DraftingLanding = () => {
 
         setIsUploading(true);
         const uploadToast = toast.loading(`Uploading ${files.length} document${files.length > 1 ? 's' : ''}...`);
-        
+
         const uploadedRecords = [];
 
         try {
@@ -164,7 +164,7 @@ const DraftingLanding = () => {
                 formData.append('session_id', sessionId);
 
                 const response = await axios.post(url, formData, {
-                    headers: { 
+                    headers: {
                         'Content-Type': 'multipart/form-data',
                         'Authorization': `Bearer ${sessionId}`
                     },
@@ -228,7 +228,7 @@ const DraftingLanding = () => {
                         formData.append('session_id', freshSession);
 
                         const response = await axios.post(url, formData, {
-                            headers: { 
+                            headers: {
                                 'Content-Type': 'multipart/form-data',
                                 'Authorization': `Bearer ${freshSession}`
                             },
@@ -283,13 +283,13 @@ const DraftingLanding = () => {
     return (
         <div className="drafting-landing-container">
             {/* Hidden File Input */}
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileSelect} 
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
                 accept=".pdf,.docx,.doc,.rtf,.txt"
                 multiple
-                style={{ display: 'none' }} 
+                style={{ display: 'none' }}
             />
 
             {/* 🚀 Hero Section */}
@@ -380,7 +380,7 @@ const DraftingLanding = () => {
             <section className="features-grid-section">
                 <h2 className="section-title">Inside the Drafting Suite</h2>
                 <div className="features-grid">
-                    
+
                     <div className="feature-card">
                         <div className="feature-header">
                             <Users className="h-5 w-5 text-indigo-600" />
@@ -446,9 +446,9 @@ const DraftingLanding = () => {
 
             {/* AI Generator Modal */}
             {isModalOpen && (
-                <DraftingModal 
-                    onClose={() => setIsModalOpen(false)} 
-                    initialPrompt={initialDraftingPrompt} 
+                <DraftingModal
+                    onClose={() => setIsModalOpen(false)}
+                    initialPrompt={initialDraftingPrompt}
                     initialEntryMode="dashboard"
                     onDraftCreated={saveDeskDraftRecord}
                 />

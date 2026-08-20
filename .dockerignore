@@ -3,10 +3,23 @@
 # Version Control
 .git
 .gitignore
+.github
 
 # Dependencies
 node_modules
 **/node_modules
+dist
+**/dist
+
+# Heavy Media & Local Storage
+shared_drafts
+backend/models
+.gemini
+.system_generated
+*.log
+*.zip
+*.tar
+*.gz
 
 # Python Artifacts (Exclude heavy venvs from copy)
 **/venv

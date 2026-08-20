@@ -18,6 +18,26 @@ if (BASE_URL.endsWith('/')) {
     BASE_URL = BASE_URL.slice(0, -1);
 }
 
+export const fetchWithTimeout = async (resource, options = {}) => {
+    const { timeout = 8000, ...customOptions } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(resource, {
+            ...customOptions,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        if (error.name === 'AbortError') {
+            throw new Error('Network request timed out. Please check your internet connection.');
+        }
+        throw error;
+    }
+};
+
 export const API_CONFIG = {
     // Service: backend/converter (Port 8000)
     CONVERTER: {

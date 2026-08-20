@@ -234,8 +234,14 @@ const Signup = () => {
                     };
                 }
                 localStorage.setItem('user_profile', JSON.stringify(profileData));
+
+                localStorage.removeItem('draftmate_ai_consent_accepted');
+                localStorage.removeItem('draftmate_ai_consent_value');
+                localStorage.removeItem('draftmate_ai_consent_details');
+                window.dispatchEvent(new Event('draftmate_consent_updated'));
+
                 toast.dismiss(loadingToast);
-                toast.success("Welcome to DraftMate!");
+                toast.success("Welcome to DraftMate! Let's customize your workspace.");
                 navigate('/onboarding');
             } catch (error) {
                 toast.dismiss(loadingToast);

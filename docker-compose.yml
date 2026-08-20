@@ -84,7 +84,6 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-
   backend:
     build:
       context: .
@@ -152,8 +151,8 @@ services:
       - PREFERRED_DOMAINS=${PREFERRED_DOMAINS}
       - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USERNAME=${SMTP_USERNAME:-preetkakdiya@gmail.com}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-ciej ysdb qdkm bxot}
+      - SMTP_USERNAME=${SMTP_USERNAME:-draftmate25@gmail.com }
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-qmfd rnio yxnc ssob}
       - UPLOAD_FOLDER=${UPLOAD_FOLDER}
       - INPUT_JSON=${INPUT_JSON}
       - INTERACTIVE=${INTERACTIVE}
@@ -183,7 +182,7 @@ services:
       qdrant:
         condition: service_started
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/lexbot/config/llm')"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/lexbot/config/llm')" ]
       interval: 20s
       timeout: 10s
       retries: 10

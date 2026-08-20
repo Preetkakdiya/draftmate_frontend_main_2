@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { API_CONFIG } from '../services/endpoints';
 
 import ErrorBoundary from '../components/ErrorBoundary';
+import AiContentNoticeModal from '../components/AiContentNoticeModal';
 import {
   Search, Bell, LayoutDashboard, FileText, Scale, FolderOpen,
   Languages, Library, GraduationCap, Gavel, Wrench,
@@ -44,6 +45,24 @@ export default function MainLayout() {
   // Modal States
   const [isReferOpen, setIsReferOpen] = useState(false);
   const [isBugOpen, setIsBugOpen] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(() => {
+    const isAccepted = localStorage.getItem('draftmate_ai_consent_accepted') === 'true';
+    const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    return !isAccepted && profile.ai_consent !== 'yes';
+  });
+
+  useEffect(() => {
+    const handleConsentCheck = () => {
+      const isAccepted = localStorage.getItem('draftmate_ai_consent_accepted') === 'true';
+      const profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const profileAccepted = profile.ai_consent === 'yes';
+      setShowConsentModal(!isAccepted && !profileAccepted);
+    };
+
+    handleConsentCheck();
+    window.addEventListener('draftmate_consent_updated', handleConsentCheck);
+    return () => window.removeEventListener('draftmate_consent_updated', handleConsentCheck);
+  }, []);
 
   const [userProfile, setUserProfile] = useState({
     firstName: '',
@@ -181,8 +200,12 @@ export default function MainLayout() {
                       </Link>
                     );
                   })}
-                  <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 transition-colors group mt-1 border border-transparent hover:border-red-100">
-                    <LogOut className="w-4 h-4 shrink-0 text-red-400 group-hover:text-red-500" />
+                  <button onClick={() => { navigate('/dashboard/settings'); setTimeout(() => window.dispatchEvent(new CustomEvent('open_delete_account_modal')), 150); }} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors group mt-1 border border-red-100">
+                    <X className="w-4 h-4 shrink-0 text-red-500 group-hover:text-red-600" />
+                    {isSidebarOpen && <span className="text-xs font-bold text-red-600">Delete Account</span>}
+                  </button>
+                  <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors group mt-1">
+                    <LogOut className="w-4 h-4 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     {isSidebarOpen && <span className="text-xs font-semibold">Logout</span>}
                   </button>
                 </div>
@@ -442,6 +465,9 @@ export default function MainLayout() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* ── MANDATORY AI CONTENT NOTICE & CONSENT MODAL ── */}
+        <AiContentNoticeModal isOpen={showConsentModal} onAccept={() => setShowConsentModal(false)} />
 
       </div>
     </div>

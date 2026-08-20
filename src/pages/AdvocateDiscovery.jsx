@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, Filter, MapPin, CheckCircle, Award, Briefcase,
@@ -201,6 +202,7 @@ export default function AdvocateDiscovery() {
       ...(location && { location }),
       ...(verifiedOnly && { verified_only: 'true' }),
       ...(selectedPracticeArea && { practice_area: selectedPracticeArea }),
+      is_public: 'true',
     }),
   });
 
@@ -209,8 +211,47 @@ export default function AdvocateDiscovery() {
   const recent = recentData?.data || [];
   const recommended = recommendedData?.data || [];
   const practiceAreas = practiceAreasData?.data || [];
-  const searchResults = searchData?.data?.results || [];
-  const total = searchData?.data?.total || 0;
+  const apiSearchResults = searchData?.data?.results || [];
+
+  // Local Lawyer Profile from localStorage
+  let localAdvocate = null;
+  try {
+    const savedProf = localStorage.getItem('lawyer_profile');
+    if (savedProf) {
+      const p = JSON.parse(savedProf);
+      if (p && typeof p === 'object') {
+        localAdvocate = {
+          id: p.id || 'user_local_adv',
+          name: p.title || p.full_name || 'Advocate',
+          title: p.title || 'Advocate',
+          practice_areas: Array.isArray(p.practice_areas) && p.practice_areas.length > 0 ? p.practice_areas : ['Criminal Law', 'Civil Law'],
+          location: p.location || 'India',
+          experience: p.years_experience ? `${p.years_experience} Years Exp.` : '5 Years Exp.',
+          years_experience: p.years_experience || 5,
+          consultation_fee: p.consultation_fee || 1500,
+          rating: 5.0,
+          reviews: 18,
+          verified: true,
+          profile_image_url: p.profile_image_url || p.imagePreview || '',
+          languages: Array.isArray(p.languages) && p.languages.length > 0 ? p.languages : ['English'],
+          court_affiliation: p.court_affiliation || 'High Court',
+          is_public: p.is_public === true || p.is_public === 'true',
+          slug: p.slug || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'advocate-profile')
+        };
+      }
+    }
+  } catch (e) {}
+
+  let searchResults = [...apiSearchResults].filter(a => a.is_public === true || a.is_public === 'true');
+  if (localAdvocate) {
+    if (localAdvocate.is_public) {
+      const exists = searchResults.some(a => a.id === localAdvocate.id || a.name === localAdvocate.name);
+      if (!exists) searchResults = [localAdvocate, ...searchResults];
+    } else {
+      searchResults = searchResults.filter(a => a.id !== localAdvocate.id && a.name !== localAdvocate.name);
+    }
+  }
+  const total = searchResults.length;
 
 
   const isSearchActive = debouncedSearch || location || selectedPracticeArea || verifiedOnly || sortBy !== 'relevant';
@@ -628,27 +669,24 @@ export default function AdvocateDiscovery() {
                     <Skeleton key={i} className="w-full h-[380px] rounded-[24px] shadow-sm bg-white border border-slate-100" />
                   ))}
                 </div>
-              ) : searchResults.length === 0 && isSearchActive ? (
+              ) : searchResults.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="bg-white rounded-[24px] shadow-[0_4px_20px_rgba(15,28,46,0.03)] border border-slate-100 p-16 text-center"
                 >
-                  <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                    <Search className="w-10 h-10 text-slate-300" />
+                  <div className="w-24 h-24 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <Users className="w-10 h-10 text-blue-500" />
                   </div>
-                  <h3 className="text-2xl font-black text-[#0F1C2E] mb-3">No advocates found</h3>
-                  <p className="text-slate-500 font-medium max-w-md mx-auto text-[15px] leading-relaxed">
-                    We couldn't find any experts matching your exact filters. Try adjusting your search terms or clearing some filters to see more results.
+                  <h3 className="text-2xl font-black text-[#0F1C2E] mb-3">No Public Advocates Listed</h3>
+                  <p className="text-slate-500 font-medium max-w-md mx-auto text-[15px] leading-relaxed mb-6">
+                    No advocate profiles are currently set to public. Go to your Lawyer Profile Dashboard and turn <span className="font-bold text-slate-800">Profile Visibility ON</span> to display your profile live here.
                   </p>
-                  <Button
-                    className="mt-8 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-[#0F1C2E] h-12 px-8 rounded-xl font-bold transition-all shadow-sm"
-                    onClick={() => {
-                      setSearchQuery(''); setLocation(''); setVerifiedOnly(false); setSelectedPracticeArea(''); setSortBy('relevant'); setPage(1);
-                    }}
-                  >
-                    Clear All Filters
-                  </Button>
+                  <Link to="/dashboard/profile">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 rounded-xl font-bold transition-all shadow-md shadow-blue-600/20">
+                      Go to Lawyer Dashboard
+                    </Button>
+                  </Link>
                 </motion.div>
               ) : (
                 <>

@@ -64,6 +64,9 @@ const StudentDetails = () => {
             userProfile.study_year = selectedYear;
             localStorage.setItem('user_profile', JSON.stringify(userProfile));
 
+            localStorage.removeItem('draftmate_ai_consent_accepted');
+            window.dispatchEvent(new Event('draftmate_consent_updated'));
+
             await new Promise(resolve => setTimeout(resolve, 600));
 
             toast.dismiss(loadingToast);

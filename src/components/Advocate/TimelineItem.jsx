@@ -9,7 +9,7 @@ export default function TimelineItem({ title, subtitle, dateRange, description, 
       )}
       
       {/* Node */}
-      <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-primary bg-white shadow-sm" />
+      <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-blue-600 bg-white shadow-sm" />
       
       {/* Content */}
       <div className="mb-1">

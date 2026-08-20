@@ -62,9 +62,25 @@ const MyDrafts = () => {
                 clearTimeout(timeoutId);
                 if (response.ok) {
                     const data = await response.json();
-                    loadedDrafts = data.drafts || [];
+                    const backendDrafts = data.drafts || [];
                     loadedFolders = data.folders || [];
                     success = true;
+
+                    // Read local drafts from localStorage so newly uploaded/opened drafts are NEVER lost
+                    const localDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
+                    const backendKeys = new Set(
+                        backendDrafts.map(d => String(d.id || d.documentKey || d.filename || d.name).toLowerCase())
+                    );
+
+                    const uniqueLocalDrafts = localDrafts.filter(d => {
+                        const candidates = [d.id, d.documentKey, d.filename, d.name]
+                            .filter(Boolean)
+                            .map(v => String(v).toLowerCase());
+                        return !candidates.some(c => backendKeys.has(c));
+                    });
+
+                    loadedDrafts = [...backendDrafts, ...uniqueLocalDrafts];
+
                     localStorage.setItem('my_drafts', JSON.stringify(loadedDrafts));
                     localStorage.setItem('my_draft_folders', JSON.stringify(loadedFolders));
                 }
@@ -84,12 +100,17 @@ const MyDrafts = () => {
             }
         }
 
-        // Always filter out locally-deleted drafts so they never resurrect after navigation
+        // Always filter out locally-deleted drafts (matching ONLY exact unique IDs/documentKeys)
         try {
-            const deletedIds = JSON.parse(localStorage.getItem('draftmate_deleted_doc_ids') || '[]');
+            let deletedIds = JSON.parse(localStorage.getItem('draftmate_deleted_doc_ids') || '[]');
+            // Sanitize: Purge generic names from deletedIds so they don't block new drafts!
+            const genericNames = ['untitled draft', 'untitled draft.docx', 'untitled_draft.docx', 'untitled_draft', 'docx', 'doc', 'undefined', 'null', ''];
+            deletedIds = deletedIds.filter(id => !genericNames.includes(String(id).trim().toLowerCase()));
+            localStorage.setItem('draftmate_deleted_doc_ids', JSON.stringify(deletedIds));
+
             if (deletedIds.length > 0) {
                 loadedDrafts = loadedDrafts.filter(d => {
-                    const candidates = [d.id, d.documentKey, d.filename, d.name]
+                    const candidates = [d.id, d.documentKey]
                         .filter(Boolean)
                         .map(v => String(v).trim().toLowerCase());
                     return !candidates.some(c => deletedIds.includes(c));
@@ -103,12 +124,24 @@ const MyDrafts = () => {
 
     useEffect(() => {
         fetchDraftsAndFolders();
+
+        const handleDraftsUpdated = () => {
+            fetchDraftsAndFolders();
+        };
+
+        window.addEventListener('my_drafts_updated', handleDraftsUpdated);
+        window.addEventListener('storage', handleDraftsUpdated);
+
+        return () => {
+            window.removeEventListener('my_drafts_updated', handleDraftsUpdated);
+            window.removeEventListener('storage', handleDraftsUpdated);
+        };
     }, []);
 
     const performDeleteDraft = async (id) => {
         const targetDraft = drafts.find(d => String(d.id) === String(id));
         const token = localStorage.getItem('session_id') || localStorage.getItem('token');
-        const deleteTargets = Array.from(new Set([id, targetDraft?.documentKey, targetDraft?.filename, targetDraft?.name].filter(Boolean)));
+        const deleteTargets = Array.from(new Set([id, targetDraft?.documentKey].filter(Boolean)));
 
         for (const targetId of deleteTargets) {
             try {
@@ -368,10 +401,13 @@ const MyDrafts = () => {
         ? folders.find(f => f.id === currentFolder)?.name
         : null;
 
-    const displayedDrafts = drafts.filter(draft =>
-        (draft.name || 'Untitled Draft').toLowerCase().includes(searchTerm.toLowerCase()) &&
-        draft.folderId === currentFolder
-    );
+    const displayedDrafts = drafts.filter(draft => {
+        const matchesSearch = (draft.name || draft.filename || 'Untitled Draft').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesFolder = currentFolder === null
+            ? (!draft.folderId || draft.folderId === null || draft.folderId === 'null')
+            : String(draft.folderId) === String(currentFolder);
+        return matchesSearch && matchesFolder;
+    });
 
     const displayedFolders = currentFolder === null
         ? folders.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()))

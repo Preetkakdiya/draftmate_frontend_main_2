@@ -29,6 +29,9 @@ const AdvocateDetails = () => {
     userProfile.experience = experience;
     localStorage.setItem("user_profile", JSON.stringify(userProfile));
 
+    localStorage.removeItem("draftmate_ai_consent_accepted");
+    window.dispatchEvent(new Event("draftmate_consent_updated"));
+
     await new Promise((res) => setTimeout(res, 500));
     toast.success("Profile saved!");
     navigate("/dashboard/home");

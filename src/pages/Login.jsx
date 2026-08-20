@@ -212,9 +212,26 @@ const Login = () => {
                             google: true
                         };
                     localStorage.setItem('user_profile', JSON.stringify(profileData));
+
+                    // Check onboarding status
+                    const hasOnboarded = !!(profileData.professional_background || profileData.role || profileData.bar_council || profileData.college_name);
+
+                    // Clear stale consent if not consented
+                    if (profileData.ai_consent !== 'yes') {
+                        localStorage.removeItem('draftmate_ai_consent_accepted');
+                        localStorage.removeItem('draftmate_ai_consent_value');
+                        localStorage.removeItem('draftmate_ai_consent_details');
+                        window.dispatchEvent(new Event('draftmate_consent_updated'));
+                    }
+
                     toast.dismiss(loadingToast);
-                    toast.success("Welcome back!");
-                    navigate('/dashboard/home');
+                    if (!hasOnboarded) {
+                        toast.success("Welcome! Let's personalize your experience.");
+                        navigate('/onboarding');
+                    } else {
+                        toast.success("Welcome back!");
+                        navigate('/dashboard/home');
+                    }
                     return;
                 }
             } catch (err) {
@@ -240,9 +257,14 @@ const Login = () => {
                 google: true
             }));
 
+            localStorage.removeItem('draftmate_ai_consent_accepted');
+            localStorage.removeItem('draftmate_ai_consent_value');
+            localStorage.removeItem('draftmate_ai_consent_details');
+            window.dispatchEvent(new Event('draftmate_consent_updated'));
+
             toast.dismiss(loadingToast);
-            toast.success(`Welcome back, ${userName}!`);
-            navigate('/dashboard/home');
+            toast.success(`Welcome to DraftMate, ${userName}!`);
+            navigate('/onboarding');
             setIsLoading(false);
         },
         onError: () => toast.error("Google Login Failed"),

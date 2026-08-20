@@ -236,6 +236,10 @@ class ProfileUpdate(BaseModel):
     bio: Optional[str] = None
     image: Optional[str] = None
 
+class ConsentUpdateModel(BaseModel):
+    user_id: Optional[str] = None
+    consent: Optional[str] = 'yes'
+
 class ChronologyCaseCreate(BaseModel):
     name: str
     user_id: str
@@ -349,6 +353,10 @@ def ensure_auth_schema():
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)")
         except Exception:
             pass
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_consent VARCHAR(10) DEFAULT 'no'")
+        except Exception:
+            pass
 
         try:
             cur.execute("""
@@ -357,7 +365,8 @@ def ensure_auth_schema():
                     email VARCHAR(255) UNIQUE,
                     password_hash VARCHAR(255),
                     google_id VARCHAR(255),
-                    full_name VARCHAR(255)
+                    full_name VARCHAR(255),
+                    ai_consent VARCHAR(10) DEFAULT 'no'
                 )
             """)
         except Exception:
@@ -597,6 +606,110 @@ def update_profile(profile: ProfileUpdate):
         conn.rollback()
         print(f"Update profile error: {e}")
         raise HTTPException(status_code=500, detail="Failed to update profile")
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/user/consent")
+@app.post("/consent/update")
+def update_user_consent(model: ConsentUpdateModel, authorization: Optional[str] = Header(default=None)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        user_id = model.user_id
+        if not user_id and authorization:
+            clean_token = authorization.replace("Bearer ", "").strip()
+            cur.execute("SELECT user_id FROM sessions WHERE session_id = %s", (clean_token,))
+            res = cur.fetchone()
+            if res:
+                user_id = res[0]
+            else:
+                user_id = clean_token
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID or session token is required.")
+
+        consent_str = str(model.consent or '').strip().lower()
+        consent_val = 'yes' if consent_str in ['yes', 'true', '1'] else 'no'
+
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_consent VARCHAR(10) DEFAULT 'no'")
+        except Exception:
+            pass
+
+        cur.execute("UPDATE users SET ai_consent = %s WHERE id = %s OR email = %s", (consent_val, user_id, user_id))
+        conn.commit()
+
+        return {
+            "ok": True,
+            "message": f"User consent updated to '{consent_val}' in database users table.",
+            "user_id": user_id,
+            "ai_consent": consent_val
+        }
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Error updating user consent: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/v2/user/delete-account")
+@app.post("/user/delete")
+def delete_user_account(model: Optional[ConsentUpdateModel] = None, authorization: Optional[str] = Header(default=None)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        user_id = model.user_id if model else None
+        if not user_id and authorization:
+            clean_token = authorization.replace("Bearer ", "").strip()
+            cur.execute("SELECT user_id FROM sessions WHERE session_id = %s", (clean_token,))
+            res = cur.fetchone()
+            if res:
+                user_id = res[0]
+            else:
+                user_id = clean_token
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID or session token is required to delete account.")
+
+        try:
+            cur.execute("DELETE FROM sessions WHERE user_id = %s OR session_id = %s", (user_id, user_id))
+        except Exception: pass
+        try:
+            cur.execute("DELETE FROM profiles WHERE user_id = %s", (user_id,))
+        except Exception: pass
+        try:
+            cur.execute("DELETE FROM draft_access WHERE user_id = %s", (user_id,))
+        except Exception: pass
+        try:
+            cur.execute("DELETE FROM drafts WHERE created_by = %s", (user_id,))
+        except Exception: pass
+        try:
+            cur.execute("DELETE FROM folders WHERE user_id = %s", (user_id,))
+        except Exception: pass
+        try:
+            cur.execute("DELETE FROM chronology_cases WHERE user_id = %s", (user_id,))
+        except Exception: pass
+        try:
+            cur.execute("DELETE FROM users WHERE id = %s OR email = %s", (user_id, user_id))
+        except Exception: pass
+
+        conn.commit()
+        return {
+            "ok": True,
+            "message": "Account and all associated user data permanently deleted."
+        }
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting user account: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cur.close()
         conn.close()
