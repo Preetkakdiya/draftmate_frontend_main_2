@@ -501,10 +501,10 @@ def build_otp_email_template(otp_code: str, to_email: str = "") -> str:
 
 def send_email_task(to_email: str, subject: str, body: str, html_body: Optional[str] = None, doc_title: Optional[str] = None, share_url: Optional[str] = None, sender_email: Optional[str] = None, sender_name: Optional[str] = None, attachment_path: Optional[str] = None):
     """Background task to send email with optional PDF attachment"""
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com").strip()
-    smtp_port = int(str(os.getenv("SMTP_PORT", "587")).strip())
-    smtp_username = os.getenv("SMTP_USERNAME", "").strip()
-    smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+    smtp_server = (os.getenv("SMTP_SERVER") or "smtp.gmail.com").strip()
+    smtp_port = int(str(os.getenv("SMTP_PORT") or "587").strip())
+    smtp_username = (os.getenv("SMTP_USERNAME") or "draftmate25@gmail.com").strip()
+    smtp_password = (os.getenv("SMTP_PASSWORD") or "qmfd rnio yxnc ssob").strip()
 
     # Extract share URL from body if not explicitly passed
     if not share_url and body and "http" in body:
