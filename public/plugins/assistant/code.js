@@ -209,7 +209,7 @@
                 var label = escapeXml(labelMatch[1]);
                 var val = convertUrlsToLinksInHtml(formatCaseNamesInHtml(escapeXml(labelMatch[2])));
                 htmlBlocks.push(
-                    '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: justify; text-justify: inter-word; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
+                    '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
                     '<strong style="font-weight: bold; color: #000000;">' + label + ':</strong> ' + (val || '&nbsp;') +
                     '</p>'
                 );
@@ -237,7 +237,7 @@
 
             var formattedBody = convertUrlsToLinksInHtml(formatCaseNamesInHtml(escaped));
             htmlBlocks.push(
-                '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: justify; text-justify: inter-word; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
+                '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
                 formattedBody +
                 '</p>'
             );
