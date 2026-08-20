@@ -260,6 +260,34 @@
         return '<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n' + htmlBlocks.join('\n') + '\n</div>';
     }
 
+    function resetAllParagraphRightIndents() {
+        try {
+            window.Asc.plugin.callCommand(function() {
+                var oDocument = Api.GetDocument();
+                if (!oDocument) return;
+                var aParagraphs = oDocument.GetAllParagraphs();
+                if (aParagraphs && aParagraphs.length) {
+                    for (var i = 0; i < aParagraphs.length; i++) {
+                        try {
+                            if (aParagraphs[i]) {
+                                aParagraphs[i].SetIndRight(0);
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }, false);
+        } catch (err) {
+            console.warn('[ONLYOFFICE Plugin] resetAllParagraphRightIndents failed:', err);
+        }
+    }
+
+    function scheduleIndentReset() {
+        resetAllParagraphRightIndents();
+        setTimeout(resetAllParagraphRightIndents, 150);
+        setTimeout(resetAllParagraphRightIndents, 400);
+        setTimeout(resetAllParagraphRightIndents, 800);
+    }
+
     function applyAutoFormat() {
         getSelectedText(function(selectedText) {
             var cleaned = formatPlainText(selectedText);
@@ -285,19 +313,7 @@
                     window.Asc.plugin.executeMethod('PasteText', [cleaned]);
                 }
 
-                try {
-                    window.Asc.plugin.callCommand(function() {
-                        var oDocument = Api.GetDocument();
-                        var aParagraphs = oDocument.GetAllParagraphs();
-                        if (aParagraphs && aParagraphs.length > 0) {
-                            for (var i = 0; i < aParagraphs.length; i++) {
-                                if (aParagraphs[i] && typeof aParagraphs[i].SetIndRight === 'function') {
-                                    aParagraphs[i].SetIndRight(0);
-                                }
-                            }
-                        }
-                    }, false);
-                } catch (indentErr) {}
+                scheduleIndentReset();
 
                 postToParent({
                     type: 'ONLYOFFICE_AUTOFORMAT_DONE',
@@ -307,6 +323,7 @@
                 console.warn('[ONLYOFFICE Plugin] PasteHtml auto-format failed, falling back to PasteText:', error);
                 try {
                     window.Asc.plugin.executeMethod('PasteText', [cleaned]);
+                    scheduleIndentReset();
                     postToParent({
                         type: 'ONLYOFFICE_AUTOFORMAT_DONE',
                         applied: true
@@ -450,6 +467,7 @@
             console.log('[ONLYOFFICE Plugin] Received ONLYOFFICE_INSERT_HTML payload (length: ' + rawHtml.length + ')');
             try {
                 window.Asc.plugin.executeMethod('PasteHtml', [rawHtml]);
+                scheduleIndentReset();
                 console.log('[ONLYOFFICE Plugin] PasteHtml executed successfully.');
             } catch (err) {
                 console.error('[ONLYOFFICE Plugin] PasteHtml execution failed:', err);
@@ -463,10 +481,12 @@
                 } else {
                     window.Asc.plugin.executeMethod('PasteText', [rawText]);
                 }
+                scheduleIndentReset();
             } catch (err) {
                 console.warn('[ONLYOFFICE Plugin] PasteHtml failed in ONLYOFFICE_INSERT_TEXT, falling back to PasteText:', err);
                 try {
                     window.Asc.plugin.executeMethod('PasteText', [rawText]);
+                    scheduleIndentReset();
                 } catch (e) {}
             }
         } else if (event.data.type === 'ONLYOFFICE_AUTO_FORMAT_SELECTION') {
