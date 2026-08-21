@@ -203,10 +203,10 @@ def seed_database():
                 """, (advocate_id, edu['institution'], edu['degree'], edu['start_year'], edu['end_year']))
 
         conn.commit()
-        print("✅ Seeding completed successfully.")
+        print("[OK] Seeding completed successfully.")
         
     except Exception as e:
-        print(f"❌ Error seeding database: {e}")
+        print(f"[ERROR] Error seeding database: {e}")
         if conn:
             conn.rollback()
     finally:

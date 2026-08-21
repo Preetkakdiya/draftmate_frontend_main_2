@@ -82,7 +82,7 @@ def _get_chunks_per_file(
             # Check cache first
             cached_chunks = session_cache.get_file_chunks(file_path)
             if cached_chunks:
-                logger.info(f"⚡ Cache HIT for {file_path}")
+                logger.info(f"[INFO] Cache HIT for {file_path}")
                 chunks = cached_chunks
             else:
                 full_text = pdf_processor.extract_text(file_path)
@@ -127,7 +127,7 @@ class DocumentAgent(BaseAgent):
         # Dynamic Mode Switching
         llm_mode = state.get("llm_mode", "fast")
         if self.mode != llm_mode:
-            logger.info(f"🔄 Switching Document Agent to {llm_mode} mode...")
+            logger.info(f"[INFO] Switching Document Agent to {llm_mode} mode...")
             self.switch_mode(llm_mode)
 
         logger.info(f"📄 DocumentAgent processing: {query[:50]}... ({len(file_paths)} file(s))")
@@ -158,7 +158,7 @@ class DocumentAgent(BaseAgent):
 
                     doc_context_str = "\n".join(sections)
                     logger.info(
-                        f"✅ Built context from {len(file_paths)} files, "
+                        f"[OK] Built context from {len(file_paths)} files, "
                         f"{len(labeled_chunks)} total chunks"
                     )
                 else:

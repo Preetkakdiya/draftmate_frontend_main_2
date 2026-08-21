@@ -105,9 +105,9 @@ class ChatStore:
             Base.metadata.create_all(self.engine)
             self.SessionLocal = sessionmaker(bind=self.engine)
             self._initialized = True
-            logger.info("✅ ChatStore database initialized")
+            logger.info("[OK] ChatStore database initialized")
         except Exception as e:
-            logger.error(f"❌ ChatStore init failed: {e}")
+            logger.error(f"[ERROR] ChatStore init failed: {e}")
             self._initialized = False
     
     def update_session_title(self, session_id: str, user_id: str, title: str) -> bool:
@@ -293,7 +293,7 @@ class ChatStore:
         if self._history_cache is not None:
             cache_key = f"{session_id}:{limit}"
             if cache_key in self._history_cache:
-                logger.debug(f"⚡ Cache HIT for session {session_id}")
+                logger.debug(f"[INFO] Cache HIT for session {session_id}")
                 return self._history_cache[cache_key]
         
         try:

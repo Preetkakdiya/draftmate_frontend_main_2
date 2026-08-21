@@ -166,17 +166,17 @@ def format_review_for_chat(review: dict) -> str:
                 lines.append(f"     → {issue['recommendation']}")
 
         if warnings:
-            lines.append(f"\n⚠️ {len(warnings)} Warning{'s' if len(warnings) > 1 else ''}:")
+            lines.append(f"\n[WARN] {len(warnings)} Warning{'s' if len(warnings) > 1 else ''}:")
             for i, issue in enumerate(warnings, 1):
                 lines.append(f"  {i}. {issue['description']}")
 
         if suggestions:
-            lines.append(f"\n💡 {len(suggestions)} Suggestion{'s' if len(suggestions) > 1 else ''}:")
+            lines.append(f"\n[INFO] {len(suggestions)} Suggestion{'s' if len(suggestions) > 1 else ''}:")
             for i, issue in enumerate(suggestions, 1):
                 lines.append(f"  {i}. {issue['description']}")
 
     strengths = review.get("strengths", [])
     if strengths:
-        lines.append(f"\n✅ Strengths: {', '.join(strengths[:3])}")
+        lines.append(f"\n[OK] Strengths: {', '.join(strengths[:3])}")
 
     return "\n".join(lines)

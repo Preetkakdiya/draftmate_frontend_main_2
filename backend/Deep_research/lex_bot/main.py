@@ -20,7 +20,7 @@ def main():
         if not query:
             continue
             
-        print("\n🚀 Starting Agent Workflow...\n")
+        print("\n[INFO] Starting Agent Workflow...\n")
         
         initial_state = AgentState(
             messages=[],
@@ -39,7 +39,7 @@ def main():
             print(result.get("final_answer", "No answer generated."))
             
         except Exception as e:
-            print(f"\n❌ Error in workflow: {e}")
+            print(f"\n[ERROR] Error in workflow: {e}")
             import traceback
             traceback.print_exc()
 

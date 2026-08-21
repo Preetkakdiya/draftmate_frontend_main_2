@@ -38,14 +38,14 @@ def fix_db():
         """)
         
         conn.commit()
-        print("✅ Missing tables created successfully.")
+        print("[OK] Missing tables created successfully.")
         
         # Now run seed_ecosystem
         print("Running seed_ecosystem.py...")
         import seed_ecosystem
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
     finally:
         if 'conn' in locals() and conn:
             conn.close()

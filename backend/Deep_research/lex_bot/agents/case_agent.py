@@ -28,7 +28,7 @@ class CaseAgent(BaseAgent):
 
             return {"case_context": results[:15]}
         except Exception as e:
-            print(f"❌ Case Agent Failed: {e}")
+            print(f"[ERROR] Case Agent Failed: {e}")
             return {"case_context": [], "errors": [f"Case Agent failed: {str(e)}"]}
 
 case_agent = CaseAgent()

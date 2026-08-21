@@ -76,7 +76,7 @@ class IndianKanoonScraper:
         if cache_key in self._fetch_cache:
             timestamp, cached_html = self._fetch_cache[cache_key]
             if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
-                logger.info(f"⚡ IK Cache HIT: {url[:50]}...")
+                logger.info(f"[INFO] IK Cache HIT: {url[:50]}...")
                 return cached_html
             else:
                 del self._fetch_cache[cache_key]

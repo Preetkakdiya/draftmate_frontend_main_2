@@ -21,11 +21,11 @@ def run_test():
     
     try:
         result = app.invoke(initial_state)
-        print("\n✅ WORKFLOW SUCCESS")
+        print("\n[OK] WORKFLOW SUCCESS")
         print("Final Answer Length:", len(result.get("final_answer", "")))
         print("Initial sub-queries:", result.get("law_query"), "|", result.get("case_query"))
     except Exception as e:
-        print(f"\n❌ WORKFLOW FAILED: {e}")
+        print(f"\n[ERROR] WORKFLOW FAILED: {e}")
         import traceback
         traceback.print_exc()
 

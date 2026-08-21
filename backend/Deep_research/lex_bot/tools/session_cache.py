@@ -53,13 +53,13 @@ class SessionCache:
             self._faiss = faiss
             # We don't eagerly load the model here, we just use the global singleton when needed
             self._initialized = True
-            logger.info("✅ SessionCache initialized")
+            logger.info("[OK] SessionCache initialized")
         except ImportError as e:
-            logger.warning(f"⚠️ SessionCache dependencies missing: {e}")
+            logger.warning(f"[WARN] SessionCache dependencies missing: {e}")
             logger.warning("Run: pip install faiss-cpu sentence-transformers")
             self._initialized = False
         except Exception as e:
-            logger.error(f"❌ SessionCache init failed: {e}")
+            logger.error(f"[ERROR] SessionCache init failed: {e}")
             self._initialized = False
     
     def _get_content_hash(self, text: str) -> str:

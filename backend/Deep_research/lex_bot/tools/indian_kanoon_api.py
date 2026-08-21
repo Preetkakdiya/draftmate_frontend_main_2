@@ -70,7 +70,7 @@ def search(query: str, max_results: int = 8, pagenum: int = 0) -> List[Dict[str,
     cache_key = f"search:{query.lower().strip()}:{max_results}:{pagenum}"
     cached = _cached(cache_key)
     if cached is not None:
-        logger.info(f"⚡ IK cache HIT: {query[:50]}")
+        logger.info(f"[INFO] IK cache HIT: {query[:50]}")
         return cached
 
     results = []

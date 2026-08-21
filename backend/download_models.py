@@ -10,7 +10,7 @@ def safe_snapshot_download(**kwargs):
     try:
         snapshot_download(**kwargs)
     except Exception as e:
-        print(f"⚠️ Warning: failed to download {kwargs.get('repo_id', '')}: {e}")
+        print(f"[WARN] Warning: failed to download {kwargs.get('repo_id', '')}: {e}")
         return False
     return True
 
@@ -30,7 +30,7 @@ def _with_retries(label, fn, cleanup=None):
             return fn()
         except Exception as err:  # noqa: BLE001 - network errors vary widely
             last_err = err
-            print(f"⚠️ {label} failed (attempt {attempt}/{MAX_RETRIES}): {err}")
+            print(f"[WARN] {label} failed (attempt {attempt}/{MAX_RETRIES}): {err}")
             if cleanup:
                 cleanup()
             if attempt < MAX_RETRIES:
@@ -58,9 +58,9 @@ def download_models():
         local_dir_use_symlinks=False
     )
     if ok:
-        print("✅ Embedding model download complete.")
+        print("[OK] Embedding model download complete.")
     else:
-        print("⚠️ Embedding model not available locally; continuing without it.")
+        print("[WARN] Embedding model not available locally; continuing without it.")
 
     # 2. Rerank Model
     print(f"⬇️ Downloading rerank model to: {rerank_path}")
@@ -70,9 +70,9 @@ def download_models():
         local_dir_use_symlinks=False
     )
     if ok:
-        print("✅ Rerank model download complete.")
+        print("[OK] Rerank model download complete.")
     else:
-        print("⚠️ Rerank model not available locally; continuing without it.")
+        print("[WARN] Rerank model not available locally; continuing without it.")
 
     # 3. EasyOCR Models
     print(f"⬇️ Downloading EasyOCR models to: {easyocr_path}")
@@ -94,20 +94,20 @@ def download_models():
                 with zipfile.ZipFile(dest_zip, 'r') as zip_ref:
                     zip_ref.extractall(easyocr_path)
                 os.remove(dest_zip)
-                print(f"✅ {filename} extracted.")
+                print(f"[OK] {filename} extracted.")
             else:
                 print(f"EasyOCR model {filename} already exists.")
         except Exception as e:
-            print(f"⚠️ Warning: failed to download/extract {filename}: {e}")
+            print(f"[WARN] Warning: failed to download/extract {filename}: {e}")
             continue
 
-    print("✅ Model download step finished (some models may be missing).")
+    print("[OK] Model download step finished (some models may be missing).")
 
 
 if __name__ == "__main__":
     try:
         download_models()
     except Exception as e:
-        print(f"⚠️ Warning: download_models raised an unexpected error: {e}")
+        print(f"[WARN] Warning: download_models raised an unexpected error: {e}")
         # Do not fail the process in build stage — models can be provided at runtime
         sys.exit(0)

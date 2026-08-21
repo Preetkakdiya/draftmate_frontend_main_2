@@ -198,20 +198,20 @@ def rewrite_query(
     # 1. Abbreviation expansion (rule-based, always runs, ~0ms)
     expanded = expand_abbreviations(original)
     if expanded != original:
-        logger.info(f"🔄 Expanded abbreviations: {expanded[:60]}...")
+        logger.info(f"[INFO] Expanded abbreviations: {expanded[:60]}...")
     
     working_query = expanded
     
     # Fast path: Skip LLM rewrite if query is self-contained (~0ms)
     if not needs_llm_rewrite(working_query):
-        logger.debug(f"⚡ Query is self-contained, skipping LLM rewrite pass: {working_query[:50]}")
+        logger.debug(f"[INFO] Query is self-contained, skipping LLM rewrite pass: {working_query[:50]}")
         return working_query
     
     # 2. If user has context, do single-pass classify + rewrite
     if user_id or session_id:
         context = _build_context_string(user_id, working_query, session_id, chat_history)
         if context:
-            logger.info(f"🔄 Single-pass classify+rewrite: {working_query[:50]}...")
+            logger.info(f"[INFO] Single-pass classify+rewrite: {working_query[:50]}...")
             rewritten = _classify_and_rewrite(working_query, context)
             
             if rewritten != working_query:
@@ -219,7 +219,7 @@ def rewrite_query(
             return rewritten
     
     # 3. No context available — return expanded query as-is
-    logger.debug(f"⚡ Query OK, no rewrite needed")
+    logger.debug(f"[INFO] Query OK, no rewrite needed")
     return working_query
 
 

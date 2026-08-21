@@ -27,7 +27,7 @@ LOCAL_BIND_PORT = 5432
 def get_db_connection():
     """Establish a database connection, using SSH tunnel if configured."""
     if BASTION_IP and SSH_KEY_PATH and RDS_ENDPOINT:
-        print(f"🔒 Starting SSH tunnel via {BASTION_IP}...")
+        print(f"[INFO] Starting SSH tunnel via {BASTION_IP}...")
         try:
             server = SSHTunnelForwarder(
                 (BASTION_IP, 22),
@@ -37,7 +37,7 @@ def get_db_connection():
                 local_bind_address=('127.0.0.1', LOCAL_BIND_PORT)
             )
             server.start()
-            print(f"✅ Tunnel active on port {server.local_bind_port}")
+            print(f"[OK] Tunnel active on port {server.local_bind_port}")
             
             conn = psycopg2.connect(
                 host='127.0.0.1',
@@ -48,10 +48,10 @@ def get_db_connection():
             )
             return conn, server
         except Exception as e:
-            print(f"❌ Tunnel connection failed: {e}")
+            print(f"[ERROR] Tunnel connection failed: {e}")
             raise
     else:
-        print("🌍 Connecting directly...")
+        print("[INFO] Connecting directly...")
         if POSTGRES_DSN:
              conn = psycopg2.connect(POSTGRES_DSN)
         else:
@@ -101,7 +101,7 @@ def view_profiles():
         cur.close()
         
     except Exception as e:
-        print(f"❌ Error fetching profiles: {e}")
+        print(f"[ERROR] Error fetching profiles: {e}")
     finally:
         if conn:
             conn.close()

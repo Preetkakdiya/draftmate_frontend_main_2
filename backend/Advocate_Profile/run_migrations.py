@@ -32,7 +32,7 @@ def get_connection():
 def main():
     migration_file = os.path.join(os.path.dirname(__file__), "migrations.sql")
     if not os.path.exists(migration_file):
-        print(f"❌  Migration file not found: {migration_file}")
+        print(f"[ERROR]  Migration file not found: {migration_file}")
         sys.exit(1)
 
     with open(migration_file, "r", encoding="utf-8") as f:
@@ -42,7 +42,7 @@ def main():
     try:
         conn = get_connection()
     except Exception as e:
-        print(f"❌  Could not connect: {e}")
+        print(f"[ERROR]  Could not connect: {e}")
         sys.exit(1)
 
     conn.autocommit = False
@@ -63,12 +63,12 @@ def main():
             if "already exists" in str(e) or "duplicate" in str(e).lower():
                 skipped += 1
             else:
-                print(f"⚠️   Non-fatal error on statement:\n  {stmt[:80]}...\n  → {e}")
+                print(f"[WARN]   Non-fatal error on statement:\n  {stmt[:80]}...\n  → {e}")
                 skipped += 1
         conn.commit()
 
     conn.close()
-    print(f"✅  Migrations complete — {ok} applied, {skipped} skipped (already present).")
+    print(f"[OK]  Migrations complete — {ok} applied, {skipped} skipped (already present).")
 
 
 if __name__ == "__main__":

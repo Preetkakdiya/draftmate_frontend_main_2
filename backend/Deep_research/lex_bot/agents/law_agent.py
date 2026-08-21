@@ -50,12 +50,12 @@ class LawAgent(BaseAgent):
                     _, web_results = web_search_tool.run(enhanced_query, domains)
                     all_results.extend(web_results)
                 except Exception as e:
-                    print(f"   ⚠️ Web augmentation failed: {e}")
+                    print(f"   [WARN] Web augmentation failed: {e}")
             
             # Return top results — manager_aggregate reranks across all agents globally
             return {"law_context": all_results[:15]}
         except Exception as e:
-            print(f"❌ Law Agent Failed: {e}")
+            print(f"[ERROR] Law Agent Failed: {e}")
             return {"law_context": [], "errors": [f"Law Agent failed: {str(e)}"]} 
 
 law_agent = LawAgent()

@@ -369,11 +369,11 @@ def build_html_email_template(doc_title: str, share_url: str, body_text: str = "
                       <div style="font-size: 11px; font-weight: 700; color: #334155;">Verified Format</div>
                     </td>
                     <td width="33%" align="center" style="padding: 8px;">
-                      <div style="font-size: 20px; margin-bottom: 4px;">🔒</div>
+                      <div style="font-size: 20px; margin-bottom: 4px;">[INFO]</div>
                       <div style="font-size: 11px; font-weight: 700; color: #334155;">Encrypted & Secure</div>
                     </td>
                     <td width="33%" align="center" style="padding: 8px;">
-                      <div style="font-size: 20px; margin-bottom: 4px;">⚡</div>
+                      <div style="font-size: 20px; margin-bottom: 4px;">[INFO]</div>
                       <div style="font-size: 11px; font-weight: 700; color: #334155;">Instant PDF View</div>
                     </td>
                   </tr>
@@ -430,7 +430,7 @@ def build_otp_email_template(otp_code: str, to_email: str = "") -> str:
                       </span>
                     </div>
                     <div style="font-size: 11px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 2px; margin-top: 6px;">
-                      🔒 Security Verification Center
+                      [INFO] Security Verification Center
                     </div>
                   </td>
                 </tr>

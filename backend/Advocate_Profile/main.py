@@ -398,9 +398,9 @@ def on_startup():
         conn = get_db_connection()
         _run_migrations(conn)
         conn.close()
-        logger.info("✅ Advocate Profile Service migrations applied.")
+        logger.info("[OK] Advocate Profile Service migrations applied.")
     except Exception as e:
-        logger.error(f"❌ Startup migration failed: {e}")
+        logger.error(f"[ERROR] Startup migration failed: {e}")
 
 
 # ── Pydantic Models ───────────────────────────────────────────────────────────

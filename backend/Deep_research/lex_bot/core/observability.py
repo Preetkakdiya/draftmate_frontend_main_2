@@ -48,7 +48,7 @@ class TokenTracker:
         new_total = current + tokens
         
         if new_total > MAX_TOKENS_PER_USER_DAILY:
-            logger.warning(f"⚠️ User {user_id} exceeded daily token limit ({new_total}/{MAX_TOKENS_PER_USER_DAILY})")
+            logger.warning(f"[WARN] User {user_id} exceeded daily token limit ({new_total}/{MAX_TOKENS_PER_USER_DAILY})")
             return False
         
         self._usage[user_id][today] = new_total
@@ -85,7 +85,7 @@ def setup_langsmith():
         return True
         
     except Exception as e:
-        logger.error(f"❌ LangSmith setup failed: {e}")
+        logger.error(f"[ERROR] LangSmith setup failed: {e}")
         return False
 
 

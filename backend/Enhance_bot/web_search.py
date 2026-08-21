@@ -128,7 +128,7 @@ class WebSearchTool:
         results = self._ddgs_search(query, WEB_SEARCH_MAX_RESULTS, domains)
         
         if not results:
-            print("⚠️ DDG yielded no results, switching to Tavily...")
+            print("[WARN] DDG yielded no results, switching to Tavily...")
             results = self._tavily_search(query, WEB_SEARCH_MAX_RESULTS, domains)
             
         # Extract URLs

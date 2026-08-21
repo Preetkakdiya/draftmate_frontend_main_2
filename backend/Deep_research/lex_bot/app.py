@@ -81,7 +81,7 @@ chat_store = ChatStore()
 # ============ Lifespan ============
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 Lex Bot v2 starting up...")
+    logger.info("[INFO] Lex Bot v2 starting up...")
     
     # Initialize LangSmith tracing (if API key is set)
     setup_langsmith()
@@ -151,11 +151,11 @@ async def lifespan(app: FastAPI):
         logger.info("Pre-loading reranker model...")
         reranker = get_reranker()
         if reranker:
-            logger.info("✅ Reranker model pre-loaded")
+            logger.info("[OK] Reranker model pre-loaded")
         else:
-            logger.warning("⚠️ Reranker not available (sentence-transformers missing?)")
+            logger.warning("[WARN] Reranker not available (sentence-transformers missing?)")
     except Exception as e:
-        logger.warning(f"⚠️ Reranker pre-load failed (non-fatal): {e}")
+        logger.warning(f"[WARN] Reranker pre-load failed (non-fatal): {e}")
         
     # Start the memory worker
     memory_worker_task = asyncio.create_task(_memory_worker())
@@ -289,7 +289,7 @@ async def _memory_worker():
                     if attempt < max_retries - 1:
                         await asyncio.sleep(1.0 * (2 ** attempt)) # 1s, 2s
                     else:
-                        logger.error(f"⚠️ Failed to store memory after {max_retries} attempts.")
+                        logger.error(f"[WARN] Failed to store memory after {max_retries} attempts.")
             
             memory_queue.task_done()
         except asyncio.CancelledError:
@@ -302,7 +302,7 @@ def _background_memory_store(user_id: str, query: str, answer: str):
     try:
         memory_queue.put_nowait((user_id, query, answer))
     except asyncio.QueueFull:
-        logger.error("⚠️ Memory queue full! Dropping memory to prevent OOM.")
+        logger.error("[WARN] Memory queue full! Dropping memory to prevent OOM.")
 
 class SessionResponse(BaseModel):
     session_id: str
@@ -455,7 +455,7 @@ def set_llm_config(request: LLMConfigRequest):
     
     _runtime_config["model"] = request.model
     os.environ["LLM_MODEL"] = request.model
-    logger.info(f"🔄 Model switched to: {request.model}")
+    logger.info(f"[INFO] Model switched to: {request.model}")
     
     return get_llm_config()
 
@@ -579,7 +579,7 @@ async def _stream_chat(request: ChatRequest, user_id: str):
             asyncio.create_task(_background_generate_title(session_id, user_id, request.query))
 
     try:
-        logger.info(f"🚀 Calling graph for session {session_id} with node tracking...")
+        logger.info(f"[INFO] Calling graph for session {session_id} with node tracking...")
         
         import queue
         

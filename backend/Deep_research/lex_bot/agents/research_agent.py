@@ -140,7 +140,7 @@ class ResearchAgent(BaseAgent):
             logger.info(f"🔍 Search triggered for: {query[:50]}")
             context_str, search_results = search_tool.run(query)
         else:
-            logger.info(f"⚡ Skipping search — answering from LLM knowledge")
+            logger.info(f"[INFO] Skipping search — answering from LLM knowledge")
         
         # 4. Cache results in session
         if search_results and session_id:
@@ -172,7 +172,7 @@ class ResearchAgent(BaseAgent):
             error_str = str(e).lower()
             # Check for quota exhaustion or permission/dunning errors
             if "429" in str(e) or "403" in str(e) or "resource_exhausted" in error_str or "quota" in error_str or "permission_denied" in error_str or "dunning" in error_str or "permission" in error_str:
-                logger.warning(f"⚠️ Quota exhausted, retrying with fallback: {e}")
+                logger.warning(f"[WARN] Quota exhausted, retrying with fallback: {e}")
                 try:
                     from lex_bot.core.llm_factory import LLMFactory, get_llm
                     LLMFactory.mark_gemini_quota_exhausted()

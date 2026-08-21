@@ -14,11 +14,11 @@ def verify_connection():
         print(f"Found DSN: {dsn.replace(os.getenv('POSTGRES_PASSWORD', 'hidden'), '******')}")
         try:
             conn = psycopg2.connect(dsn)
-            print("✅ SUCCESS: Connected via POSTGRES_DSN")
+            print("[OK] SUCCESS: Connected via POSTGRES_DSN")
             conn.close()
             return
         except Exception as e:
-            print(f"❌ FAILED to connect via DSN: {e}")
+            print(f"[ERROR] FAILED to connect via DSN: {e}")
     else:
         print("No POSTGRES_DSN found.")
         
@@ -31,10 +31,10 @@ def verify_connection():
             password=os.getenv("POSTGRES_PASSWORD", "password"),
             port=os.getenv("POSTGRES_PORT", "5432")
         )
-        print("✅ SUCCESS: Connected via individual POSTGRES_* variables")
+        print("[OK] SUCCESS: Connected via individual POSTGRES_* variables")
         conn.close()
     except Exception as e:
-        print(f"❌ FAILED to connect via individual variables: {e}")
+        print(f"[ERROR] FAILED to connect via individual variables: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

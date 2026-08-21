@@ -24,11 +24,11 @@ def get_embedding_model() -> Any:
                 _embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device='cpu', local_files_only=True)
             except Exception:
                 _embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device='cpu')
-            logger.info("✅ Global Embedding Model loaded successfully")
+            logger.info("[OK] Global Embedding Model loaded successfully")
         except ImportError:
             logger.error("SentenceTransformers not installed.")
         except Exception as e:
-            logger.error(f"❌ Global Model Loading Failed: {e}")
+            logger.error(f"[ERROR] Global Model Loading Failed: {e}")
             
     return _embedding_model
 

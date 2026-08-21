@@ -71,12 +71,12 @@ class UserMemoryManager:
             else:
                 self.memory = Memory.from_config(config)
                 
-            logger.info(f"✅ Memory initialized for user: {self.user_id}")
+            logger.info(f"[OK] Memory initialized for user: {self.user_id}")
         except ImportError:
-            logger.warning("⚠️ mem0 not installed. Run: pip install mem0ai")
+            logger.warning("[WARN] mem0 not installed. Run: pip install mem0ai")
             self.enabled = False
         except Exception as e:
-            logger.error(f"❌ Memory init failed: {e}")
+            logger.error(f"[ERROR] Memory init failed: {e}")
             self.enabled = False
     
     def add(

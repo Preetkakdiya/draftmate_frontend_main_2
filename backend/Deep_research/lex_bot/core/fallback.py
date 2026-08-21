@@ -51,7 +51,7 @@ class FallbackHandler:
             return result
             
         except Exception as e:
-            logger.warning(f"⚠️ {agent_name} failed: {e}. Triggering fallback...")
+            logger.warning(f"[WARN] {agent_name} failed: {e}. Triggering fallback...")
             self.fallback_count += 1
             return self._fallback_web_search(state)
     
@@ -84,7 +84,7 @@ class FallbackHandler:
             }
             
         except Exception as e:
-            logger.error(f"❌ Fallback web search also failed: {e}")
+            logger.error(f"[ERROR] Fallback web search also failed: {e}")
             return {
                 "law_context": [],
                 "errors": [f"All search methods failed: {e}"]

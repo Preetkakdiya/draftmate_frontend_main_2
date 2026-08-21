@@ -473,7 +473,7 @@ tool = st.sidebar.radio(
         "🗜️ Compress PDF",
         "📄➡️📝 PDF to Word",
         "📝➡️📄 Word to PDF",
-        "🔄 Rotate PDF",
+        "[INFO] Rotate PDF",
         "💧 Add Watermark",
         "✏️ Edit PDF"
     ],
@@ -481,7 +481,7 @@ tool = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("<p style='color: #d0d0d0; font-size: 1rem;'>💡 Upload your files and use the tools to manipulate PDFs easily!</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='color: #d0d0d0; font-size: 1rem;'>[INFO] Upload your files and use the tools to manipulate PDFs easily!</p>", unsafe_allow_html=True)
 
 
 # Helper Functions
@@ -558,7 +558,7 @@ def show_preview_options(uploaded_file, label="Preview PDF"):
                 display_pdf_pages_as_images(uploaded_file, page_range=(start_page, end_page))
         else:  # All pages
             if total_pages > 20:
-                st.warning(f"⚠️ This document has {total_pages} pages. Loading all pages may take time.")
+                st.warning(f"[WARN] This document has {total_pages} pages. Loading all pages may take time.")
                 if st.button("Load All Pages", key=f"load_all_{label}"):
                     display_pdf_pages_as_images(uploaded_file)
             else:
@@ -1062,7 +1062,7 @@ if tool == "🔗 Merge PDFs":
                 merged_pdf = merge_pdfs(uploaded_files)
                 
                 if merged_pdf:
-                    st.success("✅ PDFs merged successfully!")
+                    st.success("[OK] PDFs merged successfully!")
                     
                     st.download_button(
                         label="📥 Download Merged PDF",
@@ -1098,7 +1098,7 @@ elif tool == "✂️ Split PDF":
         )
         
         if split_option == "Split by page ranges":
-            st.info("💡 Enter page ranges (e.g., 1-3, 4-6, 7-10)")
+            st.info("[INFO] Enter page ranges (e.g., 1-3, 4-6, 7-10)")
             ranges_input = st.text_input(
                 "Page ranges (comma-separated):",
                 placeholder="1-3, 4-6, 7-10"
@@ -1121,7 +1121,7 @@ elif tool == "✂️ Split PDF":
                         split_pdfs = split_pdf(uploaded_file, ranges)
                         
                         if split_pdfs:
-                            st.success(f"✅ PDF split into {len(split_pdfs)} document(s)!")
+                            st.success(f"[OK] PDF split into {len(split_pdfs)} document(s)!")
                             
                             cols = st.columns(min(len(split_pdfs), 3))
                             for i, pdf in enumerate(split_pdfs):
@@ -1138,7 +1138,7 @@ elif tool == "✂️ Split PDF":
                     st.error(f"Invalid page range format: {str(e)}")
         
         else:
-            st.info("💡 Enter page numbers separated by commas")
+            st.info("[INFO] Enter page numbers separated by commas")
             pages_input = st.text_input(
                 "Pages to extract:",
                 placeholder="1, 3, 5, 7"
@@ -1153,7 +1153,7 @@ elif tool == "✂️ Split PDF":
                         extracted_pdf = extract_pages(uploaded_file, pages)
                         
                         if extracted_pdf:
-                            st.success("✅ Pages extracted successfully!")
+                            st.success("[OK] Pages extracted successfully!")
                             st.download_button(
                                 label="📥 Download Extracted Pages",
                                 data=extracted_pdf,
@@ -1228,7 +1228,7 @@ elif tool == "🗜️ Compress PDF":
                     compressed_size = len(compressed_pdf.getvalue()) / 1024
                     reduction = ((original_size - compressed_size) / original_size) * 100
                     
-                    st.success("✅ PDF compressed successfully!")
+                    st.success("[OK] PDF compressed successfully!")
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -1239,7 +1239,7 @@ elif tool == "🗜️ Compress PDF":
                         st.metric("Space Saved", f"{original_size - compressed_size:.2f} KB")
                     
                     if target_size and compressed_size > target_size * 1.2:
-                        st.warning(f"⚠️ Could not reach target size. Achieved {compressed_size:.2f} KB (Target was {target_size} KB)")
+                        st.warning(f"[WARN] Could not reach target size. Achieved {compressed_size:.2f} KB (Target was {target_size} KB)")
                     
                     st.download_button(
                         label="📥 Download Compressed PDF",
@@ -1263,17 +1263,17 @@ elif tool == "📄➡️📝 PDF to Word":
         
         with col1:
             st.info("ℹ️ This process may take a few moments depending on the file size.")
-            st.warning("⚠️ Complex formatting may not be preserved perfectly.")
+            st.warning("[WARN] Complex formatting may not be preserved perfectly.")
         
         show_preview_options(uploaded_file, "Original PDF")
         
-        if st.button("🔄 Convert to Word", type="primary", use_container_width=True):
+        if st.button("[INFO] Convert to Word", type="primary", use_container_width=True):
             with st.spinner("Converting PDF to Word..."):
                 uploaded_file.seek(0)
                 word_doc = pdf_to_word_pymupdf(uploaded_file)
                 
                 if word_doc:
-                    st.success("✅ Conversion successful!")
+                    st.success("[OK] Conversion successful!")
                     st.balloons()
                     st.download_button(
                         label="📥 Download Word Document",
@@ -1293,13 +1293,13 @@ elif tool == "📝➡️📄 Word to PDF":
     if uploaded_file:
         st.info("ℹ️ Your document will be converted to PDF format with preserved formatting.")
         
-        if st.button("🔄 Convert to PDF", type="primary", use_container_width=True):
+        if st.button("[INFO] Convert to PDF", type="primary", use_container_width=True):
             with st.spinner("Converting Word to PDF..."):
                 uploaded_file.seek(0)
                 pdf_doc = word_to_pdf_improved(uploaded_file)
                 
                 if pdf_doc:
-                    st.success("✅ Conversion successful!")
+                    st.success("[OK] Conversion successful!")
                     st.balloons()
                     
                     st.download_button(
@@ -1313,8 +1313,8 @@ elif tool == "📝➡️📄 Word to PDF":
                     show_preview_options(pdf_doc, "Converted PDF")
 
 
-elif tool == "🔄 Rotate PDF":
-    st.header("🔄 Rotate PDF Pages")
+elif tool == "[INFO] Rotate PDF":
+    st.header("[INFO] Rotate PDF Pages")
     st.write("Rotate pages in your PDF document.")
     
     uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'], key="rotate")
@@ -1356,13 +1356,13 @@ elif tool == "🔄 Rotate PDF":
                     st.error("Invalid page numbers format")
                     pages_to_rotate = []
         
-        if st.button("🔄 Rotate PDF", type="primary", use_container_width=True):
+        if st.button("[INFO] Rotate PDF", type="primary", use_container_width=True):
             with st.spinner("Rotating PDF..."):
                 uploaded_file.seek(0)
                 rotated_pdf = rotate_pdf(uploaded_file, rotation_angle, pages_to_rotate)
                 
                 if rotated_pdf:
-                    st.success("✅ PDF rotated successfully!")
+                    st.success("[OK] PDF rotated successfully!")
                     
                     st.download_button(
                         label="📥 Download Rotated PDF",
@@ -1454,7 +1454,7 @@ elif tool == "💧 Add Watermark":
                     )
                     
                     if watermarked_pdf:
-                        st.success("✅ Watermark added successfully!")
+                        st.success("[OK] Watermark added successfully!")
                         
                         st.download_button(
                             label="📥 Download Watermarked PDF",
@@ -1490,7 +1490,7 @@ elif tool == "✏️ Edit PDF":
         )
         
         if edit_option == "Remove pages":
-            st.info("💡 Enter the page numbers you want to remove")
+            st.info("[INFO] Enter the page numbers you want to remove")
             pages_input = st.text_input(
                 "Pages to remove (comma-separated):",
                 placeholder="2, 4, 6"
@@ -1506,7 +1506,7 @@ elif tool == "✏️ Edit PDF":
                         edited_pdf = extract_pages(uploaded_file, pages_to_keep)
                         
                         if edited_pdf:
-                            st.success(f"✅ Removed {len(pages_to_remove)} page(s)!")
+                            st.success(f"[OK] Removed {len(pages_to_remove)} page(s)!")
                             
                             st.download_button(
                                 label="📥 Download Edited PDF",
@@ -1521,13 +1521,13 @@ elif tool == "✏️ Edit PDF":
                     st.error(f"Error: {str(e)}")
         
         elif edit_option == "Keep specific pages":
-            st.info("💡 Only the pages you specify will be kept")
+            st.info("[INFO] Only the pages you specify will be kept")
             pages_input = st.text_input(
                 "Pages to keep (comma-separated):",
                 placeholder="1, 3, 5, 7"
             )
             
-            if st.button("✅ Keep Pages", type="primary", use_container_width=True) and pages_input:
+            if st.button("[OK] Keep Pages", type="primary", use_container_width=True) and pages_input:
                 try:
                     pages_to_keep = [int(p.strip()) for p in pages_input.split(',')]
                     
@@ -1536,7 +1536,7 @@ elif tool == "✏️ Edit PDF":
                         edited_pdf = extract_pages(uploaded_file, pages_to_keep)
                         
                         if edited_pdf:
-                            st.success(f"✅ Kept {len(pages_to_keep)} page(s)!")
+                            st.success(f"[OK] Kept {len(pages_to_keep)} page(s)!")
                             
                             st.download_button(
                                 label="📥 Download Edited PDF",
@@ -1551,7 +1551,7 @@ elif tool == "✏️ Edit PDF":
                     st.error(f"Error: {str(e)}")
         
         else:
-            st.info("💡 Enter page numbers in the order you want them (e.g., 3, 1, 2 → page 3 becomes first)")
+            st.info("[INFO] Enter page numbers in the order you want them (e.g., 3, 1, 2 → page 3 becomes first)")
             pages_input = st.text_input(
                 "New page order (comma-separated):",
                 placeholder="3, 1, 2, 4"
@@ -1566,7 +1566,7 @@ elif tool == "✏️ Edit PDF":
                         edited_pdf = extract_pages(uploaded_file, new_order)
                         
                         if edited_pdf:
-                            st.success("✅ Pages reordered successfully!")
+                            st.success("[OK] Pages reordered successfully!")
                             
                             st.download_button(
                                 label="📥 Download Edited PDF",

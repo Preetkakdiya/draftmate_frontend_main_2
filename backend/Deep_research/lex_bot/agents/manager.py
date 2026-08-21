@@ -30,7 +30,7 @@ class ManagerAgent(BaseAgent):
         if cached_result:
             complexity = cached_result["complexity"]
             selected_agents = cached_result.get("selected_agents", [])
-            print(f"   ⚡ Fast-path: {complexity.upper()} (cached)")
+            print(f"   [INFO] Fast-path: {complexity.upper()} (cached)")
             return {
                 "complexity": complexity,
                 "selected_agents": selected_agents,
@@ -147,7 +147,7 @@ class ManagerAgent(BaseAgent):
                 }
             }
         except Exception as e:
-            print(f"❌ Router Failed: {e}")
+            print(f"[ERROR] Router Failed: {e}")
             return {
                 "complexity": "simple", 
                 "selected_agents": [], 
@@ -318,7 +318,7 @@ class ManagerAgent(BaseAgent):
             return {"needs_clarification": False}
             
         except Exception as e:
-            print(f"⚠️ Clarification check failed: {e}")
+            print(f"[WARN] Clarification check failed: {e}")
             return {"needs_clarification": False}
 
     def generate_response(self, state: Dict[str, Any]) -> Dict[str, Any]:

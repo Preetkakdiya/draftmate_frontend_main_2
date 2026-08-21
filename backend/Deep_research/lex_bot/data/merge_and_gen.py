@@ -26,7 +26,7 @@ final_ipc = {k: merged_ipc[k] for k in sorted_ipc_keys}
 # Write IPC
 with open(ipc_output_path, 'w', encoding='utf-8') as f:
     json.dump(final_ipc, f, indent=4)
-print(f"✅ Created ipc_sections.json with {len(final_ipc)} sections")
+print(f"[OK] Created ipc_sections.json with {len(final_ipc)} sections")
 
 # 2. Auto-generate BNS Data from IPC Mappings
 existing_bns = {}
@@ -67,7 +67,7 @@ final_bns = {k: generated_bns[k] for k in sorted_bns_keys}
 with open(bns_output_path, 'w', encoding='utf-8') as f:
     json.dump(final_bns, f, indent=4)
 
-print(f"✅ Created bns_sections.json with {len(final_bns)} sections (Added {new_count} new from IPC mappings)")
+print(f"[OK] Created bns_sections.json with {len(final_bns)} sections (Added {new_count} new from IPC mappings)")
 
 # Cleanup
 # if os.path.exists(batch1_path): os.remove(batch1_path)

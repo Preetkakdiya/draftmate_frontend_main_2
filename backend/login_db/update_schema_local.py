@@ -69,7 +69,7 @@ def update_schema():
         """)
 
         conn.commit()
-        print("✅ Tables created.")
+        print("[OK] Tables created.")
 
         # Insert Default Plans
         cur.execute("SELECT id FROM subscription_plans WHERE id = 'PRO_MONTHLY'")
@@ -80,14 +80,14 @@ def update_schema():
                 VALUES (%s, %s, %s, %s, %s)
             """, ('PRO_MONTHLY', 'PRO', 599.00, 'monthly', '["AI-Powered Drafting", "Case Law Database", "Standard Support", "5GB Storage"]'))
             conn.commit()
-            print("✅ PRO plan inserted.")
+            print("[OK] PRO plan inserted.")
         else:
             print("ℹ️ PRO plan exists.")
 
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
 
 if __name__ == "__main__":
     update_schema()

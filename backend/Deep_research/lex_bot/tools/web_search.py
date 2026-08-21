@@ -165,7 +165,7 @@ class WebSearchTool:
             if cache_key in self._scrape_cache:
                 timestamp, cached_content = self._scrape_cache[cache_key]
                 if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
-                    logger.info(f"⚡ Scrape Cache HIT: {url[:50]}...")
+                    logger.info(f"[INFO] Scrape Cache HIT: {url[:50]}...")
                     return cached_content
                 else:
                     del self._scrape_cache[cache_key]
@@ -252,7 +252,7 @@ class WebSearchTool:
             if cache_key in self._search_cache:
                 timestamp, cached_context, cached_results = self._search_cache[cache_key]
                 if time.time() - timestamp < WEB_CACHE_TTL_SECONDS:
-                    logger.info(f"⚡ Cache HIT for query: '{query}'")
+                    logger.info(f"[INFO] Cache HIT for query: '{query}'")
                     return cached_context, cached_results
                 else:
                     del self._search_cache[cache_key]
@@ -301,7 +301,7 @@ class WebSearchTool:
         
         # Fallback Chain (if parallel search completely failed)
         if not unique_results:
-            print("⚠️ Primary parallel search failed. Engaging fallbacks...")
+            print("[WARN] Primary parallel search failed. Engaging fallbacks...")
             # Try Serper
             results = self._serper_search(query, WEB_SEARCH_MAX_RESULTS, domains)
             if not results:

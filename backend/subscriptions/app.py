@@ -70,7 +70,7 @@ def get_db_connection():
         if BASTION_IP and SSH_KEY_PATH and RDS_ENDPOINT and os.path.exists(SSH_KEY_PATH):
             # Only start tunnel if not already active
             if _tunnel is None or not _tunnel.is_active:
-                print(f"🔒 Starting SSH tunnel via {BASTION_IP}...")
+                print(f"[INFO] Starting SSH tunnel via {BASTION_IP}...")
                 try:
                     _tunnel = SSHTunnelForwarder(
                         (BASTION_IP, 22),
@@ -80,9 +80,9 @@ def get_db_connection():
                         local_bind_address=('127.0.0.1', 5433) # Use distinct port to avoid conflict if any
                     )
                     _tunnel.start()
-                    print(f"✅ Tunnel active on port {_tunnel.local_bind_port}")
+                    print(f"[OK] Tunnel active on port {_tunnel.local_bind_port}")
                 except Exception as e:
-                    print(f"❌ Tunnel connection failed: {e}")
+                    print(f"[ERROR] Tunnel connection failed: {e}")
                     raise
 
             # Connect to local forwarded port

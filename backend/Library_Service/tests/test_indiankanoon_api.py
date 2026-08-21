@@ -151,7 +151,7 @@ class IndianKanoonAPIVerifier:
         
         res = await self.run_test("Error Handling: Invalid Token", invalid_token_test)
         if not res["success"] and isinstance(res.get("error"), AuthenticationError):
-            print("   ✅ Correctly raised AuthenticationError")
+            print("   [OK] Correctly raised AuthenticationError")
         
         self.service.api_token = original_token  # Restore token
         

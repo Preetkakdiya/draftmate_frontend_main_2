@@ -183,12 +183,12 @@ def generate_simple_report(results):
         for r in results:
             # Truncate query text slightly for visual clean table
             short_query = r["query"] if len(r["query"]) <= 60 else r["query"][:57] + "..."
-            status_style = "✅ Success" if "Success" in r["status"] else "❌ Failed"
+            status_style = "[OK] Success" if "Success" in r["status"] else "[ERROR] Failed"
             f.write(f"| {r['id']} | {r['category']} | *\"{short_query}\"* | {status_style} | **{r['time_s']:.2f}s** | {r['ans_len']} |\n")
             
         f.write("\n---\n\n")
         
-        f.write("## 💡 High-Level Insights\n\n")
+        f.write("## [INFO] High-Level Insights\n\n")
         f.write("1. **Complexity Impact:** Queries requiring cross-statutory synthesis or case law citations take slightly longer than simple definitions. This is standard behavior as agents invoke deeper tool chains.\n")
         f.write("2. **Brevity Constraints:** Adding concise instructions reduces LLM generation latency significantly, bringing average response times down.\n")
         f.write("3. **Reranking Overhead:** Model loading accounts for first-run overhead. Continuous runs benefit from cache and active connection pools.\n")

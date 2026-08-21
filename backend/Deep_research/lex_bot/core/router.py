@@ -128,7 +128,7 @@ class QueryRouter:
             return result
             
         except Exception as e:
-            print(f"⚠️ Router failed: {e}")
+            print(f"[WARN] Router failed: {e}")
             return {
                 "complexity": "simple",
                 "reasoning": f"Fallback: {e}",

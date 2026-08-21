@@ -114,7 +114,7 @@ def get_db_connection():
         # Check SSH Tunnel requirement
         if BASTION_IP and SSH_KEY_PATH and RDS_ENDPOINT:
             if _tunnel is None or not _tunnel.is_active:
-                print(f"🔒 Starting SSH tunnel via {BASTION_IP}...")
+                print(f"[INFO] Starting SSH tunnel via {BASTION_IP}...")
                 try:
                     _tunnel = SSHTunnelForwarder(
                         (BASTION_IP, 22),
@@ -151,7 +151,7 @@ def get_db_connection():
                         keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5
                     )
                 except Exception as primary_err:
-                    print(f"⚠️ Primary PostgreSQL connect ({db_host}) failed: {primary_err}. Checking DSN...")
+                    print(f"[WARN] Primary PostgreSQL connect ({db_host}) failed: {primary_err}. Checking DSN...")
                     dsn = os.getenv("POSTGRES_DSN")
                     if dsn:
                         _db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, dsn,
@@ -178,7 +178,7 @@ def get_db_connection():
         return PooledConnectionProxy(conn, _db_pool)
 
     except Exception as pg_err:
-        print(f"⚠️ PostgreSQL connection pool initialization failed: {pg_err}. Using local SQLite fallback database.")
+        print(f"[WARN] PostgreSQL connection pool initialization failed: {pg_err}. Using local SQLite fallback database.")
         _db_pool = None
         db_path = os.path.join(os.path.dirname(__file__), "auth_fallback.db")
         return SQLitePooledConnectionProxy(db_path)

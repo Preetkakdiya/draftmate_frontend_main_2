@@ -46,7 +46,7 @@ def main():
         with open(env_path, 'w', encoding='utf-8') as f:
             f.write(content)
             
-        print("\n✅ Successfully updated the .env file with your password!")
+        print("\n[OK] Successfully updated the .env file with your password!")
         print("\nYou can now run:")
         print("  python verify_db_connection.py")
         print("  python seed_ecosystem.py")

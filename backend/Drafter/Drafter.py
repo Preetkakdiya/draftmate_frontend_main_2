@@ -3550,7 +3550,7 @@ async def export_judge_report_pdf(request: Dict[str, Any], authorization: Option
             
     # Suggestions
     if suggestions:
-        story.append(Paragraph("💡 SUGGESTIONS", section_title))
+        story.append(Paragraph("[INFO] SUGGESTIONS", section_title))
         for sug in suggestions:
             story.append(Paragraph(f"• {html.escape(sug)}", body_style))
             

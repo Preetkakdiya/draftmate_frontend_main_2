@@ -85,7 +85,7 @@ class LLMFactory:
         
         # Auto-switch to OpenAI if Gemini quota is exhausted
         if provider == "gemini" and _gemini_quota_exhausted and OPENAI_API_KEY:
-            logger.warning("⚠️ Gemini quota exhausted, falling back to OpenAI")
+            logger.warning("[WARN] Gemini quota exhausted, falling back to OpenAI")
             provider = "openai"
             
         # Resolve provider fallbacks based on missing API keys

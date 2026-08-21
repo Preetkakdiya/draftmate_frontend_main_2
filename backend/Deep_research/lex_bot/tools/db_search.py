@@ -30,7 +30,7 @@ class SearchTool:
             except ImportError:
                 logger.error("SQLAlchemy not installed.")
             except Exception as e:
-                logger.error(f"❌ DB Init Failed: {e}")
+                logger.error(f"[ERROR] DB Init Failed: {e}")
         
         # 2. Embedding Model (Removed - lazy loaded on demand via get_embedding_model)
         pass
@@ -104,13 +104,13 @@ class SearchTool:
         db_results = self._hybrid_db_search(query)
         
         if db_results:
-            logger.info(f"✅ DB Search returned {len(db_results)} results.")
+            logger.info(f"[OK] DB Search returned {len(db_results)} results.")
             context = ""
             for r in db_results[:10]:
                 context += f"Source: {r['title']} > {r['heading']}\n{r['text']}\n\n"
             return context, db_results
         
-        logger.warning("⚠️ DB Search empty/unavailable. Falling back to Web...")
+        logger.warning("[WARN] DB Search empty/unavailable. Falling back to Web...")
 
         # 2. Fallback to Web Search
         return web_search_tool.run(query, domains)

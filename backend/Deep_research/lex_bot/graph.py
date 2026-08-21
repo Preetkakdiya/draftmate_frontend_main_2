@@ -108,14 +108,14 @@ def memory_recall_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # no meaningful memories to retrieve yet
     messages = state.get("messages", [])
     if not messages:
-        print(f"⚡ First message — skipping memory recall for user {user_id}")
+        print(f"[INFO] First message — skipping memory recall for user {user_id}")
         return {"memory_context": []}
     
     try:
         # Cache hit: skip mem0 entirely for messages after the first in a session
         if user_id in _memory_results_cache:
             cached = _memory_results_cache[user_id]
-            print(f"⚡ Memory cache HIT for user {user_id} ({len(cached)} memories, skipping mem0)")
+            print(f"[INFO] Memory cache HIT for user {user_id} ({len(cached)} memories, skipping mem0)")
             return {"memory_context": cached}
 
         memory_manager = _get_memory_manager(user_id)
@@ -129,7 +129,7 @@ def memory_recall_node(state: Dict[str, Any]) -> Dict[str, Any]:
         _memory_results_cache[user_id] = memories or []
         return {"memory_context": memories}
     except Exception as e:
-        print(f"⚠️ Memory recall failed: {e}")
+        print(f"[WARN] Memory recall failed: {e}")
         return {"memory_context": []}
 
 
@@ -156,7 +156,7 @@ def memory_store_node(state: Dict[str, Any]) -> Dict[str, Any]:
         
         return {}
     except Exception as e:
-        print(f"⚠️ Memory store failed: {e}")
+        print(f"[WARN] Memory store failed: {e}")
         return {}
 
 
@@ -279,7 +279,7 @@ def prepare_initial_state(
         from lex_bot.core.timing import LatencyTracker
         tracker = LatencyTracker()
         
-    print(f"🔄 Preparing initial state for query: {query}")
+    print(f"[INFO] Preparing initial state for query: {query}")
     
     # Auto-detect file path from session cache if not provided
     uploaded_file_paths = []
@@ -300,7 +300,7 @@ def prepare_initial_state(
                     uploaded_file_paths.append(file_path)
                     
             except Exception as e:
-                print(f"⚠️ Failed to check session cache for files: {e}")
+                print(f"[WARN] Failed to check session cache for files: {e}")
         elif file_path:
             uploaded_file_paths = [file_path]
 
@@ -321,17 +321,17 @@ def prepare_initial_state(
                     chat_history.append({"role": msg["role"], "content": msg["content"]})
                 print(f"📜 Loaded {len(chat_history)} previous messages for context")
             except Exception as e:
-                print(f"⚠️ Failed to load chat history: {e}")
+                print(f"[WARN] Failed to load chat history: {e}")
 
     # Rewrite query — pass pre-fetched history to avoid duplicate DB reads
     with tracker.step("query_rewrite"):
         from lex_bot.core.query_rewriter import rewrite_query
-        print("🔄 Calling rewrite_query...")
+        print("[INFO] Calling rewrite_query...")
         processed_query = rewrite_query(
             query, user_id=user_id, session_id=session_id,
             chat_history=chat_history
         )
-        print(f"✅ Query rewritten to: {processed_query}")
+        print(f"[OK] Query rewritten to: {processed_query}")
     
     return {
         "messages": chat_history,
@@ -373,9 +373,9 @@ def run_query(
     )
     
     with tracker.step("graph_invoke"):
-        print("🚀 Invoking graph app.invoke(initial_state)...")
+        print("[INFO] Invoking graph app.invoke(initial_state)...")
         result = app.invoke(initial_state)
-        print("✅ Graph invocation complete.")
+        print("[OK] Graph invocation complete.")
         
     # Log latency breakdown
     tracker.summary()
@@ -387,7 +387,7 @@ def run_query(
 
 if __name__ == "__main__":
     # Quick test
-    print("🚀 Testing Lex Bot v2 Graph...")
+    print("[INFO] Testing Lex Bot v2 Graph...")
     result = run_query("What is Section 302 IPC?")
     print("\n📝 Answer:")
     print(result.get("final_answer", "No answer generated"))
