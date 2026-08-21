@@ -290,10 +290,10 @@ const OnlyOfficeWorkspace = () => {
       }
     };
 
-    if (!onlyofficeConfig && targetId) {
+    if (targetId) {
       fetchConfig();
     }
-  }, [draftId, documentKey, onlyofficeConfig]);
+  }, [draftId, documentKey]);
 
   useEffect(() => {
     const targetId = draftId || documentKey;
