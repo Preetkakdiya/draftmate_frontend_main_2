@@ -12,11 +12,16 @@ const loadScript = (src) => {
     });
 };
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
+let BASE_URL = envBaseUrl !== undefined ? envBaseUrl : '';
+if (BASE_URL.endsWith('/')) {
+    BASE_URL = BASE_URL.slice(0, -1);
+}
+const API_URL = `${BASE_URL}/subscriptions`;
 
 export const createOrder = async (planId, sessionId) => {
     try {
-        const response = await fetch(`${API_URL}/subscriptions/create-order`, {
+        const response = await fetch(`${API_URL}/create-order`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ session_id: sessionId, plan_id: planId })
@@ -32,7 +37,7 @@ export const createOrder = async (planId, sessionId) => {
 
 export const verifyPayment = async (verificationData) => {
     try {
-        const response = await fetch(`${API_URL}/subscriptions/verify`, {
+        const response = await fetch(`${API_URL}/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(verificationData)
@@ -46,7 +51,7 @@ export const verifyPayment = async (verificationData) => {
 
 export const getSubscriptionStatus = async (sessionId) => {
     try {
-        const response = await fetch(`${API_URL}/subscriptions/current-status?session_id=${sessionId}`);
+        const response = await fetch(`${API_URL}/current-status?session_id=${sessionId}`);
         return await response.json();
     } catch (error) {
         console.error("Get Status Error:", error);
@@ -56,7 +61,7 @@ export const getSubscriptionStatus = async (sessionId) => {
 
 export const getBillingHistory = async (sessionId) => {
     try {
-        const response = await fetch(`${API_URL}/subscriptions/history?session_id=${sessionId}`);
+        const response = await fetch(`${API_URL}/history?session_id=${sessionId}`);
         if (!response.ok) return [];
         return await response.json();
     } catch (error) {
