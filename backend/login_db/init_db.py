@@ -28,7 +28,7 @@ def get_db_connection():
     """Establish a database connection, using SSH tunnel if configured."""
     # Check if we need to use SSH tunnel
     if BASTION_IP and SSH_KEY_PATH and RDS_ENDPOINT:
-        print(f"🔒 Starting SSH tunnel via {BASTION_IP}...")
+        print(f"[INFO] Starting SSH tunnel via {BASTION_IP}...")
         try:
             server = SSHTunnelForwarder(
                 (BASTION_IP, 22),
@@ -38,7 +38,7 @@ def get_db_connection():
                 local_bind_address=('127.0.0.1', LOCAL_BIND_PORT)
             )
             server.start()
-            print(f"✅ Tunnel active on port {server.local_bind_port}")
+            print(f"[OK] Tunnel active on port {server.local_bind_port}")
             
             # Connect to local forwarded port
             conn = psycopg2.connect(
@@ -50,11 +50,11 @@ def get_db_connection():
             )
             return conn, server
         except Exception as e:
-            print(f"❌ Tunnel connection failed: {e}")
+            print(f"[ERROR] Tunnel connection failed: {e}")
             raise
     else:
         # Direct connection (using DSN or env vars)
-        print("🌍 Connecting directly...")
+        print("[INFO] Connecting directly...")
         if POSTGRES_DSN:
              conn = psycopg2.connect(POSTGRES_DSN)
         else:
@@ -136,7 +136,7 @@ def init_db():
         """)
 
         conn.commit()
-        print("✅ Tables created successfully.")
+        print("[OK] Tables created successfully.")
 
         # Run database migrations
         print("Running migrations...")
@@ -144,7 +144,7 @@ def init_db():
         ALTER TABLE drafts ADD COLUMN IF NOT EXISTS section VARCHAR(100) DEFAULT 'unknown';
         """)
         conn.commit()
-        print("✅ Database migrations completed.")
+        print("[OK] Database migrations completed.")
 
         # Create profiles table
         cur.execute("""
@@ -162,7 +162,7 @@ def init_db():
         """)
         
         conn.commit()
-        print("✅ Profiles table created successfully.")
+        print("[OK] Profiles table created successfully.")
 
         # Create subscription_plans table
         cur.execute("""
@@ -209,7 +209,7 @@ def init_db():
         """)
 
         conn.commit()
-        print("✅ Subscription tables created successfully.")
+        print("[OK] Subscription tables created successfully.")
 
         # Insert Default Plans (Manual Renewal Model)
         print("Checking default plans...")
@@ -227,7 +227,7 @@ def init_db():
         cur.close()
         
     except Exception as e:
-        print(f"❌ Error initializing database: {e}")
+        print(f"[ERROR] Error initializing database: {e}")
     finally:
         if conn:
             conn.close()
