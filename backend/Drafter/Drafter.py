@@ -2399,16 +2399,7 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
 
         file_mtime = int(os.path.getmtime(target_file)) if os.path.isfile(target_file) else int(time.time())
 
-        if not document_key:
-            document_key = hashlib.sha256(f"{real_draft_id}_{file_mtime}".encode("utf-8")).hexdigest()
-        else:
-            document_key = f"{document_key}_{file_mtime}"
-
-        try:
-            file_size = os.path.getsize(target_file) if os.path.isfile(target_file) else 0
-            document_key = f"{document_key}_{file_size}"
-        except Exception:
-            pass
+        document_key = hashlib.sha256(f"{real_draft_id}".encode("utf-8")).hexdigest()
           
         # 3. Build OnlyOffice config
         internal_url = get_internal_backend_url()
