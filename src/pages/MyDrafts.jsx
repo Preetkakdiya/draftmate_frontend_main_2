@@ -9,7 +9,15 @@ const MyDrafts = () => {
     const navigate = useNavigate();
     const [drafts, setDrafts] = useState(() => {
         try {
-            return JSON.parse(localStorage.getItem('my_drafts') || '[]');
+            const rawDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
+            const deletedIds = JSON.parse(localStorage.getItem('draftmate_deleted_doc_ids') || '[]');
+            if (!deletedIds.length) return rawDrafts;
+            return rawDrafts.filter(d => {
+                const candidates = [d.id, d.documentKey, d.document_key, d.filename, d.name]
+                    .filter(Boolean)
+                    .map(v => String(v).trim().toLowerCase());
+                return !candidates.some(c => deletedIds.includes(c));
+            });
         } catch {
             return [];
         }
@@ -143,7 +151,7 @@ const MyDrafts = () => {
     const performDeleteDraft = async (id) => {
         const targetDraft = drafts.find(d => String(d.id) === String(id));
         const token = localStorage.getItem('session_id') || localStorage.getItem('token');
-        const deleteTargets = Array.from(new Set([id, targetDraft?.documentKey].filter(Boolean)));
+        const deleteTargets = Array.from(new Set([id, targetDraft?.documentKey, targetDraft?.document_key, targetDraft?.filename, targetDraft?.name].filter(Boolean)));
 
         for (const targetId of deleteTargets) {
             try {
