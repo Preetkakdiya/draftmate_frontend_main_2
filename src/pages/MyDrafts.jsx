@@ -69,11 +69,13 @@ const MyDrafts = () => {
                     // Read local drafts from localStorage so newly uploaded/opened drafts are NEVER lost
                     const localDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
                     const backendKeys = new Set(
-                        backendDrafts.map(d => String(d.id || d.documentKey || d.filename || d.name).toLowerCase())
+                        backendDrafts.flatMap(d => [d.id, d.documentKey, d.document_key, d.filename, d.name])
+                            .filter(Boolean)
+                            .map(v => String(v).toLowerCase())
                     );
 
                     const uniqueLocalDrafts = localDrafts.filter(d => {
-                        const candidates = [d.id, d.documentKey, d.filename, d.name]
+                        const candidates = [d.id, d.documentKey, d.document_key, d.filename, d.name]
                             .filter(Boolean)
                             .map(v => String(v).toLowerCase());
                         return !candidates.some(c => backendKeys.has(c));

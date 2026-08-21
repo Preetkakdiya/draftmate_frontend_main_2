@@ -93,7 +93,7 @@ const DraftingLanding = () => {
             const onlyofficeConfig = data?.onlyofficeConfig || data;
 
             saveDeskDraftRecord({
-                id: documentKey,
+                id: data?.id || data?.draft_id || documentKey,
                 name: fileName,
                 filename: fileName,
                 documentKey,
