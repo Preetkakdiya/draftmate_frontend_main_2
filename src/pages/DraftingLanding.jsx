@@ -235,7 +235,8 @@ const DraftingLanding = () => {
                         });
                         const data = response.data;
                         const record = {
-                            id: data.documentKey,
+                            id: data.draftId || data.documentKey,
+                            draftId: data.draftId || data.documentKey,
                             name: data.filename,
                             filename: data.filename,
                             documentKey: data.documentKey,
@@ -245,6 +246,7 @@ const DraftingLanding = () => {
                             source: 'drafting_landing_upload',
                             trackingParams: {
                                 source: 'drafting_landing_upload',
+                                draftId: data.draftId || data.documentKey,
                                 documentKey: data.documentKey,
                                 filename: data.filename,
                                 uploadedAt: new Date().toISOString(),
@@ -258,6 +260,7 @@ const DraftingLanding = () => {
                     const firstDoc = retryRecords[0];
                     navigate('/dashboard/workspace', {
                         state: {
+                            draftId: firstDoc.draftId || firstDoc.documentKey,
                             documentKey: firstDoc.documentKey,
                             filename: firstDoc.filename,
                             onlyofficeConfig: firstDoc.onlyofficeConfig,

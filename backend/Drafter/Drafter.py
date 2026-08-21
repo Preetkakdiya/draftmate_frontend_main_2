@@ -1780,7 +1780,10 @@ async def compile_draft(request: DraftCompileRequest, authorization: Optional[st
                 }
             },
         }
-        params["token"] = _jwt_encode(params)
+        token = _jwt_encode(params)
+        params["token"] = token
+        if "editorConfig" in params and isinstance(params["editorConfig"], dict):
+            params["editorConfig"]["token"] = token
         params["documentKey"] = document_key
         params["filename"] = file_name
         params["variablesDetected"] = placeholders_list
@@ -2034,7 +2037,10 @@ async def create_empty_draft(request: Request, authorization: Optional[str] = He
                 },
             },
         }
-        params["token"] = _jwt_encode(params)
+        token = _jwt_encode(params)
+        params["token"] = token
+        if "editorConfig" in params and isinstance(params["editorConfig"], dict):
+            params["editorConfig"]["token"] = token
         params["documentKey"] = document_key
         params["filename"] = file_name
         params["variablesDetected"] = []
@@ -2225,12 +2231,23 @@ async def upload_draft(
                 },
             },
         }
-        params["token"] = _jwt_encode(params)
+        token = _jwt_encode(params)
+        params["token"] = token
+        if "editorConfig" in params and isinstance(params["editorConfig"], dict):
+            params["editorConfig"]["token"] = token
         params["variablesDetected"] = placeholders_detected
         params["documentKey"] = document_key
         params["filename"] = safe_name
         params["draftId"] = draft_id
         
+        # Save root fallback copy in shared_storage_path so both root & subfolder paths find the file instantly
+        try:
+            root_copy_path = os.path.join(shared_storage_path, safe_name)
+            with open(root_copy_path, "wb") as rf:
+                rf.write(docx_bytes)
+        except Exception:
+            pass
+
         background_tasks.add_task(extract_and_cache_docx, lex_bot_path)
         
         return params
