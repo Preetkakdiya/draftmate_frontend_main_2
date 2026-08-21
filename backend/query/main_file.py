@@ -36,7 +36,7 @@ try:
     print("[OK] Embedding model loaded successfully.")
 except Exception as e:
     print(f"[ERROR] Failed to load model from {EMBEDDING_MODEL_NAME}: {e}")
-    print("🔄 Attempting fallback download from HuggingFace...")
+    print("[INFO] Attempting fallback download from HuggingFace...")
     try:
         model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
         model.encode("warmup")
