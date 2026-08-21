@@ -4,6 +4,11 @@ CHANGES:
 1. Lower threshold from 0.6 to 0.45 (less Gemini calls = faster)
 2. Uses sql_v2 for cleaner tunnel handling
 """
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 from QueryParsing import normalize_query
 from scoring import score_match 
 from sql import search_documents
