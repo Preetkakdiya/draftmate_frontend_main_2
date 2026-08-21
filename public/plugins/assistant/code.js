@@ -189,75 +189,43 @@
     }
 
     function formatLegalDocumentHtml(text) {
-        var normalized = normalizeWhitespace(text);
-        if (!normalized.trim()) return '';
+        if (!text || !String(text).trim()) return '';
 
-        var lines = normalized.split('\n');
+        var lines = String(text).split(/\r?\n/);
         var htmlBlocks = [];
-        var currentPara = [];
-
-        function flushPara() {
-            if (currentPara.length === 0) return;
-            var paraText = currentPara.join(' ').trim();
-            currentPara = [];
-            if (!paraText) return;
-
-            var escaped = escapeXml(paraText);
-
-            var labelMatch = paraText.match(/^([A-Z\s]{2,30}|[A-Z][a-z\s]{2,25}):\s*(.*)$/);
-            if (labelMatch) {
-                var label = escapeXml(labelMatch[1]);
-                var val = convertUrlsToLinksInHtml(formatCaseNamesInHtml(escapeXml(labelMatch[2])));
-                htmlBlocks.push(
-                    '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
-                    '<strong style="font-weight: bold; color: #000000;">' + label + ':</strong> ' + (val || '&nbsp;') +
-                    '</p>'
-                );
-                return;
-            }
-
-            if (isHeadingLine(paraText)) {
-                var formattedHeader = convertUrlsToLinksInHtml(escaped);
-                var isMainTitle = /^(IN THE|SUPREME COURT|HIGH COURT|BEFORE THE|PETITION|MEMORANDUM|DEED|AGREEMENT|SPECIAL LEAVE|RECORD OF PROCEEDINGS)\b/i.test(paraText.trim());
-                if (isMainTitle) {
-                    htmlBlocks.push(
-                        '<h1 style="font-size: 14pt; font-weight: bold; color: #000000; margin-top: 14pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; line-height: 1.3; text-align: center; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
-                        formattedHeader +
-                        '</h1>'
-                    );
-                } else {
-                    htmlBlocks.push(
-                        '<h3 style="font-size: 11.5pt; font-weight: bold; color: #000000; margin-top: 10pt; margin-bottom: 4pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; line-height: 1.3; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
-                        formattedHeader +
-                        '</h3>'
-                    );
-                }
-                return;
-            }
-
-            var formattedBody = convertUrlsToLinksInHtml(formatCaseNamesInHtml(escaped));
-            htmlBlocks.push(
-                '<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">' +
-                formattedBody +
-                '</p>'
-            );
-        }
 
         lines.forEach(function(rawLine) {
             var line = String(rawLine || '').trim();
             if (!line) {
-                flushPara();
-            } else if (isHeadingLine(line) || /^([A-Z\s]{2,30}|[A-Z][a-z\s]{2,25}):\s*/.test(line)) {
-                flushPara();
-                currentPara.push(line);
-                flushPara();
+                htmlBlocks.push('<p style="font-family: \'Times New Roman\', Times, serif; font-size: 11pt; line-height: 1.5; margin: 0; padding: 0; min-height: 11pt;">&nbsp;</p>');
+                return;
+            }
+
+            var escaped = escapeXml(line);
+            var isMainTitle = /^(IN THE|SUPREME COURT|HIGH COURT|BEFORE THE|PETITION|MEMORANDUM|DEED|AGREEMENT|SPECIAL LEAVE|RECORD OF PROCEEDINGS)\b/i.test(line);
+
+            if (isMainTitle) {
+                htmlBlocks.push(
+                    '<p style="font-family: \'Times New Roman\', Times, serif; font-size: 14pt; font-weight: bold; color: #000000; margin-top: 10pt; margin-bottom: 4pt; text-align: center; line-height: 1.3;">' +
+                    convertUrlsToLinksInHtml(escaped) +
+                    '</p>'
+                );
+            } else if (isHeadingLine(line)) {
+                htmlBlocks.push(
+                    '<p style="font-family: \'Times New Roman\', Times, serif; font-size: 12pt; font-weight: bold; color: #000000; margin-top: 8pt; margin-bottom: 3pt; text-align: left; line-height: 1.3;">' +
+                    convertUrlsToLinksInHtml(escaped) +
+                    '</p>'
+                );
             } else {
-                currentPara.push(line);
+                htmlBlocks.push(
+                    '<p style="font-family: \'Times New Roman\', Times, serif; font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 4pt; text-align: justify; word-wrap: break-word;">' +
+                    convertUrlsToLinksInHtml(formatCaseNamesInHtml(escaped)) +
+                    '</p>'
+                );
             }
         });
-        flushPara();
 
-        return '<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n' + htmlBlocks.join('\n') + '\n</div>';
+        return '<div style="font-family: \'Times New Roman\', Times, serif; font-size: 11pt; line-height: 1.5; color: #111827; width: 100%; box-sizing: border-box; margin: 0; padding: 0;">\n' + htmlBlocks.join('\n') + '\n</div>';
     }
 
     function resetAllParagraphRightIndents() {
@@ -390,18 +358,20 @@
                                 try { p.SetSpacingAfter(120); } catch(e) {}
 
                                 try {
-                                    var text = p.GetText() || "";
-                                    var trimmed = text.trim();
-                                    if (trimmed.length > 0 && trimmed.length <= 60 && !/[.!?]$/.test(trimmed) && trimmed === trimmed.toUpperCase()) {
+                                    var text = (p.GetText() || "").trim();
+                                    var isTitle = /^(IN THE|SUPREME COURT|HIGH COURT|BEFORE THE|RECORD OF PROCEEDINGS)\b/i.test(text);
+                                    if (isTitle) {
+                                        p.SetAlign("center");
                                         p.SetBold(true);
-                                        p.SetFontSize(pConfig.headingFontSize || 32);
-                                        var isTitle = /^(IN THE|SUPREME COURT|HIGH COURT|BEFORE THE|PETITION|RECORD OF PROCEEDINGS)\b/i.test(trimmed);
-                                        if (isTitle) {
-                                            p.SetAlign("center");
-                                            p.SetFontSize((pConfig.headingFontSize || 32) + 4);
-                                        }
+                                        p.SetFontSize(28); // 14pt
+                                    } else if (text.length > 0 && text.length <= 60 && !/[.!?]$/.test(text) && text === text.toUpperCase()) {
+                                        p.SetAlign("left");
+                                        p.SetBold(true);
+                                        p.SetFontSize(24); // 12pt
                                     } else {
-                                        p.SetFontSize(pConfig.bodyFontSize || 28);
+                                        p.SetAlign("justify");
+                                        p.SetBold(false);
+                                        p.SetFontSize(24); // 12pt
                                     }
                                 } catch(e) {}
                             }

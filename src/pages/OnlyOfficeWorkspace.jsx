@@ -973,13 +973,10 @@ const OnlyOfficeWorkspace = () => {
     }
     const textToProcess = rawText.length > 3500 ? rawText.slice(0, 3500) + '...' : rawText;
 
-    if (actionType === 'format') {
-      handleAutoFormatSelection();
-      return;
-    }
-
     let prompt = '';
-    if (actionType === 'enhance') {
+    if (actionType === 'format') {
+      prompt = `[DIRECT EDIT MODE - NO SEARCH OR RETRIEVAL NEEDED]\nRe-format the following legal text into immaculate, clean Indian court filing structure and typography. Preserve exact case details, item numbers, petition numbers, and party names without adding commentary or smashing separate lines together. Format court titles as centered uppercase titles. Output ONLY the beautifully formatted legal document text without intro or outro commentary:\n\n"${textToProcess}"`;
+    } else if (actionType === 'enhance') {
       prompt = `[DIRECT EDIT MODE - NO SEARCH OR RETRIEVAL NEEDED]\nEnhance, refine, and polish the following legal text to improve clarity, precision, grammatical accuracy, and legal forcefulness while preserving all core facts and citations. Output ONLY the enhanced legal text without commentary:\n\n"${textToProcess}"`;
     } else if (actionType === 'rephrase') {
       const TONE_INSTRUCTIONS = {
