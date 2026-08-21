@@ -125,7 +125,7 @@ def get_db_connection():
                     )
                     _tunnel.start()
                 except Exception as e:
-                    print(f"❌ Tunnel connection failed: {e}")
+                    print(f"[ERROR] Tunnel connection failed: {e}")
 
             if _db_pool is None:
                 _db_pool = psycopg2.pool.SimpleConnectionPool(1, 20,
@@ -1561,7 +1561,7 @@ def delete_draft(draft: DraftDelete, user_id: str = Depends(get_user_id_from_hea
             deleted_count += cur.rowcount
 
         conn.commit()
-        print(f"✅ Delete draft completed. Deleted {deleted_count} records.")
+        print(f"[OK] Delete draft completed. Deleted {deleted_count} records.")
         return {"ok": True, "deleted": deleted_count}
     except Exception as e:
         conn.rollback()
