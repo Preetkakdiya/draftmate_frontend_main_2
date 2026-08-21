@@ -179,27 +179,62 @@ def get_db_connection():
         return SQLitePooledConnectionProxy(db_path)
 
 def resolve_uuid_from_identifier(identifier: str, cur) -> Optional[str]:
+    if not identifier or not isinstance(identifier, str):
+        return None
+
+    identifier = identifier.strip()
+    from urllib.parse import unquote
+    raw_ident = unquote(unquote(identifier))
+
     import uuid
     import hashlib
+
+    # 1. Check if raw_ident is a valid UUID
     try:
-        uuid.UUID(identifier)
-        return identifier
+        uuid.UUID(raw_ident)
+        cur.execute("SELECT id FROM drafts WHERE id::text = %s", (raw_ident,))
+        res = cur.fetchone()
+        if res:
+            return str(res[0])
+        return raw_ident
     except ValueError:
         pass
 
-    cur.execute("SELECT id FROM drafts WHERE document_key = %s", (identifier,))
+    # 2. Check by document_key or id
+    cur.execute("SELECT id FROM drafts WHERE document_key = %s OR id::text = %s", (raw_ident, raw_ident))
     res = cur.fetchone()
     if res:
         return str(res[0])
 
+    # 3. Check by filename or name (exact, case-insensitive, or cleaned base name)
+    clean_name = raw_ident
+    if clean_name.lower().endswith(".docx"):
+        clean_name = clean_name[:-5]
+    import re
+    base_name = re.sub(r'___\d+$', '', clean_name).strip()
+
+    cur.execute("""
+        SELECT id FROM drafts 
+        WHERE filename = %s OR name = %s OR LOWER(filename) = LOWER(%s) OR LOWER(name) = LOWER(%s)
+           OR filename LIKE %s OR name LIKE %s OR LOWER(filename) LIKE LOWER(%s) OR LOWER(name) LIKE LOWER(%s)
+        ORDER BY updated_at DESC LIMIT 1
+    """, (
+        raw_ident, raw_ident, raw_ident, raw_ident,
+        f"%{base_name}%", f"%{base_name}%", f"%{base_name}%", f"%{base_name}%"
+    ))
+    res = cur.fetchone()
+    if res:
+        return str(res[0])
+
+    # 4. Check sha256 hash of draft IDs
     cur.execute("SELECT id FROM drafts;")
     all_drafts = cur.fetchall()
     for d in all_drafts:
         d_id_str = str(d[0])
         d_hash = hashlib.sha256(d_id_str.encode('utf-8')).hexdigest()
-        if d_hash == identifier:
+        if d_hash == raw_ident or d_hash == identifier:
             return d_id_str
-            
+
     return None
 
 # Pydantic Models

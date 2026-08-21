@@ -1209,6 +1209,7 @@ def serve_draft_file(filename: str):
 @app.get("/v2/draft/serve/{draft_id}/{filename}")
 async def serve_draft(draft_id: str, filename: str):
     shared_storage_path = os.getenv("SHARED_STORAGE_PATH", "/app/shared_drafts")
+    alt_storage = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../shared_storage"))
 
     from urllib.parse import unquote
     raw_filename = unquote(unquote(filename or ""))
@@ -1216,43 +1217,108 @@ async def serve_draft(draft_id: str, filename: str):
     safe_draft_id = os.path.basename(raw_draft_id.replace("\\", "/"))
     safe_name = os.path.basename(raw_filename.replace("\\", "/"))
 
+    # 1. Resolve true UUID from auth service
+    real_draft_id = safe_draft_id
+    try:
+        async with httpx.AsyncClient() as client:
+            res_resp = await client.get(
+                f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/resolve_id/{raw_draft_id}",
+                timeout=5.0
+            )
+            if res_resp.status_code == 200:
+                real_draft_id = res_resp.json().get("id") or safe_draft_id
+    except Exception as exc:
+        logger.warning(f"Could not resolve draft ID via auth service: {exc}")
+
+    # 2. Check candidate directories
+    candidate_dirs = [
+        os.path.join(shared_storage_path, real_draft_id),
+        os.path.join(alt_storage, real_draft_id),
+        os.path.join(shared_storage_path, safe_draft_id),
+        os.path.join(alt_storage, safe_draft_id),
+    ]
+
     file_path = None
-    if safe_draft_id:
-        candidate = os.path.join(shared_storage_path, safe_draft_id, safe_name)
-        if os.path.isfile(candidate):
-            file_path = candidate
-        else:
-            draft_dir = os.path.join(shared_storage_path, safe_draft_id)
-            if os.path.isdir(draft_dir):
-                dir_files = [f for f in os.listdir(draft_dir) if os.path.isfile(os.path.join(draft_dir, f))]
-                if dir_files:
-                    ext = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else 'docx'
-                    ext_matches = [f for f in dir_files if f.lower().endswith(f".{ext}")]
-                    selected_file = ext_matches[0] if ext_matches else dir_files[0]
-                    file_path = os.path.join(draft_dir, selected_file)
+    for draft_dir in candidate_dirs:
+        if os.path.isdir(draft_dir):
+            candidate = os.path.join(draft_dir, safe_name)
+            if os.path.isfile(candidate):
+                file_path = candidate
+                break
+            # Check for space <-> underscore normalized matches
+            alt_name = safe_name.replace("_", " ") if "_" in safe_name else safe_name.replace(" ", "_")
+            alt_candidate = os.path.join(draft_dir, alt_name)
+            if os.path.isfile(alt_candidate):
+                file_path = alt_candidate
+                break
+            dir_files = [f for f in os.listdir(draft_dir) if os.path.isfile(os.path.join(draft_dir, f))]
+            if dir_files:
+                ext = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else 'docx'
+                ext_matches = [f for f in dir_files if f.lower().endswith(f".{ext}")]
+                selected_file = ext_matches[0] if ext_matches else dir_files[0]
+                file_path = os.path.join(draft_dir, selected_file)
+                break
 
+    # 3. Check root path fallback
     if not file_path:
-        root_path = os.path.join(shared_storage_path, safe_name)
-        if os.path.isfile(root_path):
-            file_path = root_path
+        for root_dir in [shared_storage_path, alt_storage]:
+            if not os.path.exists(root_dir):
+                continue
+            root_path = os.path.join(root_dir, safe_name)
+            if os.path.isfile(root_path):
+                file_path = root_path
+                break
+            alt_name = safe_name.replace("_", " ") if "_" in safe_name else safe_name.replace(" ", "_")
+            alt_root_path = os.path.join(root_dir, alt_name)
+            if os.path.isfile(alt_root_path):
+                file_path = alt_root_path
+                break
 
+    # 4. Search recursively across storage directories
     if not file_path:
+        search_roots = [
+            shared_storage_path,
+            alt_storage,
+            "/app/backend/translator/storage",
+            "/app/backend/Deep_research/lex_bot/data/uploads",
+            "/tmp"
+        ]
         norm_target = safe_name.lower()
-        for dp, dn, filenames in os.walk(shared_storage_path):
-            for f in filenames:
-                if f.lower() == norm_target or unquote(f).lower() == norm_target:
-                    file_path = os.path.join(dp, f)
+        for s_root in search_roots:
+            if not os.path.exists(s_root):
+                continue
+            for dp, dn, filenames in os.walk(s_root):
+                for f in filenames:
+                    f_lower = f.lower()
+                    if f_lower == norm_target or unquote(f).lower() == norm_target or (safe_name != "Draft_undefined.docx" and (safe_name.lower() in f_lower or f_lower in safe_name.lower())):
+                        file_path = os.path.join(dp, f)
+                        break
+                if file_path:
                     break
             if file_path:
                 break
 
+    # 5. Fallback document generator if file is missing after container restart
     if not file_path or not os.path.isfile(file_path):
-        raise HTTPException(status_code=404, detail="File not found.")
+        logger.warning(f"File '{safe_name}' for draft '{real_draft_id}' not found on disk. Generating fallback docx.")
+        target_dir = os.path.join(shared_storage_path, real_draft_id)
+        os.makedirs(target_dir, exist_ok=True)
+        file_path = os.path.join(target_dir, safe_name)
+        try:
+            from docx import Document
+            doc = Document()
+            title_text = safe_name.rsplit('.', 1)[0].replace('_', ' ')
+            doc.add_heading(title_text, level=1)
+            doc.add_paragraph("Start drafting your legal document here...")
+            doc.save(file_path)
+        except Exception as gen_err:
+            logger.error(f"Failed to generate fallback document: {gen_err}")
+            raise HTTPException(status_code=404, detail=f"File '{safe_name}' not found.")
 
     return FileResponse(
         path=file_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename=safe_name,
+        filename=os.path.basename(file_path),
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
@@ -2208,12 +2274,25 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
     try:
         user_id = await verify_token(authorization)
         
+        # 1. Resolve true UUID from auth service
+        real_draft_id = draft_id
+        try:
+            async with httpx.AsyncClient() as client:
+                res_resp = await client.get(
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/resolve_id/{draft_id}",
+                    timeout=5.0
+                )
+                if res_resp.status_code == 200:
+                    real_draft_id = res_resp.json().get("id") or draft_id
+        except Exception as exc:
+            logger.warning(f"Could not resolve draft ID via auth service: {exc}")
+
         access_level = "edit"
-        # 1. Verify access via auth service
+        # Verify access via auth service
         try:
             async with httpx.AsyncClient() as client:
                 access_resp = await client.get(
-                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/verify_access/{draft_id}?user_id={user_id}",
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/verify_access/{real_draft_id}?user_id={user_id}",
                     timeout=5.0
                 )
                 if access_resp.status_code == 200:
@@ -2242,7 +2321,7 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
         try:
             async with httpx.AsyncClient() as client:
                 draft_resp = await client.get(
-                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/get/{draft_id}",
+                    f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/get/{real_draft_id}",
                     timeout=5.0
                 )
                 if draft_resp.status_code == 200:
@@ -2255,7 +2334,34 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
             logger.warning(f"Failed to fetch draft metadata from auth service: {exc}")
 
         shared_storage_path = os.getenv("SHARED_STORAGE_PATH", "/app/shared_drafts")
-        draft_dir = os.path.join(shared_storage_path, draft_id)
+        alt_storage = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../shared_storage"))
+
+        draft_dir = os.path.join(shared_storage_path, real_draft_id)
+        if not os.path.exists(draft_dir):
+            if os.path.exists(os.path.join(alt_storage, real_draft_id)):
+                draft_dir = os.path.join(alt_storage, real_draft_id)
+            elif os.path.exists(os.path.join(shared_storage_path, draft_id)):
+                draft_dir = os.path.join(shared_storage_path, draft_id)
+            elif os.path.exists(os.path.join(alt_storage, draft_id)):
+                draft_dir = os.path.join(alt_storage, draft_id)
+
+        # Fallback disk search across shared storage if draft_dir does not exist
+        if not os.path.isdir(draft_dir):
+            search_targets = [t for t in [file_name, real_draft_id, draft_id] if t]
+            for s_root in [shared_storage_path, alt_storage]:
+                if not os.path.exists(s_root):
+                    continue
+                for dp, dn, filenames in os.walk(s_root):
+                    for f in filenames:
+                        if any(t.lower() in f.lower() or f.lower() in t.lower() for t in search_targets if len(t) > 3):
+                            draft_dir = dp
+                            real_draft_id = os.path.basename(dp)
+                            file_name = f
+                            break
+                    if os.path.isdir(draft_dir):
+                        break
+                if os.path.isdir(draft_dir):
+                    break
 
         if not file_name and os.path.isdir(draft_dir):
             files = [f for f in os.listdir(draft_dir) if os.path.isfile(os.path.join(draft_dir, f))]
@@ -2264,18 +2370,23 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
                 file_name = docx_files[0] if docx_files else files[0]
 
         if not file_name:
-            file_name = f"Draft_{draft_id[:8]}.docx"
+            file_name = f"Draft_{real_draft_id[:8]}.docx"
 
         target_file = os.path.join(draft_dir, file_name)
+        if not os.path.isfile(target_file) and os.path.isdir(draft_dir):
+            files = [f for f in os.listdir(draft_dir) if os.path.isfile(os.path.join(draft_dir, f))]
+            if files:
+                docx_files = [f for f in files if f.lower().endswith(".docx")]
+                target_file = os.path.join(draft_dir, docx_files[0] if docx_files else files[0])
+                file_name = os.path.basename(target_file)
+
         file_mtime = int(os.path.getmtime(target_file)) if os.path.isfile(target_file) else int(time.time())
 
         if not document_key:
-            document_key = hashlib.sha256(f"{draft_id}_{file_mtime}".encode("utf-8")).hexdigest()
+            document_key = hashlib.sha256(f"{real_draft_id}_{file_mtime}".encode("utf-8")).hexdigest()
         else:
             document_key = f"{document_key}_{file_mtime}"
 
-        # Append file size so a corrupted/replaced file always busts ONLYOFFICE's cache
-        # even if mtime is unchanged (e.g., overwritten by forcesave at the same second).
         try:
             file_size = os.path.getsize(target_file) if os.path.isfile(target_file) else 0
             document_key = f"{document_key}_{file_size}"
@@ -2289,7 +2400,7 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
                 "fileType": "docx",
                 "key": document_key,
                 "title": file_name,
-                "url": f"{internal_url}/drafter/v2/draft/serve/{draft_id}/{quote(file_name)}",
+                "url": f"{internal_url}/drafter/v2/draft/serve/{real_draft_id}/{quote(file_name)}",
                 "permissions": {
                     "edit": access_level == "edit",
                     "download": True,
@@ -2298,7 +2409,7 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
             },
             "documentType": "word",
             "editorConfig": {
-                "callbackUrl": f"{internal_url}/drafter/v2/draft/callback/{draft_id}",
+                "callbackUrl": f"{internal_url}/drafter/v2/draft/callback/{real_draft_id}",
                 "mode": "edit" if access_level == "edit" else "view",
                 "user": {
                     "id": user_id,
@@ -2328,11 +2439,14 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
                 }
             },
         }
-        params["token"] = _jwt_encode(params)
+        token = _jwt_encode(params)
+        params["token"] = token
+        if "editorConfig" in params and isinstance(params["editorConfig"], dict):
+            params["editorConfig"]["token"] = token
         params["documentKey"] = document_key
         params["filename"] = file_name
         params["variablesDetected"] = variables_detected
-        params["draftId"] = draft_id
+        params["draftId"] = real_draft_id
         params["status"] = status_val
          
         return params
