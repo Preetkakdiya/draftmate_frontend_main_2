@@ -3126,8 +3126,9 @@ async def export_chronology_docx_report(request: Dict[str, Any], authorization: 
     with open(lex_bot_path, "wb") as f:
         f.write(file_bytes)
         
-    # 4. Register in database
-    document_key = hashlib.sha256(draft_id.encode("utf-8")).hexdigest()
+    # 4. Register in database with a FRESH document_key every export so OnlyOffice never serves a cached version
+    import time
+    document_key = hashlib.sha256(f"{draft_id}:{time.time()}".encode("utf-8")).hexdigest()
     try:
         async with httpx.AsyncClient() as client:
             await client.post(

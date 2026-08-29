@@ -998,23 +998,51 @@ const OnlyOfficeWorkspace = () => {
     setIsInlineAiLoading(true);
     setInlineAiResponse('');
 
+    // For 'format', we auto-apply directly to the document when done (no extra button click)
+    const autoApply = actionType === 'format';
+
+    let finalContent = '';
+
     try {
       await api.chatStream(prompt, documentKey || 'inline-ai-workspace', {
         onToken: (chunk, accumulated) => {
+          finalContent = accumulated;
           setInlineAiResponse(accumulated);
         },
         onAnswer: (content) => {
-          setInlineAiResponse(content || '');
+          finalContent = content || '';
+          setInlineAiResponse(finalContent);
           setIsInlineAiLoading(false);
+          if (autoApply && finalContent.trim()) {
+            selectionPollPausedUntilRef.current = Date.now() + 1500;
+            const formattedHtml = convertMarkdownToDocHtml(finalContent.trim());
+            sendToPlugin({ type: 'ONLYOFFICE_INSERT_HTML', html: formattedHtml });
+            setShowAutoFormatPopup(false);
+            setInlineAiResponse('');
+            setInlineCustomPrompt('');
+            setActiveAction('');
+            toast.success('Auto-formatted and applied to document.');
+          }
         },
         onDone: () => {
           setIsInlineAiLoading(false);
+          // Fallback: if onAnswer wasn't called but onDone fires
+          if (autoApply && finalContent.trim()) {
+            selectionPollPausedUntilRef.current = Date.now() + 1500;
+            const formattedHtml = convertMarkdownToDocHtml(finalContent.trim());
+            sendToPlugin({ type: 'ONLYOFFICE_INSERT_HTML', html: formattedHtml });
+            setShowAutoFormatPopup(false);
+            setInlineAiResponse('');
+            setInlineCustomPrompt('');
+            setActiveAction('');
+            toast.success('Auto-formatted and applied to document.');
+          }
         },
         onError: (err) => {
           console.error('Inline AI action failed:', err);
           const msg = String(err?.message || '').toLowerCase();
           if (msg.includes('fetch') || msg.includes('network') || msg.includes('502')) {
-            toast.error('AI Service is connecting. Please try Rephrase again in a moment.');
+            toast.error('AI Service is connecting. Please try again in a moment.');
           } else {
             toast.error(err?.message || 'Inline AI action failed.');
           }

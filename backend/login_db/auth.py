@@ -1268,6 +1268,7 @@ def register_draft(draft: DraftRegister):
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 filename = EXCLUDED.filename,
+                document_key = EXCLUDED.document_key,
                 variables_detected = EXCLUDED.variables_detected,
                 section = EXCLUDED.section,
                 updated_at = CURRENT_TIMESTAMP
@@ -2048,6 +2049,7 @@ def register_draft(draft: DraftRegister):
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 filename = EXCLUDED.filename,
+                document_key = EXCLUDED.document_key,
                 variables_detected = EXCLUDED.variables_detected,
                 section = EXCLUDED.section,
                 updated_at = CURRENT_TIMESTAMP
