@@ -323,14 +323,16 @@ const DocumentManagement = () => {
     
     const domain = (typeof window !== 'undefined' && window.location.origin)
       ? window.location.origin 
-      : (import.meta.env.VITE_PUBLIC_APP_URL || 'https://www.draftmate.in');
+      : (import.meta.env.VITE_PUBLIC_APP_URL || 'https://app.draftmate.in');
       
     const cleanDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
     
-    const docName = doc.filename || doc.name || 'document.docx';
-    const docId = doc.id || doc.documentKey || 'doc-001';
+    // Use doc.id (the draft UUID) — public PDF endpoint uses this to find the file
+    const docId = doc.id || doc.documentKey || doc.draftId || 'doc';
+    const docName = encodeURIComponent(doc.filename || doc.name || 'Legal Document');
     
-    return `${cleanDomain}/drafter/v2/draft/pdf/${encodeURIComponent(docId)}/${encodeURIComponent(docName)}`;
+    // Points to the new public viewer page: /shared/:docId?name=...
+    return `${cleanDomain}/shared/${encodeURIComponent(docId)}?name=${docName}`;
   };
 
   const handleCopyShareLink = () => {

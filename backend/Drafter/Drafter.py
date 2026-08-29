@@ -1506,6 +1506,90 @@ async def serve_draft_pdf(draft_id: str = "", filename: str = ""):
     )
 
 
+@app.get("/v2/draft/public_pdf/{draft_id}")
+async def serve_public_pdf(draft_id: str):
+    """
+    Public (no-auth) endpoint that converts a draft to PDF and serves it inline.
+    Used for shareable document links that anyone can open without logging in.
+    The response has CORS-permissive headers so the frontend iframe can display it.
+    """
+    from urllib.parse import unquote
+    from fastapi.responses import Response as FResponse
+    import subprocess
+
+    shared_storage_path = os.getenv("SHARED_STORAGE_PATH", "/app/shared_drafts")
+    raw_id = unquote(unquote(draft_id or ""))
+    safe_id = os.path.basename(raw_id.replace("\\", "/"))
+
+    # ── 1. Locate the source file ──────────────────────────────────────────────
+    file_path = None
+    draft_dir = os.path.join(shared_storage_path, safe_id)
+    if os.path.isdir(draft_dir):
+        candidates = [f for f in os.listdir(draft_dir)
+                      if os.path.isfile(os.path.join(draft_dir, f))]
+        if candidates:
+            # Prefer .docx, then .pdf, then anything
+            for ext in (".docx", ".pdf"):
+                match = next((f for f in candidates if f.lower().endswith(ext)), None)
+                if match:
+                    file_path = os.path.join(draft_dir, match)
+                    break
+            if not file_path:
+                file_path = os.path.join(draft_dir, candidates[0])
+
+    if not file_path or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Document not found. The link may be expired or invalid.")
+
+    # ── 2. Already a PDF — serve directly ─────────────────────────────────────
+    if file_path.lower().endswith(".pdf"):
+        return FileResponse(
+            path=file_path,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=\"{os.path.basename(file_path)}\"",
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache"
+            }
+        )
+
+    # ── 3. Convert DOCX → PDF with LibreOffice ─────────────────────────────────
+    pdf_path = file_path.rsplit(".", 1)[0] + ".pdf"
+    if not os.path.exists(pdf_path) or os.path.getmtime(file_path) > os.path.getmtime(pdf_path):
+        try:
+            subprocess.run(
+                ["soffice", "--headless", "--convert-to", "pdf",
+                 "--outdir", os.path.dirname(file_path), file_path],
+                check=True, timeout=45,
+                capture_output=True
+            )
+        except Exception as lo_err:
+            logger.warning(f"[public_pdf] LibreOffice conversion failed: {lo_err}")
+            # Fall back: serve DOCX with download disposition
+            docx_bytes = open(file_path, "rb").read()
+            return FResponse(
+                content=docx_bytes,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{os.path.basename(file_path)}\"",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            )
+
+    if not os.path.isfile(pdf_path):
+        raise HTTPException(status_code=500, detail="PDF conversion failed. Please try again.")
+
+    pdf_name = os.path.splitext(os.path.basename(file_path))[0] + ".pdf"
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=\"{pdf_name}\"",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache"
+        }
+    )
+
+
 def convert_to_valid_pdf(file_path: Optional[str], doc_name: str) -> str:
     """Converts any docx/txt or generates a guaranteed 100% valid PDF starting with %PDF- header."""
     import subprocess

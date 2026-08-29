@@ -9,6 +9,7 @@ import MyDrafts from './pages/MyDrafts';
 import OnlyOfficeWorkspace from './pages/OnlyOfficeWorkspace';
 import DraftingLanding from './pages/DraftingLanding';
 import ChronologyWorkspace from './pages/ChronologyWorkspace';
+import SharedDocumentViewer from './pages/SharedDocumentViewer';
 import ResearchChat from './pages/ResearchChat';
 import Tools from './pages/Tools';
 import ChatWithPDF from './pages/ChatWithPDF';
@@ -167,6 +168,8 @@ function App() {
 
               <Route path="/cookie-policy" element={<SitePolicy />} />
               {/* Public pages */}
+              {/* Shared document viewer — no auth needed */}
+              <Route path="/shared/:docId" element={<SharedDocumentViewer />} />
               <Route path="/features" element={<Features />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/about" element={<About />} />
