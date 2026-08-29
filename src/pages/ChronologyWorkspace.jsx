@@ -27,8 +27,11 @@ const ChronologyWorkspace = () => {
   const [newCaseLoading, setNewCaseLoading] = useState(false);
   const [sidebarText, setSidebarText] = useState('');
   const [sidebarTitle, setSidebarTitle] = useState('');
+  const [isLoadingCase, setIsLoadingCase] = useState(false);
   
   const fileInputRef = useRef(null);
+  // Track loading toast IDs so we can dismiss them if user navigates away
+  const loadingToastIdsRef = useRef([]);
 
   const sessionId = localStorage.getItem('session_id');
 
@@ -55,23 +58,36 @@ const ChronologyWorkspace = () => {
     fetchCases();
   }, []);
 
-  // Fetch documents and events when selectedCaseId changes
+  // Dismiss all loading toasts when navigating away from this page
+  useEffect(() => {
+    return () => {
+      loadingToastIdsRef.current.forEach(id => toast.dismiss(id));
+      loadingToastIdsRef.current = [];
+    };
+  }, []);
+
+  // Fetch documents and events CONCURRENTLY when selectedCaseId changes
   const fetchCaseDetails = async () => {
     if (!selectedCaseId) return;
+    setIsLoadingCase(true);
     try {
-      // 1. Fetch documents processing status
       const statusUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/chronology/case/${selectedCaseId}/status`;
-      const statusResp = await axios.get(statusUrl, { headers });
+      const eventsUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/chronology/case/${selectedCaseId}/events`;
+
+      // Run both requests in parallel — halves the wait time
+      const [statusResp, eventsResp] = await Promise.all([
+        axios.get(statusUrl, { headers }),
+        axios.get(eventsUrl, { headers })
+      ]);
+
       setDocuments(statusResp.data.documents || []);
       setProgress(statusResp.data.progress || 0);
       setIsProcessing(statusResp.data.status === 'processing');
-
-      // 2. Fetch events
-      const eventsUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/chronology/case/${selectedCaseId}/events`;
-      const eventsResp = await axios.get(eventsUrl, { headers });
       setEvents(eventsResp.data.events || []);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoadingCase(false);
     }
   };
 
@@ -135,39 +151,43 @@ const ChronologyWorkspace = () => {
     formData.append('case_id', selectedCaseId);
     files.forEach(f => formData.append('files', f));
 
-    const loadingToast = toast.loading('Uploading files & running ingestion pipeline...');
+    const loadingToastId = toast.loading('Uploading files & running ingestion pipeline...');
+    // Register ID so it can be dismissed if user navigates away
+    loadingToastIdsRef.current.push(loadingToastId);
     setIsProcessing(true);
 
     try {
       const url = `${API_CONFIG.DRAFTER.BASE_URL}/v2/chronology/upload`;
       await axios.post(url, formData, {
-        headers: {
-          ...headers,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       });
-      toast.success('Files uploaded! Starting text extraction and OCR...', { id: loadingToast });
+      toast.success('Files uploaded! Starting text extraction and OCR...', { id: loadingToastId });
       fetchCaseDetails();
     } catch (err) {
       console.error(err);
-      toast.error('Upload failed. Check file types or sizes.', { id: loadingToast });
+      toast.error('Upload failed. Check file types or sizes.', { id: loadingToastId });
       setIsProcessing(false);
     } finally {
       e.target.value = '';
+      loadingToastIdsRef.current = loadingToastIdsRef.current.filter(id => id !== loadingToastId);
     }
   };
 
   // Trigger Timeline Synthesis
   const handleGenerateChronology = async () => {
-    const loadingToast = toast.loading('Running AI timeline extraction, deduplication, and conflict checking...');
+    const loadingToastId = toast.loading('Running AI for timeline extraction, deduplication, and conflict checking...');
+    // Register ID so it can be dismissed if user navigates away
+    loadingToastIdsRef.current.push(loadingToastId);
     try {
       const url = `${API_CONFIG.DRAFTER.BASE_URL}/v2/chronology/generate`;
       await axios.post(url, { case_id: selectedCaseId }, { headers });
-      toast.success('AI Case Chronology ready!', { id: loadingToast });
+      toast.success('AI Case Chronology ready!', { id: loadingToastId });
       fetchCaseDetails();
     } catch (err) {
       console.error(err);
-      toast.error('Synthesis failed. Please verify documents are processed.', { id: loadingToast });
+      toast.error('Synthesis failed. Please verify documents are processed.', { id: loadingToastId });
+    } finally {
+      loadingToastIdsRef.current = loadingToastIdsRef.current.filter(id => id !== loadingToastId);
     }
   };
 
@@ -303,6 +323,27 @@ const ChronologyWorkspace = () => {
 
       {activeCase ? (
         <div className="workspace-grid">
+          {/* Loading skeleton */}
+          {isLoadingCase && (
+            <div className="loading-skeleton-overlay" style={{
+              position: 'absolute', inset: 0, zIndex: 10,
+              background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '60%', maxWidth: 520 }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{
+                    height: i === 1 ? 18 : 13, borderRadius: 8,
+                    background: 'linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'skeleton-shimmer 1.4s infinite',
+                    opacity: 1 - i * 0.15, width: i === 4 ? '70%' : '100%'
+                  }} />
+                ))}
+              </div>
+              <p style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Loading case data…</p>
+            </div>
+          )}
           {/* Main workspace area */}
           <main className="workspace-main">
             {/* Tab controls */}

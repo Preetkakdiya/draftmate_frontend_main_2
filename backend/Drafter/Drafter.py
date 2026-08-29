@@ -927,6 +927,79 @@ def _sanitize_filename(raw_name: str, max_len: int = 40) -> str:
     return clean + ".docx"
 
 
+def _clean_pdf2docx_output(docx_path: str) -> None:
+    """
+    Post-process a DOCX produced by pdf2docx to remove:
+      1. Runs of 3+ consecutive blank/whitespace-only paragraphs (collapsed to 1).
+      2. Paragraphs that contain only page-number text (e.g. '1', 'Page 2 of 10',
+         '- 3 -', 'PAGE 4').
+      3. Paragraphs with extreme space_before/space_after (>400 twips) that create
+         large visual gaps in OnlyOffice.
+    """
+    import re as _re
+    try:
+        from docx import Document as _Doc
+        from docx.oxml.ns import qn as _qn
+        from lxml import etree as _et
+
+        # Page-number patterns that pdf2docx copies verbatim from PDF footer/header
+        _PAGE_NUM_RE = _re.compile(
+            r'^[-–—\s]*(?:page\s*)?(\d{1,4})(?:\s+of\s+\d{1,4})?[-–—\s]*$',
+            _re.IGNORECASE
+        )
+
+        doc = _Doc(docx_path)
+        paragraphs = doc.paragraphs
+
+        # ── Pass 1: Mark page-number paragraphs for removal ──────────────────
+        to_remove = set()
+        for i, para in enumerate(paragraphs):
+            txt = para.text.strip()
+            if _PAGE_NUM_RE.match(txt):
+                to_remove.add(i)
+
+        # ── Pass 2: Collapse runs of 3+ blank paragraphs to 1 ────────────────
+        blank_run = 0
+        for i, para in enumerate(paragraphs):
+            if i in to_remove:
+                blank_run = 0
+                continue
+            if not para.text.strip():
+                blank_run += 1
+                if blank_run >= 3:
+                    to_remove.add(i)
+            else:
+                blank_run = 0
+
+        # ── Pass 3: Remove extreme paragraph spacing ──────────────────────────
+        _MAX_SPACING = 400  # twips (~7 mm); anything larger is a PDF layout artefact
+        for para in paragraphs:
+            pf = para._element.find(_qn('w:pPr'))
+            if pf is None:
+                continue
+            spacing = pf.find(_qn('w:spacing'))
+            if spacing is None:
+                continue
+            for attr in ('w:before', 'w:after'):
+                val = spacing.get(_qn(attr))
+                if val and val.isdigit() and int(val) > _MAX_SPACING:
+                    spacing.set(_qn(attr), str(_MAX_SPACING))
+
+        # ── Pass 4: Delete marked paragraphs from XML ─────────────────────────
+        for i in sorted(to_remove, reverse=True):
+            para = paragraphs[i]
+            parent = para._element.getparent()
+            if parent is not None:
+                parent.remove(para._element)
+
+        doc.save(docx_path)
+        logger.info(f"[PDF→DOCX clean] removed {len(to_remove)} blank/page-num paras in {os.path.basename(docx_path)}")
+
+    except Exception as e:
+        # Non-fatal — conversion still succeeded, just not cleaned
+        logger.warning(f"[PDF→DOCX clean] post-processing skipped: {e}")
+
+
 def build_docx_with_controls(ai_data: dict, file_target_name: str) -> str:
     shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
     if not shared_storage_path:
@@ -2108,14 +2181,16 @@ async def upload_draft(
                 cv = Converter(temp_pdf_path)
                 cv.convert(output_path, start=0, end=None)
                 cv.close()
+                # ── Post-process: remove blank-space clutter & literal page-number text ──
+                _clean_pdf2docx_output(output_path)
             except Exception as conv_e:
                 logger.error(f"pdf2docx conversion failed: {conv_e}")
                 # Fallback: simple text extraction via fitz (PyMuPDF)
                 try:
                     import fitz
-                    from docx import Document
+                    from docx import Document as _DocxDoc
                     pdf_doc = fitz.open(temp_pdf_path)
-                    doc = Document()
+                    doc = _DocxDoc()
                     for page_num in range(len(pdf_doc)):
                         page = pdf_doc[page_num]
                         text = page.get_text()
@@ -2126,6 +2201,7 @@ async def upload_draft(
                                 if para_text.strip():
                                     doc.add_paragraph(para_text.strip())
                     doc.save(output_path)
+                    _clean_pdf2docx_output(output_path)
                 except Exception as fitz_e:
                     logger.error(f"Fallback fitz conversion also failed: {fitz_e}")
                     raise HTTPException(status_code=500, detail="Failed to convert PDF to DOCX.")
