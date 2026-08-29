@@ -59,6 +59,7 @@ const PDFEditor = () => {
     const [pageNumFormat, setPageNumFormat] = useState('number');
     const [pageNumPosition, setPageNumPosition] = useState('bottom-center');
     const [pageNumStartFrom, setPageNumStartFrom] = useState(1);
+    const [pageNumStartFromInput, setPageNumStartFromInput] = useState('1');
     const [pageNumFontSize, setPageNumFontSize] = useState(12);
     const [pageNumColor, setPageNumColor] = useState('#000000');
     const [pageNumMargin, setPageNumMargin] = useState(36);
@@ -350,8 +351,9 @@ const PDFEditor = () => {
         if (activeTool.id === 'split' && activeTool.mode === MODES.SPLITTER) filename = `${outputName}.zip`;
         a.download = filename;
         document.body.appendChild(a);
-        a.remove();
-        toast.success("Done!");
+        a.click();
+        setTimeout(() => { a.remove(); window.URL.revokeObjectURL(url); }, 100);
+        toast.success("Done! File downloaded.");
     };
 
     const reset = () => {
@@ -899,8 +901,21 @@ const PDFEditor = () => {
                                         </div>
                                         <div>
                                             <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 block">Start From</label>
-                                            <input type="number" min="1" value={pageNumStartFrom}
-                                                onChange={(e) => setPageNumStartFrom(Math.max(1, parseInt(e.target.value) || 1))}
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={pageNumStartFromInput}
+                                                onChange={(e) => {
+                                                    setPageNumStartFromInput(e.target.value);
+                                                    const parsed = parseInt(e.target.value);
+                                                    if (!isNaN(parsed) && parsed >= 1) setPageNumStartFrom(parsed);
+                                                }}
+                                                onBlur={(e) => {
+                                                    const parsed = parseInt(e.target.value);
+                                                    const safe = (!isNaN(parsed) && parsed >= 1) ? parsed : 1;
+                                                    setPageNumStartFrom(safe);
+                                                    setPageNumStartFromInput(String(safe));
+                                                }}
                                                 className="w-20 px-3 py-2 text-sm rounded-lg bg-white border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
                                         </div>
                                         <div>

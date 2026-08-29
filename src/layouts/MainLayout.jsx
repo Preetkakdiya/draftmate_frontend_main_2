@@ -26,7 +26,6 @@ const SIDEBAR_ITEMS = [
   { icon: UserCircle, label: "Lawyer Profile", path: "/dashboard/profile" },
   { icon: Landmark, label: "E-Court Services", path: "/dashboard/ecourt" },
   { icon: Library, label: "Legal Library", path: "/dashboard/library" },
-  { icon: Wrench, label: "Tools", path: "/dashboard/tools" },
 ];
 
 const UTILITY_ITEMS = [
