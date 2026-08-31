@@ -251,8 +251,7 @@ export default function AdvocateDiscovery() {
       searchResults = searchResults.filter(a => a.id !== localAdvocate.id && a.name !== localAdvocate.name);
     }
   }
-  const total = searchResults.
-
+  const total = searchResults.length;
 
   const isSearchActive = debouncedSearch || location || selectedPracticeArea || verifiedOnly || sortBy !== 'relevant';
 

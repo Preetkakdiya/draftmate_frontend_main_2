@@ -102,7 +102,7 @@ const RegionalTypingGreeting = ({ name = "Devendra", typingSpeed = 300, deleting
     );
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* ───────────────────────────────────────────────────────────── */
 export default function Dashboard() {
     const navigate = useNavigate();
 
@@ -204,7 +204,18 @@ export default function Dashboard() {
                     draftsCount = fetchedDrafts.length;
                     setAllDrafts(fetchedDrafts);
                 } else {
-                setAllDrafts(localDrafts);
+                    const localDrafts = JSON.parse(localStorage.getItem('draftmate_saved_drafts') || '[]');
+                    fetchedDrafts = localDrafts;
+                    draftsCount = localDrafts.length;
+                    setAllDrafts(localDrafts);
+                }
+            } catch (e) {
+                try {
+                    const localDrafts = JSON.parse(localStorage.getItem('draftmate_saved_drafts') || '[]');
+                    fetchedDrafts = localDrafts;
+                    draftsCount = localDrafts.length;
+                    setAllDrafts(localDrafts);
+                } catch (err) {}
             }
 
             let researchSessions = [];
@@ -400,32 +411,6 @@ export default function Dashboard() {
             });
         };
 
-        const handleCreateFolderSubmit = async (e) => {
-            e.preventDefault();
-            if (!newFolderNameInput.trim()) return;
-            setIsCreatingFolder(true);
-            try {
-                await caseService.createCase({
-                    caseTitle: newFolderNameInput.trim(),
-                    caseNumber: `FLD-${Math.floor(1000 + Math.random() * 9000)}`,
-                    caseType: 'Folder',
-                    court: 'General Matters',
-                    client: 'Self',
-                    filingDate: new Date().toISOString().split('T')[0],
-                    status: 'Open',
-                    priority: 'Medium'
-                });
-                toast.success(`Folder "${newFolderNameInput.trim()}" created successfully!`);
-                setIsNewFolderModalOpen(false);
-                setNewFolderNameInput('');
-                window.dispatchEvent(new Event('cases_updated'));
-            } catch (err) {
-                toast.error('Failed to create folder.');
-            } finally {
-                setIsCreatingFolder(false);
-            }
-        };
-
         const loadProfile = () => {
             const saved = localStorage.getItem('user_profile');
             if (saved) {
@@ -463,6 +448,32 @@ export default function Dashboard() {
             window.removeEventListener('storage', loadDashboardData);
         };
     }, [events]);
+
+    const handleCreateFolderSubmit = async (e) => {
+        e.preventDefault();
+        if (!newFolderNameInput.trim()) return;
+        setIsCreatingFolder(true);
+        try {
+            await caseService.createCase({
+                caseTitle: newFolderNameInput.trim(),
+                caseNumber: `FLD-${Math.floor(1000 + Math.random() * 9000)}`,
+                caseType: 'Folder',
+                court: 'General Matters',
+                client: 'Self',
+                filingDate: new Date().toISOString().split('T')[0],
+                status: 'Open',
+                priority: 'Medium'
+            });
+            toast.success(`Folder "${newFolderNameInput.trim()}" created successfully!`);
+            setIsNewFolderModalOpen(false);
+            setNewFolderNameInput('');
+            window.dispatchEvent(new Event('cases_updated'));
+        } catch (err) {
+            toast.error('Failed to create folder.');
+        } finally {
+            setIsCreatingFolder(false);
+        }
+    };
 
     const handleNavigate = (direction) => {
         const newDate = new Date(currentDate);
