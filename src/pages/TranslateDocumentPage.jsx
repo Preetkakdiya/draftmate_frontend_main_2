@@ -118,6 +118,63 @@ const TranslateDocumentPage = () => {
     [sourceLanguage],
   );
 
+  // ── Selection & delete state for history ──────────────────────────────────
+  const [selectedHistory, setSelectedHistory] = React.useState(new Set());
+  const [isDeletingHistory, setIsDeletingHistory] = React.useState(false);
+
+  const toggleSelectHistory = (jobId) => {
+    setSelectedHistory(prev => {
+      const next = new Set(prev);
+      next.has(jobId) ? next.delete(jobId) : next.add(jobId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedHistory.size === historyJobs.length) {
+      setSelectedHistory(new Set());
+    } else {
+      setSelectedHistory(new Set(historyJobs.map(j => j.job_id)));
+    }
+  };
+
+  // Programmatic file download helper — avoids browser opening the file inline
+  const triggerDownload = async (jobId, fileName) => {
+    try {
+      const url = api.getTranslationDownloadUrl(jobId) + '?raw=1';
+      const res = await fetch(url, { headers: userId ? { 'X-User-Id': userId } : {} });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName || 'translated_document.pdf';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(objectUrl); document.body.removeChild(a); }, 200);
+    } catch (err) {
+      toast.error('Download failed. Please try again.');
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedHistory.size === 0) return;
+    setIsDeletingHistory(true);
+    let failed = 0;
+    for (const jobId of selectedHistory) {
+      try {
+        await api.deleteTranslationJob(jobId, userId);
+      } catch {
+        failed++;
+      }
+    }
+    setSelectedHistory(new Set());
+    setIsDeletingHistory(false);
+    if (failed > 0) toast.error(`${failed} item(s) could not be deleted.`);
+    else toast.success('Deleted successfully.');
+    translationHistoryQuery.refetch();
+  };
+
   const uploadMutation = useMutation({
     mutationFn: ({ file, sourceLanguageValue, targetLanguageValue }) => api.submitTranslationJob({
       file,
@@ -194,29 +251,65 @@ const TranslateDocumentPage = () => {
     return `Translated_${langCode}_${cleaned}`;
   };
 
-  // Auto-save active completed job to Document Management ("Translated Documents" folder)
-  React.useEffect(() => {
-    if (job && job.status === 'completed') {
-      const jobId = job.job_id || job.id || selectedJobId;
-      if (jobId && !savedJobsRef.current.has(jobId)) {
-        savedJobsRef.current.add(jobId);
-        const baseName = job.file_name || 'Document.pdf';
-        const docName = cleanDocName(baseName, job.target_language || 'HI');
+  // ── Persistent save: track which job IDs we have already uploaded to S3 ────
+  // Use localStorage so the "already saved" set survives page reloads / re-logins.
+  const getSavedJobIds = () => {
+    try { return new Set(JSON.parse(localStorage.getItem('draftmate_saved_translation_jobs') || '[]')); }
+    catch { return new Set(); }
+  };
+  const markJobSaved = (jobId) => {
+    const ids = getSavedJobIds();
+    ids.add(String(jobId));
+    localStorage.setItem('draftmate_saved_translation_jobs', JSON.stringify([...ids]));
+    savedJobsRef.current.add(String(jobId));
+  };
+  const isJobSaved = (jobId) =>
+    savedJobsRef.current.has(String(jobId)) || getSavedJobIds().has(String(jobId));
 
-        caseService.addCaseDocument(null, {
-          name: docName,
-          filename: docName,
-          source: 'translate',
-          url: api.getTranslationDownloadUrl(jobId) + '?raw=1',
-          type: baseName.split('.').pop() || 'pdf'
-        }).then(() => {
-          console.log('[TranslateDocumentPage] Auto-saved translated document to Document Management');
-        }).catch((err) => {
-          console.warn('[TranslateDocumentPage] Auto-save error:', err);
-        });
-      }
+  // ── Core helper: download the translated file as a real Blob and upload ───
+  // to S3 via caseService so it persists permanently in Document Management.
+  const persistTranslatedDoc = React.useCallback(async (jobId, fileName, targetLang) => {
+    if (!jobId || isJobSaved(jobId)) return;
+    markJobSaved(jobId);                           // optimistic mark to avoid double saves
+
+    const docName = cleanDocName(fileName || 'Document.pdf', targetLang || 'HI');
+    const ext = docName.split('.').pop()?.toLowerCase() || 'pdf';
+    const mimeMap = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc: 'application/msword', html: 'text/html' };
+    const mimeType = mimeMap[ext] || 'application/octet-stream';
+
+    try {
+      // Step 1 — download the translated file from the translator service
+      const downloadUrl = api.getTranslationDownloadUrl(jobId) + '?raw=1';
+      const res = await fetch(downloadUrl, { headers: userId ? { 'X-User-Id': userId } : {} });
+      if (!res.ok) throw new Error(`Fetch translated file failed: ${res.status}`);
+      const blob = await res.blob();
+      const file = new File([blob], docName, { type: mimeType });
+
+      // Step 2 — upload to S3 + register in Document Management DB
+      await caseService.addCaseDocument(null, {
+        file,                    // ← real File object → gets uploaded to S3
+        name: docName,
+        filename: docName,
+        source: 'translate',
+        type: ext,
+      });
+      console.log(`[TranslateDocumentPage] Saved "${docName}" (job ${jobId}) to Document Management ✓`);
+      window.dispatchEvent(new Event('case_documents_updated'));
+    } catch (err) {
+      // Roll back optimistic mark so it retries on next render / page load
+      savedJobsRef.current.delete(String(jobId));
+      console.warn(`[TranslateDocumentPage] Persistent save failed for job ${jobId}:`, err);
     }
-  }, [job, selectedJobId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // ── Auto-save: currently active job once it completes ─────────────────────
+  React.useEffect(() => {
+    if (job?.status === 'completed') {
+      const jobId = job.job_id || job.id || selectedJobId;
+      persistTranslatedDoc(jobId, job.file_name, job.target_language);
+    }
+  }, [job?.status, job?.job_id, selectedJobId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // 20-second auto-reset timer upon job completion to reset buttons, form and progressbar
   React.useEffect(() => {
@@ -235,30 +328,16 @@ const TranslateDocumentPage = () => {
     }
   }, [job?.status, job?.id]);
 
-  // Auto-save history completed jobs to Document Management
+  // ── Auto-save: history jobs not yet saved (runs on every history refresh) ─
   React.useEffect(() => {
-    if (historyJobs && historyJobs.length > 0) {
-      historyJobs.forEach(async (hJob) => {
+    if (!historyJobs?.length) return;
+    historyJobs
+      .filter(hJob => hJob.status === 'completed' && !isJobSaved(hJob.job_id || hJob.id))
+      .forEach(hJob => {
         const jobId = hJob.job_id || hJob.id;
-        if (hJob.status === 'completed' && jobId && !savedJobsRef.current.has(jobId)) {
-          savedJobsRef.current.add(jobId);
-          const baseName = hJob.file_name || 'Document.pdf';
-          const docName = cleanDocName(baseName, hJob.target_language || 'HI');
-          try {
-            await caseService.addCaseDocument(null, {
-              name: docName,
-              filename: docName,
-              source: 'translate',
-              url: api.getTranslationDownloadUrl(jobId) + '?raw=1',
-              type: baseName.split('.').pop() || 'pdf'
-            });
-          } catch (err) {
-            console.warn('[TranslateDocumentPage] Auto-save history error:', err);
-          }
-        }
+        persistTranslatedDoc(jobId, hJob.file_name, hJob.target_language);
       });
-    }
-  }, [historyJobs]);
+  }, [historyJobs]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const liveStatusMessage = useMemo(() => {
     if (!job) return statusMessage;
@@ -469,13 +548,14 @@ const TranslateDocumentPage = () => {
 
               {downloadUrl && isCompleted && (
                 <>
-                  <a
-                    href={downloadUrl + '?raw=1'}
+                  <button
+                    type="button"
+                    onClick={() => triggerDownload(selectedJobId, job?.file_name ? cleanDocName(job.file_name, job?.target_language || 'HI') : 'translated_document.pdf')}
                     className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
                   >
                     <Download className="h-4 w-4" />
                     Download translated file
-                  </a>
+                  </button>
                   <button
                     type="button"
                     onClick={() => navigate(`/dashboard/translate/compare/${selectedJobId}`)}
@@ -550,15 +630,43 @@ const TranslateDocumentPage = () => {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-[0_16px_50px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+            {/* History header with select-all + delete */}
             <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950 dark:text-white">
-                <Clock3 className="h-5 w-5 text-indigo-600" />
-                History
-              </h2>
-              {historyJobs.length > 0 && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  {historyJobs.length}
-                </span>
+              <div className="flex items-center gap-2.5">
+                {historyJobs.length > 0 && (
+                  <input
+                    type="checkbox"
+                    id="select-all-history"
+                    checked={selectedHistory.size === historyJobs.length && historyJobs.length > 0}
+                    ref={el => { if (el) el.indeterminate = selectedHistory.size > 0 && selectedHistory.size < historyJobs.length; }}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-slate-300 accent-indigo-600 cursor-pointer"
+                    title="Select all"
+                  />
+                )}
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950 dark:text-white">
+                  <Clock3 className="h-5 w-5 text-indigo-600" />
+                  History
+                </h2>
+                {historyJobs.length > 0 && (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {historyJobs.length}
+                  </span>
+                )}
+              </div>
+              {selectedHistory.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  disabled={isDeletingHistory}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-rose-50 border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 transition"
+                >
+                  {isDeletingHistory
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  }
+                  Delete ({selectedHistory.size})
+                </button>
               )}
             </div>
 
@@ -578,15 +686,26 @@ const TranslateDocumentPage = () => {
               <div className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
                 {historyJobs.map((historyJob) => {
                   const isActive = historyJob.job_id === activeJobId;
+                  const isSelected = selectedHistory.has(historyJob.job_id);
+                  const canAct = historyJob.status === 'completed' || historyJob.download_available;
                   return (
                     <div
                       key={historyJob.job_id}
-                      className={`rounded-2xl border p-4 transition ${isActive
-                        ? 'border-indigo-200 bg-indigo-50 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10'
-                        : 'border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/50'
+                      className={`rounded-2xl border p-4 transition ${isSelected
+                        ? 'border-rose-200 bg-rose-50/60 dark:border-rose-500/30 dark:bg-rose-500/10'
+                        : isActive
+                          ? 'border-indigo-200 bg-indigo-50 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10'
+                          : 'border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/50'
                         }`}
                     >
-                      <div className="flex items-start justify-between gap-3 min-w-0">
+                      <div className="flex items-start gap-3 min-w-0">
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectHistory(historyJob.job_id)}
+                          className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-indigo-600 cursor-pointer"
+                        />
                         <div className="min-w-0 flex-1 overflow-hidden">
                           <p className="truncate block w-full text-sm font-semibold text-slate-950 dark:text-white" title={historyJob.file_name}>
                             {historyJob.file_name}
@@ -613,31 +732,47 @@ const TranslateDocumentPage = () => {
                         </span>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2 pl-7">
+                        {/* View — opens full-screen compare view */}
                         <button
                           type="button"
-                          disabled={historyJob.status !== 'completed' && !historyJob.download_available}
-                          onClick={() => {
-                            if (historyJob.status !== 'completed' && !historyJob.download_available) return;
-                            window.open(api.getTranslationDownloadUrl(historyJob.job_id), '_blank', 'noopener,noreferrer');
-                          }}
+                          disabled={!canAct}
+                          onClick={() => canAct && navigate(`/dashboard/translate/compare/${historyJob.job_id}`)}
                           className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           View
                         </button>
 
+                        {/* Download — programmatic fetch-based download */}
                         <button
                           type="button"
-                          disabled={historyJob.status !== 'completed' && !historyJob.download_available}
-                          onClick={() => {
-                            if (historyJob.status !== 'completed' && !historyJob.download_available) return;
-                            window.open(api.getTranslationDownloadUrl(historyJob.job_id) + '?raw=1', '_blank', 'noopener,noreferrer');
-                          }}
+                          disabled={!canAct}
+                          onClick={() => canAct && triggerDownload(
+                            historyJob.job_id,
+                            historyJob.file_name ? cleanDocName(historyJob.file_name, historyJob.target_language || 'HI') : 'translated_document.pdf'
+                          )}
                           className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                         >
                           <Download className="h-3.5 w-3.5" />
-                          {historyJob.status === 'completed' || historyJob.download_available ? 'Download' : 'Pending'}
+                          {canAct ? 'Download' : 'Pending'}
+                        </button>
+
+                        {/* Delete single item */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await api.deleteTranslationJob(historyJob.job_id, userId);
+                              toast.success('Deleted.');
+                              setSelectedHistory(prev => { const n = new Set(prev); n.delete(historyJob.job_id); return n; });
+                              translationHistoryQuery.refetch();
+                            } catch { toast.error('Delete failed.'); }
+                          }}
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          Delete
                         </button>
                       </div>
                     </div>

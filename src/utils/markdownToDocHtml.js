@@ -123,12 +123,13 @@ export const formatInlineText = (text, sources = []) => {
     return `${prefixText}${addPlaceholder(citationHtml)}`;
   });
 
-  // 5. Statutory Law References (e.g., Section 12 of the Contempt of Courts Act, 1971, Article 30 of the Constitution of India, Section 406 IPC)
-  const statuteRegex = /\b(?:Sections?|Article)\s+\d+(?:\(\d+\))?(?:\([a-zA-Z]\))?(?:\s*,\s*\d+(?:\(\d+\))?)*(?:\s+and\s+\d+(?:\(\d+\))?)?\s+of\s+(?:the\s+)?[A-Z][A-Za-z0-9\s,()'-]+(?:Act|Code|Constitution)(?:\s*,\s*\d{4})?\b/g;
+  // 5. Statutory Law References (e.g., Section 406 of the Indian Penal Code (IPC), Article 226 of the Constitution of India, Section 12 of Contempt of Courts Act)
+  const statuteRegex = /\b(?:Sections?|Article|Sec\.?)\s+\d+(?:\(\d+\))?(?:\([a-zA-Z]\))?(?:\s*,\s*\d+(?:\(\d+\))?)*(?:\s+and\s+\d+(?:\(\d+\))?)?\s+(?:of\s+(?:the\s+)?)?[A-Z][A-Za-z0-9\s,()'-]+(?:Act|Code|Constitution|IPC|CrPC|CPC|I\.P\.C\.|Cr\.P\.C\.|C\.P\.C\.)(?:\s*,\s*\d{4})?\b/gi;
   str = str.replace(statuteRegex, (match) => {
     if (match.includes('XPH') || match.includes('<a')) return match;
     const searchUrl = `https://indiankanoon.org/search/?formInput=${encodeURIComponent(match)}`;
-    return addPlaceholder(`<a href="${searchUrl}" target="_blank" rel="noopener noreferrer" style="color: #059669; text-decoration: underline; font-weight: 500;">${escapeHtml(match)}</a>`);
+    // Bold + Underlined statutory law highlight (matching python-docx sec_run.bold = True, sec_run.font.underline = True)
+    return addPlaceholder(`<a href="${searchUrl}" target="_blank" rel="noopener noreferrer" style="color: #000000; font-weight: bold; text-decoration: underline;">${escapeHtml(match)}</a>`);
   });
 
   // 6. Bold: **text** or __text__
@@ -138,11 +139,11 @@ export const formatInlineText = (text, sources = []) => {
   str = str.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
 
   // 8. Legal Case Name Auto-detection (e.g. Anand Kumar Mohatta v. State, Radhey Shyam v. Chhabi Nath)
-  const caseRegex = /\b([A-Z][A-Za-z0-9.&'/-]*(?:\s+[A-Z][A-Za-z0-9.&'/-]*)*)\s+(?:vs\.?|v\.?)\s+([A-Z][A-Za-z0-9.&'/-]*(?:\s+[A-Z][A-Za-z0-9.&'/-]*)*)\b|\bIn\s+re\s+([A-Z][A-Za-z0-9.&'/-]*(?:\s+[A-Z][A-Za-z0-9.&'/-]*)*)\b/g;
+  const caseRegex = /\b([A-Z][A-Za-z0-9.&'/-]*(?:\s+[A-Z][A-Za-z0-9.&'/-]*)*)\s+(?:vs\.?|v\.?|VERSUS)\s+([A-Z][A-Za-z0-9.&'/-]*(?:\s+[A-Z][A-Za-z0-9.&'/-]*)*)\b|\bIn\s+re\s+([A-Z][A-Za-z0-9.&'/-]*(?:\s+[A-Z][A-Za-z0-9.&'/-]*)*)\b/g;
   str = str.replace(caseRegex, (match) => {
     if (match.includes('<strong>') || match.includes('<em>') || match.includes('XPH') || match.includes('<a')) return match;
     const searchUrl = `https://indiankanoon.org/search/?formInput=${encodeURIComponent(match)}`;
-    return addPlaceholder(`<a href="${searchUrl}" target="_blank" rel="noopener noreferrer" style="color: #1d4ed8; text-decoration: underline; font-style: italic;"><em>${escapeHtml(match)}</em></a>`);
+    return addPlaceholder(`<a href="${searchUrl}" target="_blank" rel="noopener noreferrer" style="color: #000000; text-decoration: underline; font-style: italic; font-weight: bold;"><em>${escapeHtml(match)}</em></a>`);
   });
 
   // Restore placeholders safely
@@ -154,7 +155,49 @@ export const formatInlineText = (text, sources = []) => {
 };
 
 /**
- * Main AST & Structure Parser: Converts raw text -> AST -> Styled HTML with Contextual Clickable Citations & Laws
+ * Detects whether a trimmed line is part of a centered court caption block.
+ * These are short lines (≤ 90 chars) that form the case header:
+ *   SUMMONS / NOTICE / PETITION / WRIT / ORDER / JUDGMENT
+ *   IN THE … COURT …
+ *   PLAINTIFF_NAME, / Petitioner / Respondent
+ *   v. / vs. / VERSUS
+ *   Case No.: …  / No. … / Petition No. …
+ */
+const isCaptionLine = (text) => {
+  if (!text || text.length > 90) return false;
+  const t = text.trim();
+  if (!t) return false;
+
+  // Explicit court document keywords
+  if (/^(SUMMONS|NOTICE|PETITION|WRIT|ORDER|JUDGMENT|DECREE|WARRANT|SUBPOENA|COMPLAINT|AFFIDAVIT|BAIL APPLICATION|CHARGE SHEET|CRIMINAL WRIT PETITION|CIVIL WRIT PETITION)\b/i.test(t)) return true;
+  if (/^IN THE\b/i.test(t)) return true;
+  if (/^BEFORE THE\b/i.test(t)) return true;
+  if (/\b(SUPREME COURT|HIGH COURT|DISTRICT COURT|SESSION(S)? COURT|FAMILY COURT|CIVIL COURT|CRIMINAL COURT|TRIBUNAL|MAGISTRATE|JURISDICTION)\b/i.test(t)) return true;
+  if (/^v\.?$|^vs\.?$|^versus$/i.test(t)) return true;
+  if (/^(\.\.\.\s*)?(Plaintiff|Defendant|Petitioner|Respondent|Appellant|Appellee|Complainant|Accused|Applicant)s?\s*[(),.]?\s*$/i.test(t)) return true;
+  if (/^(Case|Petition|Application|Suit|Appeal|Complaint|FIR|CRL|Cr\.?P\.?C?|WP|SLP|CA|OP)\s*(No\.?|Number)[\s:]/i.test(t)) return true;
+  if (/^(DIVISION|DEPARTMENT|BENCH|COURT NO\.?|COURT ROOM)[\s:]/i.test(t)) return true;
+  if (t.length <= 60 && t === t.toUpperCase() && /[A-Z]/.test(t) && !/[.!?](?:\s|$)/.test(t.slice(0, -1))) return true;
+  if (t.length <= 60 && /,$/.test(t) && !/^(WHEREAS|WHEREAS,|AND,|THE ABOVE)/.test(t)) return true;
+
+  return false;
+};
+
+/**
+ * Detects a section heading like "TO THE DEFENDANT(S):" or "WHEREAS:" — left-aligned bold.
+ */
+const isSectionHeading = (text) => {
+  if (!text) return false;
+  const t = text.trim();
+  if (t.length <= 80 && /[:\-]\s*$/.test(t) && t === t.toUpperCase() && /[A-Z]/.test(t)) return true;
+  if (/^TO THE\b/i.test(t) && t.length <= 80) return true;
+  if (/^(WHEREAS|NOW THEREFORE|BE IT KNOWN|BE IT RESOLVED|KNOW ALL MEN BY THESE PRESENTS)\b/i.test(t)) return true;
+  return false;
+};
+
+/**
+ * Main AST & Structure Parser: Converts raw text -> AST -> Styled HTML
+ * matching Indian Court Legal Document Standards (Times New Roman 12pt, 1.5 line spacing, 0.5" indent, Legal margins).
  */
 export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
   if (!rawInput || !rawInput.trim()) return '';
@@ -188,98 +231,76 @@ export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
     if (mdHeaderMatch) {
       flushList();
       const level = Math.min(mdHeaderMatch[1].length, 3);
-      ast.push({
-        type: 'heading',
-        level,
-        text: mdHeaderMatch[2].trim(),
-      });
+      ast.push({ type: 'heading', level, text: mdHeaderMatch[2].trim() });
       continue;
     }
 
-    // 2. Major Numbered Heading Detection (e.g. "1. **Brief Answer** content..." or "2. **Detailed Analysis**")
+    // 2. Section headings like "TO THE DEFENDANT(S):" — left-aligned bold
+    if (isSectionHeading(trimmed)) {
+      flushList();
+      ast.push({ type: 'section', text: trimmed });
+      continue;
+    }
+
+    // 3. Court caption lines — centered bold or right-aligned party label
+    if (isCaptionLine(trimmed)) {
+      flushList();
+      const isPartyDesignation = /^(\.\.\.\s*)?(Petitioner|Respondent|Plaintiff|Defendant|Appellant|Appellee)s?\s*$/i.test(trimmed);
+      if (isPartyDesignation) {
+        ast.push({ type: 'party_label', text: trimmed });
+      } else {
+        ast.push({ type: 'caption', text: trimmed });
+      }
+      continue;
+    }
+
+    // 4. Major Numbered Heading (e.g. "1. **Brief Answer**")
     const majorNumberedMatch = trimmed.match(/^(\d+)\.\s+(\*\*(.*?)\*\*|__(.*?)__|([A-Z0-9\s:/-]{3,}))(?:\s*(.*))?$/i);
     if (majorNumberedMatch) {
       flushList();
       const number = majorNumberedMatch[1];
       const titleText = majorNumberedMatch[3] || majorNumberedMatch[4] || majorNumberedMatch[5] || '';
       const inlineContent = majorNumberedMatch[6] ? majorNumberedMatch[6].trim() : '';
-
-      ast.push({
-        type: 'heading',
-        level: 2,
-        text: `${number}. ${titleText.trim().replace(/:$/, '')}`,
-      });
-
-      if (inlineContent) {
-        ast.push({
-          type: 'paragraph',
-          text: inlineContent,
-        });
-      }
+      ast.push({ type: 'heading', level: 2, text: `${number}. ${titleText.trim().replace(/:$/, '')}` });
+      if (inlineContent) ast.push({ type: 'paragraph', text: inlineContent });
       continue;
     }
 
-    // 3. Bullet Subsection Heading (e.g. "- **Case Identification:** Content...")
+    // 5. Bullet Subsection Heading
     const bulletHeadingMatch = trimmed.match(/^[-*]\s+\*\*(.*?)\:\*\*\s*(.*)$/);
     if (bulletHeadingMatch) {
       flushList();
       const titleText = bulletHeadingMatch[1].trim();
       const inlineContent = bulletHeadingMatch[2].trim();
-
-      ast.push({
-        type: 'heading',
-        level: 3,
-        text: titleText,
-      });
-
-      if (inlineContent) {
-        ast.push({
-          type: 'paragraph',
-          text: inlineContent,
-        });
-      }
+      ast.push({ type: 'heading', level: 3, text: titleText });
+      if (inlineContent) ast.push({ type: 'paragraph', text: inlineContent });
       continue;
     }
 
-    // 4. Inline Bold Section Title (e.g. "**High Court's Decision:** Content...")
+    // 6. Inline Bold Section Title
     const inlineBoldHeadingMatch = trimmed.match(/^\*\*(.*?)\:\*\*\s*(.*)$/);
     if (inlineBoldHeadingMatch) {
       flushList();
       const titleText = inlineBoldHeadingMatch[1].trim();
       const inlineContent = inlineBoldHeadingMatch[2].trim();
-
-      ast.push({
-        type: 'heading',
-        level: 3,
-        text: titleText,
-      });
-
-      if (inlineContent) {
-        ast.push({
-          type: 'paragraph',
-          text: inlineContent,
-        });
-      }
+      ast.push({ type: 'heading', level: 3, text: titleText });
+      if (inlineContent) ast.push({ type: 'paragraph', text: inlineContent });
       continue;
     }
 
-    // 5. Blockquote Detection
+    // 7. Blockquote Detection
     const quoteMatch = trimmed.match(/^&gt;|> (.*)$/);
     if (quoteMatch) {
       flushList();
-      ast.push({
-        type: 'blockquote',
-        text: quoteMatch[1] || '',
-      });
+      ast.push({ type: 'blockquote', text: quoteMatch[1] || '' });
       continue;
     }
 
-    // 6. Bullet List Items (- item, * item)
+    // 8. Bullet List Items (- item, * item)
     const bulletItemMatch = rawLine.match(/^(\s*)[-*]\s+(.+)$/);
     if (bulletItemMatch) {
       const indent = bulletItemMatch[1].length;
       const itemText = bulletItemMatch[2].trim();
-
       if (!currentList || currentList.type !== 'ul') {
         flushList();
         currentList = { type: 'ul', items: [] };
@@ -288,12 +309,11 @@ export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
       continue;
     }
 
-    // 7. Numbered List Items (1. item, 2. item)
+    // 9. Numbered List Items (1. item, 2. item)
     const numberedItemMatch = rawLine.match(/^(\s*)(\d+)\.\s+(.+)$/);
     if (numberedItemMatch) {
       const indent = numberedItemMatch[1].length;
       const itemText = numberedItemMatch[3].trim();
-
       if (!currentList || currentList.type !== 'ol') {
         flushList();
         currentList = { type: 'ol', items: [] };
@@ -302,15 +322,12 @@ export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
       continue;
     }
 
-    // 8. Continuation line or Regular Paragraph text
+    // 10. Regular Paragraph text
     if (!currentList && ast.length > 0 && ast[ast.length - 1].type === 'paragraph') {
       ast[ast.length - 1].text += ' ' + trimmed;
     } else {
       flushList();
-      ast.push({
-        type: 'paragraph',
-        text: trimmed,
-      });
+      ast.push({ type: 'paragraph', text: trimmed });
     }
   }
 
@@ -318,24 +335,49 @@ export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
 
   console.log('[MarkdownToDocHtml] --- Step 2: Detected AST Structure ---', ast);
 
-  // Render HTML using single dedicated legal document typography and structure
-  let htmlResult = `<div style="font-family: inherit; font-size: 11pt; line-height: 1.5; color: #111827; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n`;
+  // ── HTML Renderer — Indian Court Legal Document Standard (Times New Roman 12pt, 1.5 line spacing) ──
+  const FONT_FAMILY = "font-family:'Times New Roman', Times, serif;";
+  const BASE = `box-sizing:border-box;width:100%;max-width:100%;word-wrap:break-word;overflow-wrap:break-word;word-break:normal;${FONT_FAMILY}`;
+  let htmlResult = `<div style="${FONT_FAMILY}font-size:12pt;line-height:1.5;color:#000000;${BASE}margin:0;padding:0;">\n`;
 
   ast.forEach((node) => {
     if (node.type === 'heading') {
-      const fontSize = node.level === 1 ? '14pt' : node.level === 2 ? '12.5pt' : '11.5pt';
-      const marginTop = node.level === 1 ? '14pt' : node.level === 2 ? '12pt' : '10pt';
+      const fontSize = node.level === 1 ? '14pt' : node.level === 2 ? '13pt' : '12pt';
+      const marginTop = node.level === 1 ? '18pt' : node.level === 2 ? '14pt' : '10pt';
       const textAlign = node.level === 1 ? 'center' : 'left';
-      htmlResult += `<h${node.level} style="font-size: ${fontSize}; font-weight: bold; color: #000000; margin-top: ${marginTop}; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; line-height: 1.3; text-align: ${textAlign}; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(node.text, sources)}</h${node.level}>\n`;
+      htmlResult += `<h${node.level} style="font-size:${fontSize};font-weight:bold;color:#000;margin-top:${marginTop};margin-bottom:8pt;margin-left:0;margin-right:0;padding:0;line-height:1.3;text-align:${textAlign};${BASE}">${formatInlineText(node.text, sources)}</h${node.level}>\n`;
+
+    } else if (node.type === 'caption') {
+      // Court header & Case Title: centered, bold, Times New Roman 14pt/12pt
+      const t = node.text.trim();
+      const isHeaderLine = /^(IN THE|BEFORE THE|SUPREME COURT|HIGH COURT|DISTRICT COURT|RECORD OF PROCEEDINGS)/i.test(t);
+      const isVs = /^v\.?$|^vs\.?$|^versus$/i.test(t);
+      const fontSize = isHeaderLine ? '14pt' : '12pt';
+      const marginBottom = isHeaderLine ? '12pt' : (isVs ? '6pt' : '4pt');
+      const marginTop = isVs ? '6pt' : '2pt';
+      htmlResult += `<p style="font-size:${fontSize};font-weight:bold;color:#000;text-align:center;margin-top:${marginTop};margin-bottom:${marginBottom};margin-left:0;margin-right:0;padding:0;line-height:1.4;${BASE}">${formatInlineText(t, sources)}</p>\n`;
+
+    } else if (node.type === 'party_label') {
+      // "... Petitioner" or "... Respondent" designation line — right aligned, bold
+      const textWithPrefix = node.text.trim().startsWith('...') ? node.text.trim() : `... ${node.text.trim()}`;
+      htmlResult += `<p style="font-size:12pt;font-weight:bold;color:#000;text-align:right;margin-top:2pt;margin-bottom:6pt;margin-left:0;margin-right:0;padding:0;${BASE}">${formatInlineText(textWithPrefix, sources)}</p>\n`;
+
+    } else if (node.type === 'section') {
+      // Section heading: left-aligned, bold — e.g. "TO THE DEFENDANT(S):"
+      htmlResult += `<p style="font-size:12pt;font-weight:bold;color:#000;text-align:left;margin-top:14pt;margin-bottom:6pt;margin-left:0;margin-right:0;padding:0;${BASE}">${formatInlineText(node.text, sources)}</p>\n`;
+
     } else if (node.type === 'paragraph') {
-      htmlResult += `<p style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 0pt; padding-right: 0pt; text-align: left; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(node.text, sources)}</p>\n`;
+      // Core Body Paragraph: Justified alignment, 1.5 line spacing, 0.5" first-line indent
+      htmlResult += `<p style="font-size:12pt;line-height:1.5;color:#000000;margin-top:0;margin-bottom:8pt;margin-left:0;margin-right:0;padding:0;text-align:justify;text-indent:0.5in;${BASE}">${formatInlineText(node.text, sources)}</p>\n`;
+
     } else if (node.type === 'blockquote') {
-      htmlResult += `<blockquote style="font-size: 11pt; font-style: italic; border-left: 3px solid #64748b; padding-left: 10pt; margin-top: 4pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; color: #334155; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(node.text, sources)}</blockquote>\n`;
+      htmlResult += `<blockquote style="font-size:11.5pt;font-style:italic;border-left:3px solid #334155;padding-left:12pt;margin-top:6pt;margin-bottom:8pt;margin-left:0.5in;margin-right:0;color:#1e293b;${BASE}">${formatInlineText(node.text, sources)}</blockquote>\n`;
+
     } else if (node.type === 'ul' || node.type === 'ol') {
       const tag = node.type;
-      htmlResult += `<${tag} style="font-size: 11pt; line-height: 1.5; color: #111827; margin-top: 0pt; margin-bottom: 6pt; margin-left: 0pt; margin-right: 0pt; padding-left: 18pt; padding-right: 0pt; box-sizing: border-box; width: 100%; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">\n`;
+      htmlResult += `<${tag} style="font-size:12pt;line-height:1.5;color:#000000;margin-top:0;margin-bottom:8pt;margin-left:0;margin-right:0;padding-left:24pt;${BASE}">\n`;
       node.items.forEach((item) => {
-        htmlResult += `  <li style="margin-bottom: 3pt; margin-right: 0pt; box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${formatInlineText(item.text, sources)}</li>\n`;
+        htmlResult += `  <li style="margin-bottom:4pt;margin-right:0;${BASE}">${formatInlineText(item.text, sources)}</li>\n`;
       });
       htmlResult += `</${tag}>\n`;
     }
@@ -350,7 +392,7 @@ export const convertMarkdownToDocHtml = (rawInput, sources = []) => {
   const sanitizedHtml = DOMPurify.sanitize(htmlResult.trim(), {
     ALLOWED_TAGS: [
       'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'p', 'strong', 'em', 'b', 'i',
+      'p', 'strong', 'em', 'b', 'i', 'u',
       'ul', 'ol', 'li', 'blockquote',
       'a', 'br', 'span', 'sub', 'sup'
     ],

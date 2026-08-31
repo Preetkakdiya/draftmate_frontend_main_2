@@ -228,9 +228,9 @@ You must verify this region is selected at the start of every step below.
 
 ---
 
-## STEP 8: Configure Scheduled Autoscaling (2:00 AM – 7:00 AM IST Down)
+## STEP 8: Configure Scheduled Autoscaling (10:00 PM – 10:00 AM IST Down)
 * **AWS Region**: Specify `--region ap-south-1` in your CLI commands.
-* **Local Terminal Configuration**: Run the following three commands in your terminal to set up the daily 5-hour scale-down schedule:
+* **Local Terminal Configuration**: Run the following three commands in your terminal to set up the daily 12-hour cost-saving scale-down schedule:
 
 ```bash
 # 1. Register the ecs service desired count target
@@ -242,23 +242,23 @@ aws application-autoscaling register-scalable-target \
   --max-capacity 1 \
   --region ap-south-1
 
-# 2. Scale down to 0 at 2:00 AM IST (20:30 UTC) daily
+# 2. Scale down to 0 at 10:00 PM IST (16:30 UTC) daily
 aws application-autoscaling put-scheduled-action \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
   --resource-id service/default/draftmatebackendservice \
   --scheduled-action-name ScaleDownAtMidnight \
-  --schedule "cron(30 20 * * ? *)" \
+  --schedule "cron(30 16 * * ? *)" \
   --scalable-target-action MinCapacity=0,MaxCapacity=0 \
   --region ap-south-1
 
-# 3. Scale back up to 1 at 7:00 AM IST (01:30 UTC) daily
+# 3. Scale back up to 1 at 10:00 AM IST (04:30 UTC) daily
 aws application-autoscaling put-scheduled-action \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
   --resource-id service/default/draftmatebackendservice \
   --scheduled-action-name ScaleUpInMorning \
-  --schedule "cron(30 1 * * ? *)" \
+  --schedule "cron(30 4 * * ? *)" \
   --scalable-target-action MinCapacity=1,MaxCapacity=1 \
   --region ap-south-1
 ```

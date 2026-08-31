@@ -220,6 +220,50 @@ const ResearchChat = () => {
     const [draftingPrompt, setDraftingPrompt] = useState('');
     const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
 
+    // Per-message feedback (like / dislike) and share popover state
+    const [messageFeedback, setMessageFeedback] = useState({}); // { [msgId]: 'like' | 'dislike' | null }
+    const [shareOpenId, setShareOpenId] = useState(null);        // msgId whose share popover is open
+    const sharePopoverRef = useRef(null);
+
+    const handleFeedback = (msgId, type) => {
+        setMessageFeedback(prev => ({
+            ...prev,
+            [msgId]: prev[msgId] === type ? null : type   // toggle
+        }));
+        if (type === 'like') toast.success('Thanks for the positive feedback!');
+        else toast('Thanks for your feedback. We\'ll keep improving.');
+    };
+
+    const handleShareWhatsApp = (text) => {
+        const encoded = encodeURIComponent(text.substring(0, 600) + '\n\n— via DraftMate AI Research');
+        window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
+        setShareOpenId(null);
+    };
+
+    const handleShareEmail = (text) => {
+        const subject = encodeURIComponent('Legal Research from DraftMate AI');
+        const body = encodeURIComponent(text.substring(0, 1500) + '\n\n— Shared via DraftMate AI Research (app.draftmate.in)');
+        window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
+        setShareOpenId(null);
+    };
+
+    const handleCopyShareLink = (text, msgId) => {
+        navigator.clipboard.writeText(text);
+        toast.success('Research copied to clipboard!');
+        setShareOpenId(null);
+    };
+
+    // Close share popover on outside click
+    useEffect(() => {
+        const handleOutside = (e) => {
+            if (sharePopoverRef.current && !sharePopoverRef.current.contains(e.target)) {
+                setShareOpenId(null);
+            }
+        };
+        if (shareOpenId) document.addEventListener('mousedown', handleOutside);
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, [shareOpenId]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -278,11 +322,12 @@ const ResearchChat = () => {
         fetchLLMConfig();
         fetchSessions();
 
-        // Check for existing session in URL or localStorage
-        // For now, let's start fresh or load if ID is present
-        const storedSessionId = localStorage.getItem('last_chat_session_id');
-        if (storedSessionId) {
-            loadSession(storedSessionId);
+        // Check for existing session in URL query param or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const querySessionId = urlParams.get('session');
+        const targetSessionId = querySessionId || localStorage.getItem('last_chat_session_id');
+        if (targetSessionId) {
+            loadSession(targetSessionId);
         } else {
             startNewChat();
         }
@@ -975,19 +1020,143 @@ const ResearchChat = () => {
 
                                             {/* Completion Actions */}
                                             {!isTyping && msg.content && !msg.isIntro && (
-                                                <div className="mt-5 flex items-center gap-4 pt-2">
-                                                    <button className="flex items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors text-[11px] font-bold uppercase">
-                                                        <span className="material-symbols-outlined text-sm">thumb_up</span>
-                                                    </button>
-                                                    <button className="flex items-center gap-1 text-slate-400 hover:text-rose-500 transition-colors text-[11px] font-bold uppercase">
-                                                        <span className="material-symbols-outlined text-sm">thumb_down</span>
-                                                    </button>
+                                                <div className="mt-5 flex items-center gap-1 pt-2 relative" ref={shareOpenId === msg.id ? sharePopoverRef : null}>
+
+                                                    {/* 👍 Like */}
                                                     <button
-                                                        onClick={() => { navigator.clipboard.writeText(msg.content); toast.success("Copied to clipboard") }}
-                                                        className="flex items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors text-[11px] font-bold uppercase"
+                                                        onClick={() => handleFeedback(msg.id, 'like')}
+                                                        title="Helpful"
+                                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-[11px] font-bold uppercase ${
+                                                            messageFeedback[msg.id] === 'like'
+                                                                ? 'bg-blue-50 text-blue-600'
+                                                                : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+                                                        }`}
                                                     >
-                                                        <span className="material-symbols-outlined text-sm">content_copy</span> Copy
+                                                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: messageFeedback[msg.id] === 'like' ? "'FILL' 1" : "'FILL' 0" }}>thumb_up</span>
                                                     </button>
+
+                                                    {/* 👎 Dislike */}
+                                                    <button
+                                                        onClick={() => handleFeedback(msg.id, 'dislike')}
+                                                        title="Not helpful"
+                                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-[11px] font-bold uppercase ${
+                                                            messageFeedback[msg.id] === 'dislike'
+                                                                ? 'bg-rose-50 text-rose-500'
+                                                                : 'text-slate-400 hover:text-rose-500 hover:bg-rose-50'
+                                                        }`}
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: messageFeedback[msg.id] === 'dislike' ? "'FILL' 1" : "'FILL' 0" }}>thumb_down</span>
+                                                    </button>
+
+                                                    {/* 📋 Copy */}
+                                                    <button
+                                                        onClick={() => { navigator.clipboard.writeText(msg.content); toast.success('Copied to clipboard'); }}
+                                                        title="Copy response"
+                                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all text-[11px] font-bold uppercase"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">content_copy</span>
+                                                        <span>Copy</span>
+                                                    </button>
+
+                                                    {/* 🔗 Share */}
+                                                    <div className="relative">
+                                                        <button
+                                                            onClick={() => setShareOpenId(shareOpenId === msg.id ? null : msg.id)}
+                                                            title="Share"
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-[11px] font-bold uppercase ${
+                                                                shareOpenId === msg.id
+                                                                    ? 'bg-indigo-50 text-indigo-600'
+                                                                    : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
+                                                            }`}
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">share</span>
+                                                            <span>Share</span>
+                                                        </button>
+
+                                                        {/* Share Popover */}
+                                                        {shareOpenId === msg.id && (
+                                                            <div
+                                                                ref={sharePopoverRef}
+                                                                className="absolute bottom-full left-0 mb-2 z-50 animate-fade-in"
+                                                                style={{
+                                                                    background: '#fff',
+                                                                    border: '1px solid #e2e8f0',
+                                                                    borderRadius: 14,
+                                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                                                    padding: '6px',
+                                                                    minWidth: 200,
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column',
+                                                                    gap: 2
+                                                                }}
+                                                            >
+                                                                {/* WhatsApp */}
+                                                                <button
+                                                                    onClick={() => handleShareWhatsApp(msg.content)}
+                                                                    style={{
+                                                                        display: 'flex', alignItems: 'center', gap: 10,
+                                                                        padding: '9px 12px', borderRadius: 10,
+                                                                        border: 'none', background: 'transparent',
+                                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
+                                                                        fontSize: 13, fontWeight: 600, color: '#1a1a1a',
+                                                                        transition: 'background 0.15s'
+                                                                    }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                                >
+                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366">
+                                                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                                                    </svg>
+                                                                    Share on WhatsApp
+                                                                </button>
+
+                                                                {/* Email */}
+                                                                <button
+                                                                    onClick={() => handleShareEmail(msg.content)}
+                                                                    style={{
+                                                                        display: 'flex', alignItems: 'center', gap: 10,
+                                                                        padding: '9px 12px', borderRadius: 10,
+                                                                        border: 'none', background: 'transparent',
+                                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
+                                                                        fontSize: 13, fontWeight: 600, color: '#1a1a1a',
+                                                                        transition: 'background 0.15s'
+                                                                    }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                                >
+                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
+                                                                        <rect x="2" y="4" width="20" height="16" rx="2"/>
+                                                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                                                                    </svg>
+                                                                    Share via Email
+                                                                </button>
+
+                                                                {/* Divider */}
+                                                                <div style={{ height: 1, background: '#f1f5f9', margin: '2px 8px' }} />
+
+                                                                {/* Copy Link */}
+                                                                <button
+                                                                    onClick={() => handleCopyShareLink(msg.content, msg.id)}
+                                                                    style={{
+                                                                        display: 'flex', alignItems: 'center', gap: 10,
+                                                                        padding: '9px 12px', borderRadius: 10,
+                                                                        border: 'none', background: 'transparent',
+                                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
+                                                                        fontSize: 13, fontWeight: 600, color: '#1a1a1a',
+                                                                        transition: 'background 0.15s'
+                                                                    }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                                >
+                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                                                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                                                    </svg>
+                                                                    Copy to Clipboard
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
 

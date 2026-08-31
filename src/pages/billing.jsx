@@ -80,9 +80,9 @@ export default function Billing() {
     if (processingId) return;
     const sessionId = localStorage.getItem('session_id') || localStorage.getItem('token') || '';
     if (!sessionId) { toast.error('Please log in first.'); return; }
-    const planId = plan.name.includes('Professional')
+    const planId = (plan.name.includes('Professional') || plan.name.includes('Pro'))
       ? (isAnnual ? 'PRO_ANNUAL' : 'PRO_MONTHLY')
-      : 'BASIC_MONTHLY';
+      : (isAnnual ? 'BASIC_ANNUAL' : 'BASIC_MONTHLY');
     try {
       setProcessingId(plan.name);
       const orderData = await createOrder(planId, sessionId);
@@ -218,9 +218,9 @@ export default function Billing() {
                         <h3 className="text-xl font-bold text-[#0F1C2E] mb-2">{plan.name.replace('DraftMate ', '')}</h3>
                         <p className="text-xs text-slate-500 font-medium mb-6 min-h-[32px]">{plan.description}</p>
                         
-                        <div className="flex items-baseline gap-1 mb-6">
-                          <span className="text-3xl font-black text-[#0F1C2E]">₹{isAnnual ? plan.priceAnnual : plan.priceMonthly}</span>
-                          <span className="text-sm font-medium text-slate-500">/month</span>
+                        <div className="flex items-baseline gap-1 mb-2">
+                          <span className="text-3xl font-black text-[#0F1C2E]">₹{isAnnual ? (plan.priceAnnual * 12).toLocaleString() : plan.priceMonthly}</span>
+                          <span className="text-sm font-medium text-slate-500">{isAnnual ? '/year' : '/month'}</span>
                         </div>
 
                         <button
@@ -232,9 +232,14 @@ export default function Billing() {
                           {processingId === plan.name ? 'Processing...' : plan.buttonText}
                         </button>
 
-                        {isAnnual && (
-                          <div className="text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-1.5 rounded-lg mb-6 border border-emerald-100">
-                            You are saving ₹{(plan.priceMonthly - plan.priceAnnual)}/month
+                        {isAnnual ? (
+                          <div className="text-xs font-bold text-emerald-600 bg-emerald-50 py-1.5 px-3 rounded-lg mb-6 border border-emerald-100 flex items-center justify-between">
+                            <span>₹{plan.priceAnnual}/mo billed yearly</span>
+                            <span>Save ₹{(plan.priceMonthly - plan.priceAnnual) * 12}/yr</span>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-400 font-medium mb-6">
+                            Billed monthly, cancel anytime
                           </div>
                         )}
 

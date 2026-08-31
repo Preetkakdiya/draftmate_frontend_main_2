@@ -317,6 +317,22 @@ export const api = {
     getTranslationDownloadUrl: (jobId) => `${TRANSLATOR_BASE_URL}${API_CONFIG.TRANSLATOR.ENDPOINTS.DOWNLOAD_JOB(jobId)}`,
     getTranslationSourceUrl: (jobId) => `${TRANSLATOR_BASE_URL}/translation-jobs/${jobId}/source`,
 
+    deleteTranslationJob: async (jobId, userId) => {
+        const response = await fetch(
+            `${TRANSLATOR_BASE_URL}/translation-jobs/${jobId}`,
+            {
+                method: 'DELETE',
+                headers: getTranslatorUserHeader(userId),
+            }
+        );
+        // 204 = success with no body, 404 = already gone — both are fine
+        if (!response.ok && response.status !== 404 && response.status !== 204) {
+            const txt = await response.text();
+            throw new Error(txt || `Delete failed: ${response.status}`);
+        }
+        return true;
+    },
+
     /**
      * Send email notification for calendar event.
      * @param {string} toEmail - Recipient email

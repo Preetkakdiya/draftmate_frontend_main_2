@@ -418,91 +418,107 @@ const DocumentManagement = () => {
     }
   };
 
-  const handleDocumentClick = async (doc) => {
-    // 1. If this is a translated document or has a direct file URL
-    if (doc.source === 'translate' || (doc.url && (doc.url.includes('translator') || doc.url.includes('/download')))) {
-      if (doc.url) {
-        let downloadUrl = doc.url;
-        if (!downloadUrl.startsWith('http') && !downloadUrl.startsWith('blob:') && !downloadUrl.startsWith('data:')) {
-          downloadUrl = `${window.location.origin}${downloadUrl}`;
-        }
-        if (downloadUrl.includes('/translator/') && !downloadUrl.includes('raw=1')) {
-          downloadUrl += (downloadUrl.includes('?') ? '&' : '?') + 'raw=1';
-        }
-        window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+  const handleDownloadDocument = async (doc, e) => {
+    if (e) e.stopPropagation();
+
+    const fileName = doc.filename || doc.name || 'document.pdf';
+    const toastId = toast.loading(`Downloading "${fileName}"...`);
+
+    try {
+      let fileUrl = doc.url || doc.s3_url;
+
+      if (!fileUrl && doc.id) {
+        fileUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${doc.id}/${encodeURIComponent(fileName)}`;
+      }
+
+      if (!fileUrl) {
+        toast.dismiss(toastId);
+        toast.error('Download URL not available.');
         return;
       }
-    }
 
-    // 2. Drafter workspace documents
-    if (doc.type === 'docx' && doc.source !== 'translate') {
-      const toastId = toast.loading("Opening document...");
+      // 1. Data URLs
+      if (fileUrl.startsWith('data:')) {
+        const parts = fileUrl.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        toast.dismiss(toastId);
+        toast.success(`Downloaded "${fileName}"`);
+        return;
+      }
+
+      // 2. Fetch remote file as Blob to bypass browser cross-origin download restrictions
       try {
-        const token = localStorage.getItem('session_id') || localStorage.getItem('token');
-        const response = await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/config/${doc.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const config = await response.json();
+        const res = await fetch(fileUrl, { mode: 'cors' });
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
           toast.dismiss(toastId);
-          navigate('/dashboard/workspace', { 
-            state: { 
-              documentKey: doc.id, 
-              filename: doc.filename || doc.name, 
-              draftId: doc.id,
-              onlyofficeConfig: config 
-            } 
-          });
+          toast.success(`Downloaded "${fileName}"`);
           return;
         }
-      } catch (err) {
-        console.warn("OnlyOffice draft config fallback:", err);
+      } catch (corsErr) {
+        console.warn('CORS blob download fallback:', corsErr);
       }
-      toast.dismiss(toastId);
-    }
 
-    if (doc.url) {
-      let targetUrl = doc.url;
-      if (doc.url.startsWith('data:')) {
-        try {
-          const parts = doc.url.split(',');
-          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
-          const bstr = atob(parts[1]);
-          let n = bstr.length;
-          const u8arr = new Uint8Array(n);
-          while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-          }
-          let blob;
-          if (mime.includes('text') || (doc.name || '').toLowerCase().endsWith('.txt')) {
-            const textDecoder = new TextDecoder('utf-8');
-            const textContent = textDecoder.decode(u8arr);
-            blob = new Blob(['\uFEFF' + textContent], { type: 'text/plain;charset=utf-8' });
-          } else {
-            blob = new Blob([u8arr], { type: mime });
-          }
-          targetUrl = URL.createObjectURL(blob);
-        } catch (e) {
-          targetUrl = doc.url;
-        }
-      } else if (!doc.url.startsWith('http') && !doc.url.startsWith('blob:')) {
-        targetUrl = `${window.location.origin}${doc.url}`;
-      }
-      
-      const link = document.createElement('a');
-      link.href = targetUrl;
-      link.target = '_blank';
-      if (doc.type === 'pdf' || (doc.name || '').toLowerCase().endsWith('.pdf')) {
-        link.download = doc.filename || doc.name || 'document.pdf';
-      }
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        try { document.body.removeChild(link); } catch(e){}
-      }, 500);
-    } else {
-      window.open(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${doc.id}/${doc.filename || doc.name}`, '_blank');
+      // 3. Direct fallback window download
+      const fallbackLink = document.createElement('a');
+      fallbackLink.href = fileUrl;
+      fallbackLink.target = '_blank';
+      fallbackLink.download = fileName;
+      document.body.appendChild(fallbackLink);
+      fallbackLink.click();
+      document.body.removeChild(fallbackLink);
+      toast.dismiss(toastId);
+      toast.success(`Started download for "${fileName}"`);
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.dismiss(toastId);
+      toast.error('Failed to download document.');
     }
+  };
+
+  const handleDocumentClick = (doc) => {
+    const docKey = doc.id || doc.document_key || doc.name;
+    const fileName = doc.filename || doc.name || 'Document.docx';
+    const fileUrl = doc.url || doc.s3_url;
+
+    const toastId = toast.loading(`Opening "${fileName}" in ONLYOFFICE Editor...`);
+
+    setTimeout(() => {
+      toast.dismiss(toastId);
+      navigate('/dashboard/workspace', {
+        state: {
+          documentKey: docKey,
+          filename: fileName,
+          draftId: doc.id,
+          initialUrl: fileUrl,
+          s3_url: fileUrl,
+          isOnlyOfficeEdit: true
+        }
+      });
+    }, 300);
   };
 
   // Navigations: If selectedCaseId is null, default to General Documents case matter
@@ -871,6 +887,13 @@ const DocumentManagement = () => {
                       </td>
                       <td>
                         <div className="flex items-center gap-1.5 justify-end pr-2">
+                          <button 
+                            onClick={(e) => handleDownloadDocument(doc, e)}
+                            title="Download File"
+                            className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 rounded-lg transition-colors flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined text-lg">download</span>
+                          </button>
                           <button 
                             onClick={(e) => handleShareDocument(doc, e)}
                             title="Share File"

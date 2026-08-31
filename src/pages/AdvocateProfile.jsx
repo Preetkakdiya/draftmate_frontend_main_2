@@ -418,15 +418,18 @@ export default function AdvocateProfile() {
             
             {/* Statistics */}
             {(() => {
-              const casesWon = (profile.cases_won && String(profile.cases_won).trim() !== '') 
+              const casesWon = (profile.cases_won !== undefined && String(profile.cases_won).trim() !== '') 
                 ? profile.cases_won 
-                : (profile.years_experience ? `${Math.max(10, Number(profile.years_experience) * 8)}+` : '25+');
-              const totalClients = (profile.total_clients && String(profile.total_clients).trim() !== '') 
+                : '0';
+              const totalClients = (profile.total_clients !== undefined && String(profile.total_clients).trim() !== '') 
                 ? profile.total_clients 
-                : (profile.years_experience ? `${Math.max(20, Number(profile.years_experience) * 15)}+` : '50+');
-              const successRate = (profile.success_rate && String(profile.success_rate).trim() !== '') 
+                : '0';
+              const successRate = (profile.success_rate !== undefined && String(profile.success_rate).trim() !== '') 
                 ? (String(profile.success_rate).endsWith('%') ? profile.success_rate : `${profile.success_rate}%`) 
-                : '94%';
+                : '0%';
+              const totalConsultations = (profile.total_consultations !== undefined && String(profile.total_consultations).trim() !== '')
+                ? profile.total_consultations
+                : '0';
 
               return (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6">
@@ -438,7 +441,7 @@ export default function AdvocateProfile() {
                     </div>
                     <div className="w-full h-px bg-slate-100"></div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500 text-sm font-medium">Total Clients</span>
+                      <span className="text-slate-500 text-sm font-medium">Total Cases / Clients</span>
                       <span className="font-bold text-slate-900">{totalClients}</span>
                     </div>
                     <div className="w-full h-px bg-slate-100"></div>
@@ -449,12 +452,12 @@ export default function AdvocateProfile() {
                     <div className="w-full h-px bg-slate-100"></div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 text-sm font-medium">Consultations</span>
-                      <span className="font-bold text-slate-900">{profile.total_consultations || '12'}</span>
+                      <span className="font-bold text-slate-900">{totalConsultations}</span>
                     </div>
                     <div className="w-full h-px bg-slate-100"></div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 text-sm font-medium">Profile Views</span>
-                      <span className="font-bold text-slate-900">{profile.view_count || '148'}</span>
+                      <span className="font-bold text-slate-900">{profile.view_count || '0'}</span>
                     </div>
                   </div>
                 </div>

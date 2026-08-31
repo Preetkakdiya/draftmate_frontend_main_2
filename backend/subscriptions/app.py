@@ -259,6 +259,7 @@ def create_order(data: CreateOrderModel):
         
         DEFAULT_PLANS = {
             "BASIC_MONTHLY": (699.0, "DraftMate Basic Monthly"),
+            "BASIC_ANNUAL": (6708.0, "DraftMate Basic Annual"),
             "PRO_MONTHLY": (999.0, "DraftMate Pro Monthly"),
             "PRO_ANNUAL": (9588.0, "DraftMate Pro Annual"),
             "pack_a": (199.0, "Pack A - 2,000 Credits"),

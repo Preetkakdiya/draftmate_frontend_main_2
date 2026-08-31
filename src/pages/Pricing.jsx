@@ -213,17 +213,17 @@ export default function Pricing() {
                       <>
                         <div className="flex items-baseline gap-1">
                           <span className="text-4xl font-black text-[#0F1C2E]">
-                            ₹{isAnnual ? plan.priceAnnual : plan.priceMonthly}
+                            ₹{isAnnual ? (plan.priceAnnual * 12).toLocaleString() : plan.priceMonthly}
                           </span>
                           <span className="text-slate-500 font-medium">
-                            {isAnnual ? '/month' : '/30 days'}
+                            {isAnnual ? '/year' : '/30 days'}
                           </span>
                         </div>
                         <div className="h-5 mt-1">
                           <AnimatePresence mode="wait">
                             {isAnnual ? (
                               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-sm text-emerald-600 font-medium">
-                                Billed ₹{plan.priceAnnual * 12} yearly
+                                (₹{plan.priceAnnual}/mo billed yearly, save ₹{(plan.priceMonthly - plan.priceAnnual) * 12}/yr)
                               </motion.div>
                             ) : (
                               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-sm text-slate-400 font-medium">
@@ -242,7 +242,9 @@ export default function Pricing() {
                     <button 
                       onClick={async () => {
                         try {
-                          const targetPlanId = isAnnual ? `${plan.id}_ANNUAL` : plan.id;
+                          const targetPlanId = (plan.name.includes('Professional') || plan.name.includes('Pro') || (plan.id && plan.id.includes('PRO')))
+                            ? (isAnnual ? 'PRO_ANNUAL' : 'PRO_MONTHLY')
+                            : (isAnnual ? 'BASIC_ANNUAL' : 'BASIC_MONTHLY');
                           const sessionId = localStorage.getItem('session_id') || localStorage.getItem('token') || 'demo_session';
                           const orderData = await createOrder(targetPlanId, sessionId);
                           await doPayment(

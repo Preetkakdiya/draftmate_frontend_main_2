@@ -10,48 +10,66 @@ import remarkGfm from 'remark-gfm';
 import { processCitations, CitationLink } from '../utils/citationUtils';
 import convertMarkdownToDocHtml from '../utils/markdownToDocHtml';
 
-const SmoothVlcProgressBar = ({ statusMessage, isLoading }) => {
-  const [progress, setProgress] = useState(5);
+const CircleProcessingLoader = ({ statusMessage, isLoading }) => {
+  const [phaseIndex, setPhaseIndex] = useState(0);
+
+  const defaultPhases = useMemo(() => [
+    'Analyzing document structure & legal query...',
+    'Searching Indian Bare Acts & precedents...',
+    'Analyzing statutory provisions & legal framework...',
+    'Generating legal draft & response...',
+  ], []);
 
   useEffect(() => {
     if (!isLoading) {
-      setProgress(100);
+      setPhaseIndex(0);
       return;
     }
-    setProgress(10);
     const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev < 95) {
-          const inc = Math.max(0.4, (95 - prev) * 0.08);
-          return Math.min(95, prev + inc);
-        }
-        return prev;
-      });
-    }, 50);
+      setPhaseIndex((prev) => (prev < defaultPhases.length - 1 ? prev + 1 : prev));
+    }, 2200);
 
     return () => clearInterval(timer);
-  }, [isLoading]);
+  }, [isLoading, defaultPhases]);
 
   if (!isLoading) return null;
 
+  const currentText = statusMessage || defaultPhases[phaseIndex] || 'Analyzing legal query...';
+  const isGenerating = phaseIndex >= 3 || currentText.toLowerCase().includes('generat');
+  const stepNumber = Math.min(phaseIndex + 1, 3);
+
   return (
-    <div className="my-2 bg-white border border-blue-100 rounded-xl p-3 shadow-[0_4px_15px_rgba(37,99,235,0.06)] text-slate-800">
-      <div className="flex items-center justify-between text-[11px] mb-1.5 font-medium">
-        <span className="truncate text-slate-700 flex items-center gap-1.5 font-bold">
-          <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping shrink-0" />
-          {statusMessage || 'Processing legal query...'}
-        </span>
-        <span className="font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 shrink-0">{Math.round(progress)}%</span>
+    <div className="my-3 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/90 backdrop-blur border border-blue-200/60 rounded-2xl shadow-sm transition-all duration-300">
+      {/* Circular Processing Spinner */}
+      <div className="relative w-8 h-8 shrink-0 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-2 border-blue-200 border-t-blue-600 border-r-indigo-600 animate-spin" />
+        <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
       </div>
-      <div className="relative h-2 bg-slate-100 rounded-full w-full overflow-hidden border border-slate-200 shadow-inner">
-        <div
-          className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(37,99,235,0.4)]"
-          style={{ width: `${progress}%` }}
-        />
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full border-2 border-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.4)] pointer-events-none transition-all duration-300 ease-out z-10"
-          style={{ left: `calc(${progress}% - 7px)` }}
-        />
+
+      {/* Animated Phase Text & Status Badge */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-slate-800 truncate tracking-tight">
+            {currentText}
+          </span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0">
+            {isGenerating ? 'Generating' : `Phase ${stepNumber}/3`}
+          </span>
+        </div>
+
+        {/* Subtle Step Dots */}
+        <div className="flex items-center gap-1 mt-1.5">
+          {[0, 1, 2].map((idx) => (
+            <div
+              key={idx}
+              className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                idx <= phaseIndex
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-sm'
+                  : 'bg-slate-200/80'
+              }`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -975,7 +993,24 @@ const OnlyOfficeWorkspace = () => {
 
     let prompt = '';
     if (actionType === 'format') {
-      prompt = `[DIRECT EDIT MODE - NO SEARCH OR RETRIEVAL NEEDED]\nRe-format the following legal text into immaculate, clean Indian court filing structure and typography. Preserve exact case details, item numbers, petition numbers, and party names without adding commentary or smashing separate lines together. Format court titles as centered uppercase titles. Output ONLY the beautifully formatted legal document text without intro or outro commentary:\n\n"${textToProcess}"`;
+      prompt = `[DIRECT EDIT MODE - REPLACE ONLY - NO SEARCH OR RETRIEVAL NEEDED]
+You are a legal document formatter. Your task: REFORMAT the text below into proper Indian court filing structure.
+
+CRITICAL RULES:
+1. Output ONLY the reformatted text — NO commentary, NO intro, NO outro, NO "Here is..." phrases.
+2. DO NOT duplicate or repeat any content. Each piece of information appears EXACTLY ONCE.
+3. Use proper Markdown heading hierarchy:
+   - # (H1) for the main court/case title — it will be centered and bold
+   - ## (H2) for major section headings (TO THE DEFENDANT, WHEREAS, etc.)
+   - ### (H3) for sub-section headings
+4. If a line is ALREADY properly formatted as a heading, keep it as-is — do not reformat it.
+5. Preserve all case details, names, numbers, dates exactly as given.
+6. Court/jurisdiction lines → # heading, centered
+7. Party names, case numbers → paragraph or # heading
+8. Legal body text → justified paragraphs
+
+TEXT TO FORMAT:
+"${textToProcess}"`;
     } else if (actionType === 'enhance') {
       prompt = `[DIRECT EDIT MODE - NO SEARCH OR RETRIEVAL NEEDED]\nEnhance, refine, and polish the following legal text to improve clarity, precision, grammatical accuracy, and legal forcefulness while preserving all core facts and citations. Output ONLY the enhanced legal text without commentary:\n\n"${textToProcess}"`;
     } else if (actionType === 'rephrase') {
@@ -1002,6 +1037,23 @@ const OnlyOfficeWorkspace = () => {
     const autoApply = actionType === 'format';
 
     let finalContent = '';
+    // ── Guard: ensure we only insert ONCE even if both onAnswer + onDone fire ──
+    let applied = false;
+
+    const applyFormattedContent = (content) => {
+      if (applied) return;          // already applied — ignore second callback
+      applied = true;
+      if (!content.trim()) return;
+      selectionPollPausedUntilRef.current = Date.now() + 1500;
+      const formattedHtml = convertMarkdownToDocHtml(content.trim());
+      // REPLACE_SELECTION replaces the selected text; INSERT_HTML just appends at cursor
+      sendToPlugin({ type: 'ONLYOFFICE_REPLACE_SELECTION_HTML', html: formattedHtml });
+      setShowAutoFormatPopup(false);
+      setInlineAiResponse('');
+      setInlineCustomPrompt('');
+      setActiveAction('');
+      toast.success('Auto-formatted and applied to document.');
+    };
 
     try {
       await api.chatStream(prompt, documentKey || 'inline-ai-workspace', {
@@ -1014,28 +1066,14 @@ const OnlyOfficeWorkspace = () => {
           setInlineAiResponse(finalContent);
           setIsInlineAiLoading(false);
           if (autoApply && finalContent.trim()) {
-            selectionPollPausedUntilRef.current = Date.now() + 1500;
-            const formattedHtml = convertMarkdownToDocHtml(finalContent.trim());
-            sendToPlugin({ type: 'ONLYOFFICE_INSERT_HTML', html: formattedHtml });
-            setShowAutoFormatPopup(false);
-            setInlineAiResponse('');
-            setInlineCustomPrompt('');
-            setActiveAction('');
-            toast.success('Auto-formatted and applied to document.');
+            applyFormattedContent(finalContent);
           }
         },
         onDone: () => {
           setIsInlineAiLoading(false);
-          // Fallback: if onAnswer wasn't called but onDone fires
-          if (autoApply && finalContent.trim()) {
-            selectionPollPausedUntilRef.current = Date.now() + 1500;
-            const formattedHtml = convertMarkdownToDocHtml(finalContent.trim());
-            sendToPlugin({ type: 'ONLYOFFICE_INSERT_HTML', html: formattedHtml });
-            setShowAutoFormatPopup(false);
-            setInlineAiResponse('');
-            setInlineCustomPrompt('');
-            setActiveAction('');
-            toast.success('Auto-formatted and applied to document.');
+          // Fallback: if onAnswer wasn't called (some streams skip it) but onDone fires
+          if (autoApply && finalContent.trim() && !applied) {
+            applyFormattedContent(finalContent);
           }
         },
         onError: (err) => {
@@ -1890,8 +1928,8 @@ const OnlyOfficeWorkspace = () => {
                   </div>
                 ))}
 
-                {/* VLC / Spotify Style Continuous Progress Bar */}
-                <SmoothVlcProgressBar statusMessage={statusMessage} isLoading={isChatLoading} />
+                {/* Circular Processing Loader (3-Phase Analysis -> Generation) */}
+                <CircleProcessingLoader statusMessage={statusMessage} isLoading={isChatLoading} />
 
                 <div ref={chatEndRef} />
               </div>

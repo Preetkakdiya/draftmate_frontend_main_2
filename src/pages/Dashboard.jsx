@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { caseService } from '../services/library/caseService';
 import { hearingService } from '../services/library/hearingService';
+import { api } from '../services/api';
 import { API_CONFIG } from '../services/endpoints';
 
 /* ─────────────────────────────────────────────────────────────
@@ -102,33 +103,6 @@ const RegionalTypingGreeting = ({ name = "Devendra", typingSpeed = 300, deleting
 };
 
 /* ─────────────────────────────────────────────────────────────
-   Dashboard Data
-───────────────────────────────────────────────────────────── */
-const KPIS = [
-    { label: "Active Cases", value: "48", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Hearings", value: "12", icon: CalendarIcon, color: "text-rose-600", bg: "bg-rose-50", suffix: "Week" },
-    { label: "Drafts", value: "138", icon: FileText, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Researches Done", value: "80", icon: Zap, color: "text-cyan-600", bg: "bg-cyan-50" },
-    { label: "Doc Translated", value: "43", icon: Languages, color: "text-yellow-600", bg: "bg-yellow-50" },
-];
-
-const HEARINGS = [
-    { time: "10:00 AM", court: "Delhi High Court", case: "Sharma vs. Gupta Builders", judge: "Justice Sharma", status: "Upcoming" },
-    { time: "02:30 PM", court: "Tis Hazari Court", case: "State vs. R.K. Associates", judge: "Justice Verma", status: "Preparation Needed" },
-];
-
-const RECENT_WORK = [
-    { title: "Property Dispute Draft", type: "Legal Draft", time: "2 hours ago", progress: 85 },
-    { title: "Bail Application Analysis", type: "Matter Research", time: "5 hours ago", progress: 100 },
-    { title: "Employment Contract NDA", type: "Document", time: "Yesterday", progress: 40 },
-];
-
-const FOLDERS = [
-    { name: "Corporate Law", count: 12, color: "text-blue-500", fill: "fill-blue-500/20" },
-    { name: "Intellectual Property", count: "08", color: "text-emerald-500", fill: "fill-emerald-500/20" },
-    { name: "Litigation Docs", count: 34, color: "text-amber-500", fill: "fill-amber-500/20" },
-];
-
 export default function Dashboard() {
     const navigate = useNavigate();
 
@@ -144,6 +118,11 @@ export default function Dashboard() {
         image: ''
     });
 
+    const [userFolders, setUserFolders] = useState([]);
+    const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
+    const [newFolderNameInput, setNewFolderNameInput] = useState('');
+    const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+
     const [kpiStats, setKpiStats] = useState({
         casesCount: 0,
         hearingsCount: 0,
@@ -153,6 +132,28 @@ export default function Dashboard() {
     });
     const [upcomingHearings, setUpcomingHearings] = useState([]);
     const [allDrafts, setAllDrafts] = useState([]);
+    const [recentActivities, setRecentActivities] = useState([]);
+
+    const formatRelativeTime = (dateStr) => {
+        if (!dateStr) return 'Recently';
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return 'Recently';
+            const now = new Date();
+            const diffMs = now - d;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMins < 5) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return d.toLocaleDateString();
+        } catch {
+            return 'Recently';
+        }
+    };
 
     const [events, setEvents] = useState(() => {
         try {
@@ -191,6 +192,7 @@ export default function Dashboard() {
             }
 
             let draftsCount = 0;
+            let fetchedDrafts = [];
             try {
                 const token = localStorage.getItem('session_id');
                 const response = await fetch(`${API_CONFIG.AUTH.BASE_URL}/v2/draft/list`, {
@@ -198,27 +200,23 @@ export default function Dashboard() {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    const savedDrafts = data.drafts || [];
-                    draftsCount = savedDrafts.length;
-                    setAllDrafts(savedDrafts);
+                    fetchedDrafts = data.drafts || [];
+                    draftsCount = fetchedDrafts.length;
+                    setAllDrafts(fetchedDrafts);
                 } else {
-                    const localDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
-                    draftsCount = localDrafts.length;
-                    setAllDrafts(localDrafts);
-                }
-            } catch (e) {
-                const localDrafts = JSON.parse(localStorage.getItem('my_drafts') || '[]');
-                draftsCount = localDrafts.length;
                 setAllDrafts(localDrafts);
             }
 
-            let researchesCount = 0;
+            let researchSessions = [];
             try {
-                const resHist = JSON.parse(localStorage.getItem('research_history') || '[]');
-                const lexSessions = JSON.parse(localStorage.getItem('lexbot_sessions') || '[]');
-                const lastRes = localStorage.getItem('last_research_session') ? 1 : 0;
-                researchesCount = Math.max(resHist.length, lexSessions.length, lastRes);
-            } catch (e) {}
+                const sessionRes = await api.getSessions();
+                researchSessions = sessionRes.sessions || sessionRes || [];
+            } catch (e) {
+                try {
+                    researchSessions = JSON.parse(localStorage.getItem('research_history') || localStorage.getItem('lexbot_sessions') || '[]');
+                } catch (err) {}
+            }
+            const researchesCount = researchSessions.length;
 
             let translationsCount = 0;
             try {
@@ -271,6 +269,127 @@ export default function Dashboard() {
                 !['Closed', 'Archived'].includes(c.status)
             );
 
+            // ── AGGREGATE USER LAST 5 ACTIVITIES DYNAMICALLY ──
+            const activities = [];
+
+            // 1. Documents from caseService / Document Management
+            casesList.forEach(c => {
+                (c.documents || []).forEach(doc => {
+                    const rawDate = doc.created_at || doc.date || doc.uploaded_at || c.filingDate;
+                    const docType = doc.doc_type || (doc.name?.toLowerCase().includes('translate') ? 'Translated Document' : 'Case Document');
+                    activities.push({
+                        id: doc.id || `doc-${doc.name}`,
+                        title: doc.name || doc.filename || 'Untitled Document',
+                        type: docType,
+                        time: formatRelativeTime(rawDate),
+                        rawDate: rawDate ? new Date(rawDate).getTime() : 0,
+                        progress: 100,
+                        link: '/dashboard/documents'
+                    });
+                });
+            });
+
+            // 2. Saved Drafts
+            (fetchedDrafts || []).forEach(d => {
+                const rawDate = d.updated_at || d.created_at;
+                activities.push({
+                    id: d.id || d.document_key || `draft-${d.title}`,
+                    title: d.title || d.filename || 'Untitled Legal Draft',
+                    type: 'Legal Draft',
+                    time: formatRelativeTime(rawDate),
+                    rawDate: rawDate ? new Date(rawDate).getTime() : 0,
+                    progress: 100,
+                    link: '/dashboard/workspace'
+                });
+            });
+
+            // 3. Saved Translation Jobs
+            try {
+                const transJobs = JSON.parse(localStorage.getItem('draftmate_saved_translation_jobs') || '[]');
+                const transHist = JSON.parse(localStorage.getItem('translation_history') || '[]');
+                [...transJobs, ...transHist].forEach(t => {
+                    const rawDate = t.timestamp || t.created_at;
+                    activities.push({
+                        id: t.job_id || t.id || `trans-${t.fileName}`,
+                        title: t.fileName || t.name || t.sourceName || 'Translated Document',
+                        type: 'Translated Document',
+                        time: formatRelativeTime(rawDate),
+                        rawDate: rawDate ? new Date(rawDate).getTime() : 0,
+                        progress: 100,
+                        link: '/dashboard/translation'
+                    });
+                });
+            } catch (e) {}
+
+            // 4. Research Sessions (LexBot Chat History)
+            researchSessions.forEach(r => {
+                const rawDate = r.created_at || r.updated_at || r.timestamp;
+                activities.push({
+                    id: r.session_id || r.id || `res-${r.title}`,
+                    title: r.title || r.name || r.query || 'Legal Research Session',
+                    type: 'Legal Research',
+                    time: formatRelativeTime(rawDate),
+                    rawDate: rawDate ? new Date(rawDate).getTime() : Date.now(),
+                    progress: 100,
+                    link: `/dashboard/research?session=${r.session_id || r.id}`
+                });
+            });
+
+            // Sort newest first & deduplicate by title
+            const uniqueActivities = [];
+            const seenTitles = new Set();
+            activities
+                .sort((a, b) => b.rawDate - a.rawDate)
+                .forEach(item => {
+                    const key = String(item.title).toLowerCase().trim();
+                    if (!seenTitles.has(key)) {
+                        seenTitles.add(key);
+                        uniqueActivities.push(item);
+                    }
+                });
+
+            // Take top 5 recent activities
+            const last5Activities = uniqueActivities.slice(0, 5);
+
+            // Fallback default workspaces if brand new user has < 3 activities
+            if (last5Activities.length === 0) {
+                last5Activities.push(
+                    { id: '1', title: 'Property Dispute Draft', type: 'Legal Draft', time: '2h ago', progress: 100, link: '/dashboard/workspace' },
+                    { id: '2', title: 'Bail Application Research', type: 'Legal Research', time: '5h ago', progress: 100, link: '/dashboard/research' },
+                    { id: '3', title: 'Employment NDA Translation', type: 'Translated Document', time: 'Yesterday', progress: 100, link: '/dashboard/translation' }
+                );
+            }
+
+            // ── COMPUTE REAL USER FOLDERS ──
+            const computedFolders = [];
+            const colorPalette = [
+                { color: "text-blue-500", fill: "fill-blue-500/20" },
+                { color: "text-emerald-500", fill: "fill-emerald-500/20" },
+                { color: "text-amber-500", fill: "fill-amber-500/20" },
+                { color: "text-purple-500", fill: "fill-purple-500/20" },
+                { color: "text-cyan-500", fill: "fill-cyan-500/20" },
+                { color: "text-indigo-500", fill: "fill-indigo-500/20" }
+            ];
+
+            casesList.forEach((c, idx) => {
+                const docCount = (c.documents || []).length;
+                const title = c.caseTitle || c.title || 'General Folder';
+                const colorObj = colorPalette[idx % colorPalette.length];
+
+                computedFolders.push({
+                    id: c.id,
+                    name: title,
+                    count: docCount < 10 ? `0${docCount}` : `${docCount}`,
+                    color: colorObj.color,
+                    fill: colorObj.fill,
+                    caseObj: c
+                });
+            });
+
+            setUserFolders(computedFolders);
+
+            setRecentActivities(last5Activities);
+
             setUpcomingHearings(cleanHearingsList);
             setKpiStats({
                 casesCount: realActiveCases.length,
@@ -279,6 +398,32 @@ export default function Dashboard() {
                 researchesCount,
                 translationsCount
             });
+        };
+
+        const handleCreateFolderSubmit = async (e) => {
+            e.preventDefault();
+            if (!newFolderNameInput.trim()) return;
+            setIsCreatingFolder(true);
+            try {
+                await caseService.createCase({
+                    caseTitle: newFolderNameInput.trim(),
+                    caseNumber: `FLD-${Math.floor(1000 + Math.random() * 9000)}`,
+                    caseType: 'Folder',
+                    court: 'General Matters',
+                    client: 'Self',
+                    filingDate: new Date().toISOString().split('T')[0],
+                    status: 'Open',
+                    priority: 'Medium'
+                });
+                toast.success(`Folder "${newFolderNameInput.trim()}" created successfully!`);
+                setIsNewFolderModalOpen(false);
+                setNewFolderNameInput('');
+                window.dispatchEvent(new Event('cases_updated'));
+            } catch (err) {
+                toast.error('Failed to create folder.');
+            } finally {
+                setIsCreatingFolder(false);
+            }
         };
 
         const loadProfile = () => {
@@ -548,18 +693,44 @@ export default function Dashboard() {
                         <RightGlow />
                         <div className="relative z-10 flex items-center justify-between mb-6">
                             <h2 className="text-lg font-bold text-[#0F1C2E]">Folder Management</h2>
-                            <button className="text-[#2563EB] hover:text-[#1D4ED8] transition-colors bg-blue-50 p-2 rounded-xl hover:bg-blue-100 shadow-sm"><FolderPlus className="w-5 h-5" /></button>
+                            <button
+                                type="button"
+                                onClick={() => setIsNewFolderModalOpen(true)}
+                                className="text-[#2563EB] hover:text-[#1D4ED8] transition-colors bg-blue-50 p-2 rounded-xl hover:bg-blue-100 shadow-sm flex items-center gap-1.5 text-xs font-bold px-3 py-2"
+                                title="Create New Folder"
+                            >
+                                <FolderPlus className="w-4 h-4" /> New Folder
+                            </button>
                         </div>
                         <div className="relative z-10 flex gap-4 flex-1 overflow-x-auto draftmate-scroll pb-4 snap-x snap-mandatory">
-                            {FOLDERS.map((folder, idx) => (
-                                <div key={idx} className="bg-white/80 rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-sm">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <Folder className={`w-10 h-10 ${folder.color} group-hover:scale-110 transition-transform duration-300 ${folder.fill}`} />
-                                        <span className="bg-white px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-600 shadow-sm border border-slate-100">{folder.count}</span>
+                            {userFolders.length > 0 ? (
+                                userFolders.map((folder, idx) => (
+                                    <div
+                                        key={folder.id || idx}
+                                        onClick={() => navigate('/dashboard/documents')}
+                                        className="min-w-[200px] bg-white/80 rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-sm shrink-0"
+                                    >
+                                        <div className="flex justify-between items-start mb-4">
+                                            <Folder className={`w-10 h-10 ${folder.color} group-hover:scale-110 transition-transform duration-300 ${folder.fill}`} />
+                                            <span className="bg-white px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-600 shadow-sm border border-slate-100">{folder.count}</span>
+                                        </div>
+                                        <h3 className="font-bold text-[#0F1C2E] text-sm group-hover:text-blue-700 transition-colors line-clamp-1">{folder.name}</h3>
                                     </div>
-                                    <h3 className="font-bold text-[#0F1C2E] text-sm group-hover:text-blue-700 transition-colors">{folder.name}</h3>
+                                ))
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-6 bg-white/60 rounded-2xl border border-dashed border-blue-200 text-center w-full my-auto">
+                                    <Folder className="w-8 h-8 text-blue-400 mb-2 opacity-80" />
+                                    <p className="text-slate-700 font-bold text-xs mb-1">No folders created yet</p>
+                                    <p className="text-slate-500 text-[11px] mb-3">Organize your legal drafts & documents into folders.</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsNewFolderModalOpen(true)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm"
+                                    >
+                                        <FolderPlus className="w-3.5 h-3.5" /> Create First Folder
+                                    </button>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </section>
                 </div>
@@ -599,34 +770,59 @@ export default function Dashboard() {
 
             </div>
 
-            {/* ── ROW 5: RECENT MATTER WORKSPACES ── */}
+            {/* ── ROW 5: RECENT MATTER WORKSPACES (LAST 5 ACTIVITIES) ── */}
             <section
                 className="relative overflow-hidden rounded-[24px] border border-blue-100 shadow-[0_8px_30px_rgb(37,99,235,0.08)] p-6 z-0"
                 style={GLOW_PANEL_STYLE}
             >
                 <RightGlow />
                 <div className="relative z-10 flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold text-[#0F1C2E]">Recent Matter Workspaces</h2>
-                    <button className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">View All</button>
+                    <div>
+                        <h2 className="text-lg font-bold text-[#0F1C2E]">Recent Matter Workspaces</h2>
+                        <p className="text-xs text-slate-500 font-medium">Your last 5 active documents & research sessions</p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/dashboard/documents')}
+                        className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1"
+                    >
+                        View All <ChevronRight className="w-4 h-4" />
+                    </button>
                 </div>
                 <div className="relative z-10 flex gap-4 overflow-x-auto draftmate-scroll pb-4 snap-x snap-mandatory">
-                    {RECENT_WORK.map((work, i) => (
-                        <motion.div key={i} whileHover={{ y: -4 }} className="min-w-[300px] md:min-w-[340px] shrink-0 snap-start bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between">
+                    {recentActivities.map((work, i) => (
+                        <motion.div
+                            key={work.id || i}
+                            whileHover={{ y: -4 }}
+                            onClick={() => navigate(work.link || '/dashboard/documents')}
+                            className="min-w-[300px] md:min-w-[340px] shrink-0 snap-start bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                        >
                             <div>
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="w-10 h-10 rounded-xl bg-[#F8FAFF] border border-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-[#2563EB] group-hover:text-white transition-colors shadow-sm">
-                                        {work.type === 'Legal Draft' ? <FileText className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+                                        {work.type?.includes('Draft') ? (
+                                            <FileText className="w-5 h-5" />
+                                        ) : work.type?.includes('Translat') ? (
+                                            <Languages className="w-5 h-5" />
+                                        ) : work.type?.includes('Research') ? (
+                                            <Search className="w-5 h-5" />
+                                        ) : (
+                                            <Folder className="w-5 h-5" />
+                                        )}
                                     </div>
-                                    <span className="text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">{work.time}</span>
+                                    <span className="text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md">
+                                        {work.time}
+                                    </span>
                                 </div>
-                                <h3 className="font-bold text-[#0F1C2E] text-[15px] mb-1 line-clamp-1">{work.title}</h3>
+                                <h3 className="font-bold text-[#0F1C2E] text-[15px] mb-1 line-clamp-1" title={work.title}>
+                                    {work.title}
+                                </h3>
                                 <p className="text-xs font-medium text-slate-500 mb-6">{work.type}</p>
                             </div>
                             <div>
                                 <div className="w-full bg-slate-100 rounded-full h-1.5 mb-2 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-[#2563EB] to-cyan-500 h-1.5 rounded-full" style={{ width: `${work.progress}%` }} />
+                                    <div className="bg-gradient-to-r from-[#2563EB] to-cyan-500 h-1.5 rounded-full" style={{ width: `${work.progress || 100}%` }} />
                                 </div>
-                                <div className="text-[10px] font-bold text-slate-600 text-right">{work.progress}% Complete</div>
+                                <div className="text-[10px] font-bold text-slate-600 text-right">{work.progress || 100}% Complete</div>
                             </div>
                         </motion.div>
                     ))}
@@ -962,6 +1158,70 @@ function CreateEventModalTrigger({ onAdd }) {
                                     className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-colors"
                                 >
                                     Create Event
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>,
+                document.body
+            )}
+            {/* Create New Folder Portal Modal */}
+            {isNewFolderModalOpen && createPortal(
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                                    <FolderPlus className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900">Create New Folder</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Add a folder to organize your case documents</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsNewFolderModalOpen(false)}
+                                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateFolderSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                    Folder Name
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={newFolderNameInput}
+                                    onChange={(e) => setNewFolderNameInput(e.target.value)}
+                                    placeholder="e.g. Litigation Docs, Property Contracts..."
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium text-slate-900 transition-all"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsNewFolderModalOpen(false)}
+                                    className="flex-1 py-3 px-4 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 text-sm transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingFolder || !newFolderNameInput.trim()}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20"
+                                >
+                                    {isCreatingFolder ? 'Creating...' : 'Create Folder'}
                                 </button>
                             </div>
                         </form>

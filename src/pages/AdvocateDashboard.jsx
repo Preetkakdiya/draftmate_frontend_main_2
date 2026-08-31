@@ -213,7 +213,17 @@ export default function AdvocateDashboard() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setProfile(prev => ({ ...prev, [name]: value }));
+        setProfile(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === 'cases_won' || name === 'total_clients') {
+                const won = parseFloat(name === 'cases_won' ? value : next.cases_won);
+                const total = parseFloat(name === 'total_clients' ? value : next.total_clients);
+                if (!isNaN(won) && !isNaN(total) && total > 0) {
+                    next.success_rate = Math.min(100, Math.round((won / total) * 100));
+                }
+            }
+            return next;
+        });
     };
 
     const handleSocialLinkChange = (e) => {
@@ -881,38 +891,84 @@ export default function AdvocateDashboard() {
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.4 }}
                         >
-                            <h3 className="text-lg font-bold text-slate-900 mb-4 px-2">Professional Metrics</h3>
+                            <div className="flex items-center justify-between mb-4 px-2">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">Professional Metrics</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Enter your actual court performance stats & consultation history</p>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                {/* Cases Won */}
                                 <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <Gavel className="w-5 h-5" />
                                     </div>
-                                    <Input type="number" name="cases_won" min="0" value={profile?.cases_won || 0} disabled className="h-8 text-2xl font-bold text-slate-900 border-none shadow-none bg-transparent px-0 opacity-100 mb-1" />
-                                    <Label className="text-xs font-medium text-slate-500">Cases Won</Label>
+                                    <Input 
+                                        type="number" 
+                                        name="cases_won" 
+                                        min="0" 
+                                        placeholder="0"
+                                        value={profile?.cases_won ?? ''} 
+                                        onChange={handleChange} 
+                                        className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1" 
+                                    />
+                                    <Label className="text-xs font-semibold text-slate-600">Cases Won</Label>
                                 </div>
+
+                                {/* Total Cases / Clients */}
                                 <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <Users className="w-5 h-5" />
                                     </div>
-                                    <Input type="number" name="total_clients" min="0" value={profile?.total_clients || 0} disabled className="h-8 text-2xl font-bold text-slate-900 border-none shadow-none bg-transparent px-0 opacity-100 mb-1" />
-                                    <Label className="text-xs font-medium text-slate-500">Total Clients</Label>
+                                    <Input 
+                                        type="number" 
+                                        name="total_clients" 
+                                        min="0" 
+                                        placeholder="0"
+                                        value={profile?.total_clients ?? ''} 
+                                        onChange={handleChange} 
+                                        className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1" 
+                                    />
+                                    <Label className="text-xs font-semibold text-slate-600">Total Cases / Clients</Label>
                                 </div>
+
+                                {/* Success Rate */}
                                 <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <TrendingUp className="w-5 h-5" />
                                     </div>
-                                    <div className="flex items-end gap-1">
-                                        <Input type="number" name="success_rate" min="0" max="100" step="0.1" value={profile?.success_rate || 0} disabled className="h-8 text-2xl font-bold text-slate-900 border-none shadow-none bg-transparent px-0 opacity-100 mb-1 w-20" />
-                                        <span className="text-lg font-bold text-slate-900 mb-1.5">%</span>
+                                    <div className="flex items-center gap-1">
+                                        <Input 
+                                            type="number" 
+                                            name="success_rate" 
+                                            min="0" 
+                                            max="100" 
+                                            step="0.1" 
+                                            placeholder="0"
+                                            value={profile?.success_rate ?? ''} 
+                                            onChange={handleChange} 
+                                            className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1 flex-1 min-w-0" 
+                                        />
+                                        <span className="text-lg font-bold text-slate-900 mb-1">%</span>
                                     </div>
-                                    <Label className="text-xs font-medium text-slate-500">Success Rate</Label>
+                                    <Label className="text-xs font-semibold text-slate-600">Success Rate (%)</Label>
                                 </div>
+
+                                {/* Total Consultations */}
                                 <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <CalendarDays className="w-5 h-5" />
                                     </div>
-                                    <Input type="number" name="total_consultations_fake" value={analytics?.total_consultations || 0} disabled className="h-8 text-2xl font-bold text-slate-900 border-none shadow-none bg-transparent px-0 opacity-100 mb-1" />
-                                    <Label className="text-xs font-medium text-slate-500">Consultations (Auto)</Label>
+                                    <Input 
+                                        type="number" 
+                                        name="total_consultations" 
+                                        min="0" 
+                                        placeholder="0"
+                                        value={profile?.total_consultations ?? ''} 
+                                        onChange={handleChange} 
+                                        className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1" 
+                                    />
+                                    <Label className="text-xs font-semibold text-slate-600">Total Consultations</Label>
                                 </div>
                             </div>
                         </motion.div>
@@ -1389,241 +1445,184 @@ export default function AdvocateDashboard() {
 
 
 
-                {/* ── CONSULTATIONS TAB ── */}
-                {activeTab === 'consultations' && (
-                    <div className="space-y-6">
-                        <h2 className="text-2xl font-bold text-slate-900">Consultation Requests</h2>
-                        {consultations.length === 0 ? (
-                            <div className="text-center p-12 bg-white rounded-2xl border border-slate-200">
-                                <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                <p className="text-slate-500">No consultation requests yet.</p>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {consultations.map(c => (
-                                    <div key={c.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6 justify-between">
-                                        <div className="space-y-2 flex-1">
-                                            <div className="flex items-center gap-3 flex-wrap">
-                                                <h3 className="font-bold text-lg">{c.client_name}</h3>
-                                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                                    c.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                                                    c.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-700' :
-                                                    c.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>{c.status}</span>
-                                            </div>
-                                            <div className="text-sm text-slate-600 grid grid-cols-2 gap-x-8 gap-y-1">
-                                                <p><strong>Email:</strong> {c.client_email}</p>
-                                                <p><strong>Phone:</strong> {c.client_phone || 'Not provided'}</p>
-                                                <p><strong>Type:</strong> {c.preferred_type || 'Any'}</p>
-                                                <p><strong>Date:</strong> {c.preferred_date ? new Date(c.preferred_date).toLocaleString() : 'Not specified'}</p>
-                                            </div>
-                                            <div className="mt-3 bg-slate-50 p-3 rounded-lg text-sm border border-slate-100">
-                                                <span className="font-semibold block mb-1">Case Summary:</span>
-                                                {c.case_summary}
-                                            </div>
-                                            <p className="text-xs text-slate-400">
-                                                Received: {new Date(c.created_at).toLocaleString()}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-row md:flex-col gap-2 min-w-[130px]">
-                                            {c.status === 'PENDING' && (<>
-                                                <Button onClick={() => handleUpdateConsultationStatus(c.id, 'ACCEPTED')}
-                                                    disabled={updatingStatus === c.id}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white w-full">
-                                                    {updatingStatus === c.id ? 'Updating...' : (
-                                                        <><CheckCircle2 className="w-4 h-4 mr-2" /> Accept</>
-                                                    )}
-                                                </Button>
-                                                <Button onClick={() => handleUpdateConsultationStatus(c.id, 'REJECTED')}
-                                                    disabled={updatingStatus === c.id}
-                                                    variant="outline" className="w-full text-red-600 hover:text-red-700 border-red-200">
-                                                    {updatingStatus === c.id ? 'Updating...' : (
-                                                        <><XCircle className="w-4 h-4 mr-2" /> Reject</>
-                                                    )}
-                                                </Button>
-                                            </>)}
-                                            {c.status === 'ACCEPTED' && (
-                                                <Button onClick={() => handleUpdateConsultationStatus(c.id, 'COMPLETED')}
-                                                    disabled={updatingStatus === c.id}
-                                                    className="bg-green-600 hover:bg-green-700 text-white w-full">
-                                                    {updatingStatus === c.id ? 'Updating...' : 'Mark Complete'}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* ── COMING SOON TABS ── */}
+                {(activeTab === 'consultations' || activeTab === 'messages' || activeTab === 'analytics' || activeTab === 'verification') && (() => {
+                    const tabMeta = {
+                        consultations: {
+                            icon: Calendar,
+                            gradient: 'from-blue-500 to-indigo-600',
+                            lightBg: 'from-blue-50 to-indigo-50',
+                            ring: 'ring-blue-200',
+                            badge: 'bg-blue-100 text-blue-700',
+                            title: 'Consultations',
+                            subtitle: 'Manage your client consultation requests',
+                            description: 'Accept, reject, and track consultation requests from potential clients all in one place.',
+                            features: [
+                                'Real-time consultation request notifications',
+                                'Accept / Reject / Complete workflow',
+                                'Calendar integration with scheduling',
+                                'Video call & in-person booking management',
+                                'Auto-confirmation emails to clients',
+                            ],
+                            eta: 'Q4 2025',
+                        },
+                        messages: {
+                            icon: MessageCircle,
+                            gradient: 'from-violet-500 to-purple-600',
+                            lightBg: 'from-violet-50 to-purple-50',
+                            ring: 'ring-violet-200',
+                            badge: 'bg-violet-100 text-violet-700',
+                            title: 'Messages',
+                            subtitle: 'Inbox for client enquiries & contact messages',
+                            description: 'Read and respond to messages sent by potential clients through your public profile.',
+                            features: [
+                                'Unified inbox for all client messages',
+                                'One-click reply via email or platform',
+                                'Message status tracking (read / unread)',
+                                'Quick-reply templates',
+                                'Spam & automated-message filtering',
+                            ],
+                            eta: 'Q4 2025',
+                        },
+                        analytics: {
+                            icon: BarChart2,
+                            gradient: 'from-emerald-500 to-teal-600',
+                            lightBg: 'from-emerald-50 to-teal-50',
+                            ring: 'ring-emerald-200',
+                            badge: 'bg-emerald-100 text-emerald-700',
+                            title: 'Analytics',
+                            subtitle: 'Insights about your profile performance',
+                            description: 'Track profile views, consultation conversions, search ranking, and audience insights.',
+                            features: [
+                                'Profile views & search impressions',
+                                'Consultation conversion rate tracking',
+                                'Traffic sources & referral breakdown',
+                                '7-day & 30-day trend charts',
+                                'Keyword ranking in Lawyer Search',
+                            ],
+                            eta: 'Q1 2026',
+                        },
+                        verification: {
+                            icon: ShieldCheck,
+                            gradient: 'from-amber-500 to-orange-500',
+                            lightBg: 'from-amber-50 to-orange-50',
+                            ring: 'ring-amber-200',
+                            badge: 'bg-amber-100 text-amber-700',
+                            title: 'Verification',
+                            subtitle: 'Get the Verified Advocate badge',
+                            description: 'Submit your Bar Council ID and credentials for review. Verified advocates get 3× more visibility.',
+                            features: [
+                                'Bar Council ID document upload',
+                                'Secure admin review process',
+                                'Verified badge on your public profile',
+                                '3× priority placement in search results',
+                                'Re-submission on rejection',
+                            ],
+                            eta: 'Q4 2025',
+                        },
+                    };
+                    const meta = tabMeta[activeTab];
+                    const Icon = meta.icon;
+                    return (
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 24 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden rounded-3xl"
+                        >
+                            {/* Background gradient */}
+                            <div className={`absolute inset-0 bg-gradient-to-br ${meta.lightBg} rounded-3xl`} />
+                            {/* Floating blobs */}
+                            <div className={`absolute -top-20 -right-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.12] blur-3xl pointer-events-none`} />
+                            <div className={`absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.08] blur-3xl pointer-events-none`} />
 
-                {/* ── MESSAGES TAB ── */}
-                {activeTab === 'messages' && (
-                    <div className="space-y-6">
-                        <h2 className="text-2xl font-bold text-slate-900">Messages</h2>
-                        {messages.length === 0 ? (
-                            <div className="text-center p-12 bg-white rounded-2xl border border-slate-200">
-                                <MessageCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                <p className="text-slate-500">No messages received yet.</p>
+                            {/* Content */}
+                            <div className="relative z-10 flex flex-col items-center text-center px-6 py-16 max-w-2xl mx-auto w-full">
+                                {/* Icon */}
+                                <motion.div
+                                    initial={{ scale: 0.7, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
+                                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-xl mb-6`}
+                                >
+                                    <Icon className="w-10 h-10 text-white drop-shadow" />
+                                </motion.div>
+
+                                {/* Badge */}
+                                <motion.span
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 ${meta.badge}`}
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                    Coming Soon · {meta.eta}
+                                </motion.span>
+
+                                {/* Title */}
+                                <motion.h2
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.25 }}
+                                    className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2"
+                                >
+                                    {meta.title}
+                                </motion.h2>
+                                <motion.p
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="text-slate-500 font-medium mb-2"
+                                >
+                                    {meta.subtitle}
+                                </motion.p>
+                                <motion.p
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.35 }}
+                                    className="text-slate-400 text-sm max-w-md mb-8"
+                                >
+                                    {meta.description}
+                                </motion.p>
+
+                                {/* Feature list */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 12 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="w-full max-w-md bg-white/70 backdrop-blur rounded-2xl border border-white shadow-sm p-5 mb-8 text-left"
+                                >
+                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">What's coming</p>
+                                    <ul className="space-y-2.5">
+                                        {meta.features.map((f, i) => (
+                                            <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
+                                                <span className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br ${meta.gradient} flex items-center justify-center`}>
+                                                    <Check className="w-3 h-3 text-white" />
+                                                </span>
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </motion.div>
+
+                                {/* CTA */}
+                                <motion.button
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 0.5 }}
+                                    type="button"
+                                    onClick={() => setActiveTab('profile')}
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 shadow text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:shadow-md transition-all"
+                                >
+                                    <User className="w-4 h-4" />
+                                    Back to Profile
+                                </motion.button>
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {messages.map(m => (
-                                    <div key={m.id}
-                                        className={`bg-white rounded-2xl p-6 border shadow-sm transition-all ${m.status === 'UNREAD' ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}
-                                        onClick={() => m.status === 'UNREAD' && handleMarkMessageRead(m.id)}>
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="font-bold text-slate-900">{m.client_name}</h4>
-                                                    {m.status === 'UNREAD' && (
-                                                        <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-full">NEW</span>
-                                                    )}
-                                                </div>
-                                                <a href={`mailto:${m.client_email}`}
-                                                    className="text-sm text-blue-600 hover:underline">{m.client_email}</a>
-                                            </div>
-                                            <span className="text-xs text-slate-400">
-                                                {new Date(m.created_at).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                        <p className="text-slate-700 text-sm whitespace-pre-wrap">{m.message}</p>
-                                        <div className="mt-4 pt-4 border-t border-slate-100 flex gap-3">
-                                            <Button variant="outline" size="sm"
-                                                onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${m.client_email}`; }}>
-                                                Reply via Email
-                                            </Button>
-                                            {m.status === 'UNREAD' && (
-                                                <Button variant="ghost" size="sm"
-                                                    onClick={(e) => { e.stopPropagation(); handleMarkMessageRead(m.id); }}
-                                                    className="text-slate-500">
-                                                    Mark as Read
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                        </motion.div>
+                    );
+                })()}
 
-                {/* ── ANALYTICS TAB ── */}
-                {activeTab === 'analytics' && (
-                    <div className="space-y-6">
-                        <h2 className="text-2xl font-bold text-slate-900">Analytics</h2>
-                        {!analytics ? (
-                            <div className="text-center p-12 bg-white rounded-2xl border border-slate-200">
-                                <BarChart2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                <p className="text-slate-500">Analytics data is loading or unavailable.</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {[
-                                        { label: 'Profile Views', value: analytics.total_views ?? 0, icon: Eye, color: 'text-blue-600 bg-blue-50' },
-                                        { label: 'Profile Shares', value: analytics.total_shares ?? 0, icon: Share2, color: 'text-purple-600 bg-purple-50' },
-                                        { label: 'Consultations', value: analytics.total_consultations ?? 0, icon: Calendar, color: 'text-green-600 bg-green-50' },
-                                        { label: 'Messages', value: analytics.total_messages ?? 0, icon: MessageCircle, color: 'text-amber-600 bg-amber-50' },
-                                        { label: 'Conversion Rate', value: `${analytics.conversion_rate ?? 0}%`, icon: TrendingUp, color: 'text-rose-600 bg-rose-50' },
-                                    ].map(stat => (
-                                        <div key={stat.label} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                                            <div className={`w-10 h-10 rounded-xl ${stat.color} flex items-center justify-center mb-3`}>
-                                                <stat.icon className="w-5 h-5" />
-                                            </div>
-                                            <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-                                            <p className="text-sm text-slate-500 font-medium mt-1">{stat.label}</p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {analytics.views_trend?.length > 0 && (
-                                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                                        <h3 className="text-lg font-bold mb-4">Views — Last 7 Days</h3>
-                                        <div className="flex items-end gap-2 h-24">
-                                            {analytics.views_trend.map((d, i) => {
-                                                const max = Math.max(...analytics.views_trend.map(x => x.views), 1);
-                                                return (
-                                                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                                        <span className="text-xs text-slate-500">{d.views}</span>
-                                                        <div className="w-full bg-blue-600 rounded-t"
-                                                            style={{ height: `${(d.views / max) * 72}px`, minHeight: 4 }} />
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {new Date(d.day).toLocaleDateString('en', { weekday: 'short' })}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
-
-                {/* ── VERIFICATION TAB ── */}
-                {activeTab === 'verification' && (
-                    <div className="space-y-6">
-                        <h2 className="text-2xl font-bold text-slate-900">Identity Verification</h2>
-                        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className={`p-4 rounded-full ${profile?.is_verified ? 'bg-green-100 text-green-600' : profile?.verification_status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
-                                    {profile?.is_verified ? <ShieldCheck className="w-8 h-8" /> : profile?.verification_status === 'REJECTED' ? <XCircle className="w-8 h-8" /> : <Clock className="w-8 h-8" />}
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold">
-                                        {profile?.is_verified ? 'Verified Advocate' : profile?.verification_status === 'REJECTED' ? 'Verification Rejected' : 'Not Yet Verified'}
-                                    </h3>
-                                    <p className="text-slate-500 text-sm">
-                                        {profile?.is_verified
-                                            ? 'Your profile has the verified badge. You receive priority placement in search results.'
-                                            : profile?.verification_status === 'REJECTED'
-                                            ? 'Your verification was rejected by an admin. Please upload a valid document to resubmit.'
-                                            : 'Verified advocates receive 3× more consultation requests. Submit your Bar Council ID to get the verified badge.'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {profile?.verification_status === 'PENDING' && (
-                                <div className="border-t border-slate-100 pt-6 mt-6">
-                                    <div className="flex flex-col items-center justify-center p-8 bg-blue-50 border border-blue-100 rounded-2xl text-center">
-                                        <Clock className="w-12 h-12 text-blue-400 mb-4" />
-                                        <h4 className="text-lg font-bold text-blue-900 mb-2">Verification in Progress</h4>
-                                        <p className="text-blue-700 text-sm max-w-md mx-auto">
-                                            We have received your documents and are currently reviewing them. This process usually takes up to 2 business days.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {!profile?.is_verified && profile?.verification_status !== 'PENDING' && (
-                                <form onSubmit={handleSubmitVerification} className="border-t border-slate-100 pt-6 mt-6">
-                                    <h4 className="font-bold mb-4">
-                                        {profile?.verification_status === 'REJECTED' ? 'Resubmit Verification Documents' : 'Submit Verification Documents'}
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <Label>Upload Bar Council ID (PDF / JPG / PNG)</Label>
-                                            <Input type="file" accept="application/pdf,image/png,image/jpeg"
-                                                className="mt-1"
-                                                onChange={(e) => setVerificationDoc(e.target.files?.[0] || null)}
-                                                required />
-                                            <p className="text-xs text-slate-500 mt-1.5">
-                                                Max file size: 10 MB. Files are securely stored and only used for identity verification.
-                                            </p>
-                                        </div>
-                                        <Button type="submit" disabled={submittingVerification || !verificationDoc}
-                                            className="bg-slate-900 text-white">
-                                            {submittingVerification ? 'Submitting...' : 'Submit for Review'}
-                                        </Button>
-                                    </div>
-                                </form>
-                            )}
-                        </div>
-                    </div>
-                )}
 
             </div>
         </div>
@@ -1636,3 +1635,4 @@ export default function AdvocateDashboard() {
         </div>
     );
 }
+

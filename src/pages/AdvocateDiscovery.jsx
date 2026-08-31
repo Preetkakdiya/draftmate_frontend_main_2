@@ -80,7 +80,7 @@ const SPECIALIZATIONS = [
 // function DummyAdvocateCard({ advocate }) {
 //   return (
 //     <div className="bg-white rounded-[28px] border border-slate-200/60 shadow-[0_4px_24px_rgba(15,28,46,0.03)] hover:shadow-[0_24px_48px_rgba(37,99,235,0.08)] hover:-translate-y-2 hover:border-blue-200 transition-all duration-500 p-6 flex flex-col h-full group text-left relative overflow-hidden cursor-pointer">
-       
+
 //        {/* Subtle Top Gradient Glow on Hover */}
 //        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -240,7 +240,7 @@ export default function AdvocateDiscovery() {
         };
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   let searchResults = [...apiSearchResults].filter(a => a.is_public === true || a.is_public === 'true');
   if (localAdvocate) {
@@ -251,7 +251,7 @@ export default function AdvocateDiscovery() {
       searchResults = searchResults.filter(a => a.id !== localAdvocate.id && a.name !== localAdvocate.name);
     }
   }
-  const total = searchResults.length;
+  const total = searchResults.
 
 
   const isSearchActive = debouncedSearch || location || selectedPracticeArea || verifiedOnly || sortBy !== 'relevant';
