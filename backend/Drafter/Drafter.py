@@ -2563,8 +2563,36 @@ async def get_draft_config(draft_id: str, request: Request, authorization: Optio
 
         file_mtime = int(os.path.getmtime(target_file)) if os.path.isfile(target_file) else int(time.time())
 
-        document_key = hashlib.sha256(f"{real_draft_id}".encode("utf-8")).hexdigest()
-          
+        # ── STABLE document_key: NEVER regenerate on every open ───────────────
+        # Rule: use whatever key is stored in the DB. That key is set once at
+        # draft creation time and ONLY updated when the file is force-saved by
+        # OnlyOffice (in the callback). If DB has no key yet (edge case),
+        # compute a deterministic key from draft_id + file_mtime so it changes
+        # only when the file is modified on disk — not every time the page loads.
+        if not document_key:
+            document_key = hashlib.sha256(
+                f"{real_draft_id}:{file_mtime}".encode("utf-8")
+            ).hexdigest()
+            # Persist the new key so subsequent opens stay consistent
+            try:
+                async with httpx.AsyncClient() as _c:
+                    await _c.post(
+                        f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/register",
+                        json={
+                            "draft_id": real_draft_id,
+                            "name": file_name,
+                            "filename": file_name,
+                            "document_key": document_key,
+                            "created_by": user_id,
+                            "variables_detected": variables_detected,
+                            "status": status_val,
+                        },
+                        timeout=5.0,
+                    )
+            except Exception:
+                pass  # Non-fatal — key still used for this session
+        # ─────────────────────────────────────────────────────────────────────
+
         # 3. Build OnlyOffice config
         internal_url = get_internal_backend_url()
         params: Dict[str, Any] = {
@@ -2720,6 +2748,33 @@ async def onlyoffice_callback(event: Dict[str, Any], draft_id: Optional[str] = N
                             if chunk:
                                 f.write(chunk)
                                 
+            # ── After save: update document_key to reflect new file state ────
+            # This ensures the next open sees the SAME key and OnlyOffice
+            # does NOT show "Version changed" → reload → freeze.
+            if draft_id:
+                try:
+                    new_mtime = int(os.path.getmtime(target_path)) if os.path.isfile(target_path) else int(time.time())
+                    new_doc_key = hashlib.sha256(
+                        f"{draft_id}:{new_mtime}".encode("utf-8")
+                    ).hexdigest()
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            f"{AUTH_SERVICE_URL.rstrip('/')}/internal/draft/register",
+                            json={
+                                "draft_id": draft_id,
+                                "name": file_name,
+                                "filename": file_name,
+                                "document_key": new_doc_key,
+                                "created_by": "",       # not needed for update
+                                "variables_detected": [],
+                                "status": "In progress",
+                            },
+                            timeout=5.0,
+                        )
+                    logger.info(f"[callback] Updated document_key for draft {draft_id} → {new_doc_key[:12]}…")
+                except Exception as key_err:
+                    logger.warning(f"[callback] Failed to update document_key after save: {key_err}")
+
             # Touch draft updated_at in DB
             if draft_id:
                 try:
