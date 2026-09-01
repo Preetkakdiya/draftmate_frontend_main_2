@@ -1,8 +1,8 @@
 /**
  * HTML Sanitizer Utility
  *
- * Functions to strip HTML tags and decode common HTML entities,
- * returning clean plain text while preserving spacing and punctuation.
+ * Functions to strip HTML tags, embedded JS/CSS code, and site boilerplate
+ * from legal text (e.g. Indian Kanoon scraped pages), returning clean plain text.
  */
 
 /**
@@ -30,55 +30,80 @@ export const decodeHtmlEntities = (text) => {
 };
 
 /**
- * Shared cleanup: trim whitespace, remove leftover boilerplate lines, decode entities
+ * Purges JS statements, inline scripts, CSS rules, and site boilerplate
  */
-function cleanupRawText(raw) {
-  const boilerplate = [
+function purgeJsAndCssNoise(text) {
+  if (!text) return text;
+  let clean = text;
+
+  // 1. Remove JS patterns: window.dataLayer, gtag, IIFE, $(document).ready, function declarations
+  clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, ' ');
+  clean = clean.replace(/window\.\w+\s*=\s*[\s\S]*?;/gi, ' ');
+  clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, ' ');
+  clean = clean.replace(/\(function\s*\([^)]*\)\s*\{[\s\S]*?\}\s*\)\s*\([^)]*\)\s*;?/gi, ' ');
+  clean = clean.replace(/\$\s*\(document\)[\s\S]*?\)\s*;?/gi, ' ');
+  clean = clean.replace(/\$\s*\([^)]*\)[\s\S]*?;\s*/gi, ' ');
+  clean = clean.replace(/function\s+\w*\s*\([^)]*\)\s*\{[\s\S]*?\}/gi, ' ');
+
+  // 2. Remove CSS rule blocks: :root { ... }, @keyframes { ... }, @media { ... }, .class { ... }
+  clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, ' ');
+  clean = clean.replace(/@keyframes\s+[\w-]+\s*\{[\s\S]*?\}/gi, ' ');
+  clean = clean.replace(/@media\s+[^{]+\{[\s\S]*?\}\s*\}/gi, ' ');
+  clean = clean.replace(/([.#][\w-]+|\w+)\s*\{[^}]*\}/gi, ' ');
+  clean = clean.replace(/--[\w-]+\s*:[^;\}]+;?/gi, ' ');
+
+  // 3. Remove Indian Kanoon navigation boilerplate and UI strings
+  const ikBoilerplate = [
     /Skip to main content/gi,
     /Indian Kanoon\s*[-–]\s*Search engine for Indian Law/gi,
     /Search laws,?\s*court judgments/gi,
     /Unlock Advanced Research/gi,
-    /Free features\s+Premium\s+Prism AI/gi,
+    /Free features\s+Premium\s+Premium features\s+Prism AI\s+IKademy\s+Pricing\s+Login/gi,
+    /Tools for analyzing structure and cite text of judgments/gi,
+    /AI Integrated with over \d+ crore judgments[^\n]*/gi,
+    /\[Cites \d+\s*,\s*Cited by \d+\s*\]/gi,
+    /Case Recast AI/gi,
+    /Related AI tags, queries and research notes/gi,
+    /About\s+Disclaimer\s+Privacy Policy\s+Terms\s+Case Removal\s+Blog\s+Share URL\s+Mobile View/gi,
+    /Warning on translation/gi,
+    /The option to translate the legal documents is to overcome language barriers[^\n]*/gi,
+    /Signature Not Verified[^\n]*/gi,
+    /Digitally signed by[^\n]*/gi,
+    /Get in PDF/gi,
+    /Print it!/gi,
+    /Download Court Copy/gi,
     /Mobile Navigation/gi,
     /Know your Kanoon/gi,
     /Doc Gen Hub/gi,
     /Counter Argument/gi,
     /Case Predict AI/gi,
     /Talk with IK Doc/gi,
-    /Get in PDF/gi,
-    /Print it!/gi,
-    /Download Court Copy/gi,
-    /window\.__CF\$[^;]+;/gi,
-    /dataLayer\.push[^;]+;/gi,
-    /Legal Document View/gi,
-    /Upgrade to Premium/gi,
-    /Document Options/gi,
-    /AI Integrated with over/gi,
   ];
-  let text = raw;
-  for (const pat of boilerplate) text = text.replace(pat, ' ');
-  // Collapse multiple spaces/newlines but preserve paragraph breaks
-  text = text.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  return decodeHtmlEntities(text);
+
+  for (const pat of ikBoilerplate) {
+    clean = clean.replace(pat, ' ');
+  }
+
+  // Collapse whitespace
+  clean = clean.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  return decodeHtmlEntities(clean);
 }
 
 /**
  * Strips all HTML tags, embedded CSS/JS code blocks, and site header boilerplate
- * Uses DOMParser when available (browser) for reliable extraction,
- * falls back to regex for SSR environments.
  * @param {string} text - Text containing HTML or scraped markup
  * @returns {string} Clean plain text without CSS/JS code or navigation noise
  */
 export const stripHtmlTags = (text) => {
   if (!text) return text;
 
-  // ── Strategy 1: Use DOMParser (browser-native, most reliable) ───────────
+  // ── Strategy 1: Use DOMParser (browser) to parse HTML structure ────────
   if (typeof window !== 'undefined' && window.DOMParser) {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(text, 'text/html');
 
-      // Remove all noisy elements entirely before extracting text
+      // Remove script/style/nav/header/footer elements entirely
       const removeSelectors = [
         'script', 'style', 'noscript', 'nav', 'header', 'footer',
         '.premium-banner', '.modal', '#google_translate_element',
@@ -92,9 +117,10 @@ export const stripHtmlTags = (text) => {
         try { doc.querySelectorAll(sel).forEach(el => el.remove()); } catch {}
       });
 
-      // Try to find the actual judgment content container (Indian Kanoon structure)
+      // Try Indian Kanoon container selectors (checking correct spelling variants)
       const judgmentSelectors = [
-        '#judgments', '.judgments', '#doc', '.doc',
+        '#judgements', '.judgements', '#judgments', '.judgments',
+        '.docsource_main', '.expanded_doc', '#doc', '.doc',
         '#main-doc', '.main-doc', '#judgment-doc',
         '.doc-content', '#doc-content', '.judgment-content',
         'pre', '.judgment',
@@ -105,20 +131,21 @@ export const stripHtmlTags = (text) => {
         if (contentEl) break;
       }
 
-      // Extract innerText (handles line breaks naturally) or textContent fallback
+      // Extract innerText or textContent
       const rawText = (contentEl || doc.body).innerText
         || (contentEl || doc.body).textContent
         || '';
-      return cleanupRawText(rawText);
+
+      return purgeJsAndCssNoise(rawText);
     } catch {
-      // Fall through to regex approach
+      // Fall through to regex strategy
     }
   }
 
-  // ── Strategy 2: Aggressive regex fallback (SSR / non-browser) ───────────
+  // ── Strategy 2: Regex fallback ──────────────────────────────────────────
   let cleanText = text;
 
-  // Remove entire block-level noise elements
+  // Remove block tags
   cleanText = cleanText.replace(/<script[\s\S]*?<\/script>/gi, ' ');
   cleanText = cleanText.replace(/<style[\s\S]*?<\/style>/gi, ' ');
   cleanText = cleanText.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
@@ -127,22 +154,10 @@ export const stripHtmlTags = (text) => {
   cleanText = cleanText.replace(/<footer[\s\S]*?<\/footer>/gi, ' ');
   cleanText = cleanText.replace(/<iframe[\s\S]*?<\/iframe>/gi, ' ');
 
-  // Remove all remaining HTML tags
+  // Remove all HTML tags
   cleanText = cleanText.replace(/<[^>]*>/g, ' ');
 
-  // Remove JS patterns: IIFE, window assignments, function declarations, $(...) calls
-  cleanText = cleanText.replace(/\(function\s*\([\s\S]*?\}\s*\)\s*\(\s*[^)]*\)\s*;?/g, ' ');
-  cleanText = cleanText.replace(/window\.\w+\s*=[\s\S]*?;/g, ' ');
-  cleanText = cleanText.replace(/function\s+\w+\s*\([^)]*\)\s*\{[\s\S]*?\}\s*/g, ' ');
-  cleanText = cleanText.replace(/gtag\s*\([^)]*\)\s*;?/g, ' ');
-  cleanText = cleanText.replace(/\$\s*\(document\)[\s\S]*?;\s*/g, ' ');
-
-  // Remove CSS patterns: selectors with curly-brace blocks
-  cleanText = cleanText.replace(/[.#]?[\w-]+(?:\s*[,:>+~\[\]()]*\s*[\w-]*)*\s*\{[^{}]*\}/g, ' ');
-  cleanText = cleanText.replace(/@[\w-]+[^{]*\{[^{}]*\}/g, ' ');
-  cleanText = cleanText.replace(/--[\w-]+\s*:[^;]+;/g, ' ');
-
-  return cleanupRawText(cleanText);
+  return purgeJsAndCssNoise(cleanText);
 };
 
 export default {
