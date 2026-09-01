@@ -1,11 +1,15 @@
 /**
- * HTML Sanitizer & Legal Text Extractor Utility
+ * HTML Sanitizer Utility
  *
- * Extracts complete, formatted legal judgment text from Indian Kanoon HTML responses,
- * completely stripping UI components, CSS rules, analytics scripts, and banners while
- * preserving paragraph structure, court headings, and numbered orders.
+ * Functions to strip HTML tags, embedded JS/CSS code, and site boilerplate
+ * from legal text (e.g. Indian Kanoon scraped pages), returning clean plain text.
  */
 
+/**
+ * Decodes common HTML entities to their plain text equivalents
+ * @param {string} text - Text with HTML entities
+ * @returns {string} Text with decoded entities
+ */
 export const decodeHtmlEntities = (text) => {
   if (!text) return text;
 
@@ -26,180 +30,122 @@ export const decodeHtmlEntities = (text) => {
 };
 
 /**
- * Post-processes extracted text:
- * Purges leftover CSS rules, JS code blocks, analytics, and Indian Kanoon site chrome.
+ * Purges JS statements, inline scripts, CSS rules, and site boilerplate
  */
-function postProcessLegalText(text) {
+function purgeJsAndCssNoise(text) {
   if (!text) return text;
   let clean = text;
 
-  // 1. Remove JS patterns (window.dataLayer, gtag, IIFE, jQuery, function declarations)
-  clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, '');
-  clean.replace(/window\.\w+\s*=\s*[\s\S]*?;/gi, '');
-  clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, '');
-  clean = clean.replace(/\(function\s*\([^)]*\)\s*\{[\s\S]*?\}\s*\)\s*\([^)]*\)\s*;?/gi, '');
-  clean = clean.replace(/\$\s*\(document\)[\s\S]*?\)\s*;?/gi, '');
-  clean = clean.replace(/function\s+\w*\s*\([^)]*\)\s*\{[\s\S]*?\}/gi, '');
+  // 1. Remove JS patterns: window.dataLayer, gtag, IIFE, $(document).ready, function declarations
+  clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, ' ');
+  clean = clean.replace(/window\.\w+\s*=\s*[\s\S]*?;/gi, ' ');
+  clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, ' ');
+  clean = clean.replace(/\(function\s*\([^)]*\)\s*\{[\s\S]*?\}\s*\)\s*\([^)]*\)\s*;?/gi, ' ');
+  clean = clean.replace(/\$\s*\(document\)[\s\S]*?\)\s*;?/gi, ' ');
+  clean = clean.replace(/\$\s*\([^)]*\)[\s\S]*?;\s*/gi, ' ');
+  clean = clean.replace(/function\s+\w*\s*\([^)]*\)\s*\{[\s\S]*?\}/gi, ' ');
 
-  // 2. Remove CSS rule blocks (:root {...}, @keyframes {...}, .class {...}, #id {...})
-  clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, '');
-  clean = clean.replace(/@keyframes\s+[\w-]+\s*\{[\s\S]*?\}/gi, '');
-  clean = clean.replace(/@media\s+[^{]+\{[\s\S]*?\}\s*\}/gi, '');
-  clean = clean.replace(/([.#][\w-]+|\w+)\s*\{[^}]*\}/gi, '');
-  clean = clean.replace(/--[\w-]+\s*:[^;\}]+;?/gi, '');
+  // 2. Remove CSS rule blocks: :root { ... }, @keyframes { ... }, @media { ... }, .class { ... }
+  clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, ' ');
+  clean = clean.replace(/@keyframes\s+[\w-]+\s*\{[\s\S]*?\}/gi, ' ');
+  clean = clean.replace(/@media\s+[^{]+\{[\s\S]*?\}\s*\}/gi, ' ');
+  clean = clean.replace(/([.#][\w-]+|\w+)\s*\{[^}]*\}/gi, ' ');
+  clean = clean.replace(/--[\w-]+\s*:[^;\}]+;?/gi, ' ');
 
-  // 3. Filter line-by-line to remove remaining code snippets & site boilerplate
-  const ikBoilerplatePatterns = [
-    /Skip to main content/i,
-    /Search laws,?\s*court judgments/i,
-    /Unlock Advanced Research/i,
-    /Free features\s+Premium/i,
-    /Tools for analyzing structure/i,
-    /AI Integrated with over/i,
-    /\[Cites \d+\s*,\s*Cited by \d+\s*\]/i,
-    /Case Recast AI/i,
-    /Related AI tags/i,
-    /About\s+Disclaimer\s+Privacy Policy/i,
-    /Warning on translation/i,
-    /Get in PDF/i,
-    /Print it!/i,
-    /Download Court Copy/i,
-    /Mobile Navigation/i,
-    /Know your Kanoon/i,
-    /Doc Gen Hub/i,
-    /Counter Argument/i,
-    /Case Predict AI/i,
-    /Talk with IK Doc/i,
+  // 3. Remove Indian Kanoon navigation boilerplate and UI strings
+  const ikBoilerplate = [
+    /Skip to main content/gi,
+    /Indian Kanoon\s*[-–]\s*Search engine for Indian Law/gi,
+    /Search laws,?\s*court judgments/gi,
+    /Unlock Advanced Research/gi,
+    /Free features\s+Premium\s+Premium features\s+Prism AI\s+IKademy\s+Pricing\s+Login/gi,
+    /Tools for analyzing structure and cite text of judgments/gi,
+    /AI Integrated with over \d+ crore judgments[^\n]*/gi,
+    /\[Cites \d+\s*,\s*Cited by \d+\s*\]/gi,
+    /Case Recast AI/gi,
+    /Related AI tags, queries and research notes/gi,
+    /About\s+Disclaimer\s+Privacy Policy\s+Terms\s+Case Removal\s+Blog\s+Share URL\s+Mobile View/gi,
+    /Warning on translation/gi,
+    /The option to translate the legal documents is to overcome language barriers[^\n]*/gi,
+    /Signature Not Verified[^\n]*/gi,
+    /Digitally signed by[^\n]*/gi,
+    /Get in PDF/gi,
+    /Print it!/gi,
+    /Download Court Copy/gi,
+    /Mobile Navigation/gi,
+    /Know your Kanoon/gi,
+    /Doc Gen Hub/gi,
+    /Counter Argument/gi,
+    /Case Predict AI/gi,
+    /Talk with IK Doc/gi,
   ];
 
-  const lines = clean.split('\n');
-  const filteredLines = [];
-
-  for (let line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    // Skip CSS / JS / JSON code lines
-    if (
-      trimmed.startsWith('{') || trimmed.endsWith('}') ||
-      trimmed.includes('var ') || trimmed.includes('const ') || trimmed.includes('let ') ||
-      trimmed.includes('function(') || trimmed.includes('document.get') ||
-      trimmed.includes('display:') || trimmed.includes('color:') || trimmed.includes('margin:') ||
-      trimmed.includes('padding:') || trimmed.includes('font-family:') || trimmed.includes('transform:') ||
-      trimmed.includes('background:') || trimmed.includes('box-shadow:') || trimmed.includes('border:')
-    ) {
-      continue;
-    }
-
-    // Skip site boilerplate
-    let isBoilerplate = false;
-    for (const pat of ikBoilerplatePatterns) {
-      if (pat.test(trimmed)) {
-        isBoilerplate = true;
-        break;
-      }
-    }
-    if (isBoilerplate) continue;
-
-    filteredLines.push(trimmed);
+  for (const pat of ikBoilerplate) {
+    clean = clean.replace(pat, ' ');
   }
 
-  // Join lines into clean formatted paragraphs
-  let result = filteredLines.join('\n\n');
-  result = decodeHtmlEntities(result);
-
-  // Collapse multiple spaces but preserve paragraph breaks
-  return result.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  // Collapse whitespace
+  clean = clean.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  return decodeHtmlEntities(clean);
 }
 
 /**
  * Strips all HTML tags, embedded CSS/JS code blocks, and site header boilerplate
- * extracting the COMPLETE judgment text (all paragraphs and court orders).
- *
- * @param {string} htmlString - Raw HTML document from Indian Kanoon
- * @returns {string} Clean, formatted plain text judgment
+ * @param {string} text - Text containing HTML or scraped markup
+ * @returns {string} Clean plain text without CSS/JS code or navigation noise
  */
-export const stripHtmlTags = (htmlString) => {
-  if (!htmlString) return htmlString;
+export const stripHtmlTags = (text) => {
+  if (!text) return text;
 
-  // ── Strategy 1: Browser DOMParser ─────────────────────────────────────────
+  // ── Strategy 1: Use DOMParser (browser) to parse HTML structure ────────
   if (typeof window !== 'undefined' && window.DOMParser) {
     try {
       const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlString, 'text/html');
+      const doc = parser.parseFromString(text, 'text/html');
 
-      // 1. Remove noisy non-content elements
-      const noisySelectors = [
-        'script', 'style', 'noscript', 'nav', 'header', 'footer', 'iframe', 'svg',
-        'button', 'input', 'form', '.premium-banner', '#case-recast-fab',
-        '#google_translate_element', '.search-autocomplete-list', '.ui-dialog',
-        '.ui-widget', '.ui-autocomplete', '#translatewarn', '#courtcopyform',
-        '#pdfdoc', '#printdoc', '.mainnavigation', '.siteheader', '.sitefooter',
-        '.navigation', '[id^="google_translate"]', '.expanded_doc_header'
+      // Remove script/style/nav/header/footer elements entirely
+      const removeSelectors = [
+        'script', 'style', 'noscript', 'nav', 'header', 'footer',
+        '.premium-banner', '.modal', '#google_translate_element',
+        '.search-autocomplete-list', '#case-recast-fab',
+        '.ui-dialog', '.ui-widget', '.ui-autocomplete',
+        '#translatewarn', '#courtcopyform', '#pdfdoc', '#printdoc',
+        '.mainnavigation', '.siteheader', '.sitefooter', '.navigation',
+        '[id^="google_translate"]', 'iframe',
       ];
-
-      noisySelectors.forEach(sel => {
-        try {
-          doc.querySelectorAll(sel).forEach(el => el.remove());
-        } catch {}
+      removeSelectors.forEach(sel => {
+        try { doc.querySelectorAll(sel).forEach(el => el.remove()); } catch {}
       });
 
-      // 2. Target ALL document content sections (title + full judgment body)
-      const contentElements = doc.querySelectorAll(
-        '.docsource_main, #judgements, .judgements, #judgments, .judgments, ' +
-        '.expanded_doc, #doc, .doc, #main-doc, .doc-content, .judgment-content, ' +
-        'blockquote, pre, .doc_input'
-      );
-
-      let extractedParagraphs = [];
-
-      if (contentElements && contentElements.length > 0) {
-        contentElements.forEach(container => {
-          // Extract text from block-level children or pre elements
-          const blockNodes = container.querySelectorAll('h1, h2, h3, h4, p, pre, blockquote, div.doc_input, div.item_title');
-          if (blockNodes && blockNodes.length > 0) {
-            blockNodes.forEach(b => {
-              const txt = (b.innerText || b.textContent || '').trim();
-              if (txt && !extractedParagraphs.includes(txt)) {
-                extractedParagraphs.push(txt);
-              }
-            });
-          } else {
-            const txt = (container.innerText || container.textContent || '').trim();
-            if (txt && !extractedParagraphs.includes(txt)) {
-              extractedParagraphs.push(txt);
-            }
-          }
-        });
+      // Try Indian Kanoon container selectors (checking correct spelling variants)
+      const judgmentSelectors = [
+        '#judgements', '.judgements', '#judgments', '.judgments',
+        '.docsource_main', '.expanded_doc', '#doc', '.doc',
+        '#main-doc', '.main-doc', '#judgment-doc',
+        '.doc-content', '#doc-content', '.judgment-content',
+        'pre', '.judgment',
+      ];
+      let contentEl = null;
+      for (const sel of judgmentSelectors) {
+        contentEl = doc.querySelector(sel);
+        if (contentEl) break;
       }
 
-      // If specific containers did not yield enough text, fall back to doc.body
-      if (extractedParagraphs.join('\n').length < 150) {
-        extractedParagraphs = [];
-        const bodyBlocks = doc.body.querySelectorAll('h1, h2, h3, h4, p, pre, blockquote, div');
-        bodyBlocks.forEach(b => {
-          // Only take leaf nodes or text block elements to avoid parent duplication
-          if (
-            b.children.length === 0 ||
-            Array.from(b.children).every(c => ['BR', 'A', 'SPAN', 'B', 'I', 'STRONG', 'EM'].includes(c.tagName))
-          ) {
-            const txt = (b.innerText || b.textContent || '').trim();
-            if (txt && txt.length > 5 && !extractedParagraphs.includes(txt)) {
-              extractedParagraphs.push(txt);
-            }
-          }
-        });
-      }
+      // Extract innerText or textContent
+      const rawText = (contentEl || doc.body).innerText
+        || (contentEl || doc.body).textContent
+        || '';
 
-      const rawCombined = extractedParagraphs.join('\n\n');
-      return postProcessLegalText(rawCombined);
-    } catch (e) {
-      console.warn('DOMParser extraction failed, using fallback:', e);
+      return purgeJsAndCssNoise(rawText);
+    } catch {
+      // Fall through to regex strategy
     }
   }
 
-  // ── Strategy 2: Regex Fallback ────────────────────────────────────────────
-  let cleanText = htmlString;
+  // ── Strategy 2: Regex fallback ──────────────────────────────────────────
+  let cleanText = text;
+
+  // Remove block tags
   cleanText = cleanText.replace(/<script[\s\S]*?<\/script>/gi, ' ');
   cleanText = cleanText.replace(/<style[\s\S]*?<\/style>/gi, ' ');
   cleanText = cleanText.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
@@ -207,9 +153,11 @@ export const stripHtmlTags = (htmlString) => {
   cleanText = cleanText.replace(/<nav[\s\S]*?<\/nav>/gi, ' ');
   cleanText = cleanText.replace(/<footer[\s\S]*?<\/footer>/gi, ' ');
   cleanText = cleanText.replace(/<iframe[\s\S]*?<\/iframe>/gi, ' ');
+
+  // Remove all HTML tags
   cleanText = cleanText.replace(/<[^>]*>/g, ' ');
 
-  return postProcessLegalText(cleanText);
+  return purgeJsAndCssNoise(cleanText);
 };
 
 export default {
