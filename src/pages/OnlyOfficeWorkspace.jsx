@@ -692,6 +692,110 @@ const OnlyOfficeWorkspace = () => {
     await promise;
   };
 
+  // ── 5-Minute Inactivity Auto-Save & Soft Session Renewal Strategy ──
+  const idleTimerRef = useRef(null);
+  const lastActivityTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes (300,000 ms)
+
+    const performIdleAutoSaveAndRenew = async () => {
+      const targetId = documentKey || draftId;
+      if (!targetId) return;
+
+      console.log('[OnlyOfficeWorkspace] 5 minutes of inactivity detected. Initiating auto-save and session renewal...');
+
+      // 1. Tell ONLYOFFICE plugin to commit pending changes
+      sendToPlugin({ type: 'ONLYOFFICE_FORCE_SAVE' });
+
+      // 2. Trigger backend force-save
+      const token = localStorage.getItem('session_id') || localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      try {
+        await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/forcesave`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ document_key: targetId }),
+        });
+        console.log('[OnlyOfficeWorkspace] Background forcesave completed for idle session.');
+      } catch (err) {
+        console.warn('[OnlyOfficeWorkspace] Background forcesave encountered a network issue:', err);
+      }
+
+      // 3. Soft Session Renewal: Refresh JWT token & session lock silently without reloading page
+      try {
+        const resp = await fetch(`${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/config/${targetId}`, {
+          headers: { Authorization: token ? `Bearer ${token}` : '' },
+        });
+        if (resp.ok) {
+          const freshConfig = await resp.json();
+          setDynamicConfig(freshConfig);
+          console.log('[OnlyOfficeWorkspace] Soft session renewal completed successfully.');
+        }
+      } catch (err) {
+        console.warn('[OnlyOfficeWorkspace] Soft session token refresh skipped:', err);
+      }
+
+      // 4. Notify advocate with clean toast
+      toast.success('Document auto-saved & session renewed due to 5 minutes of inactivity.', {
+        id: 'idle-autosave-toast',
+        duration: 4000,
+      });
+    };
+
+    const resetIdleTimer = () => {
+      lastActivityTimeRef.current = Date.now();
+
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+
+      idleTimerRef.current = setTimeout(() => {
+        performIdleAutoSaveAndRenew();
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    // User activity listeners
+    const activityEvents = ['mousemove', 'keydown', 'mousedown', 'scroll', 'touchstart'];
+    
+    // Throttled activity handler so high-frequency events don't degrade performance
+    let throttleTimeout = null;
+    const handleUserActivity = () => {
+      if (!throttleTimeout) {
+        throttleTimeout = setTimeout(() => {
+          throttleTimeout = null;
+          resetIdleTimer();
+        }, 1000);
+      }
+    };
+
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, handleUserActivity, { passive: true });
+    });
+
+    // Also reset idle timer on incoming plugin selection/message events
+    const handleWindowPluginMessage = (e) => {
+      if (e.data && e.data.type && typeof e.data.type === 'string' && e.data.type.startsWith('ONLYOFFICE_')) {
+        handleUserActivity();
+      }
+    };
+    window.addEventListener('message', handleWindowPluginMessage);
+
+    // Initial timer start
+    resetIdleTimer();
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      if (throttleTimeout) clearTimeout(throttleTimeout);
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, handleUserActivity);
+      });
+      window.removeEventListener('message', handleWindowPluginMessage);
+    };
+  }, [documentKey, draftId]);
+
   const buildEnhancementPrompt = (selectedText, instruction) => {
     return [
       'You are editing a legal document.',
