@@ -1,38 +1,33 @@
 /**
  * HTML Sanitizer & Legal Text Extractor Utility
  *
- * Extracts clean, formatted legal judgment text from Indian Kanoon HTML responses,
- * completely purging inline scripts (window.dataLayer, gtag), CSS stylesheets,
- * navigation headers, and PRISM banners, while preserving court headers and numbered paragraphs.
+ * Extracts complete, formatted legal judgment text from Indian Kanoon HTML responses,
+ * preserving all document sections: court header, bench names, party names, main order,
+ * citations, quoted judgments, bench signatures, and record of proceedings.
  */
 
 export const decodeHtmlEntities = (text) => {
-  if (!text) return text;
-
-  const entityMap = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&apos;': "'",
-    '&nbsp;': ' ',
-    '&copy;': '©',
-    '&reg;': '®',
-    '&trade;': '™'
-  };
-
-  return text.replace(/&[#a-zA-Z0-9]+;/g, (match) => entityMap[match] || match);
+  if (!text) return '';
+  return text
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#(\d+);/g, (m, dec) => String.fromCharCode(dec))
+    .replace(/&#x([0-9a-f]+);/gi, (m, hex) => String.fromCharCode(parseInt(hex, 16)));
 };
 
 /**
- * Line-by-line cleaner that strips residual JS code, CSS variables/keyframes,
- * and site boilerplate text.
+ * Line-by-line cleaner that decodes HTML entities and strips residual JS code,
+ * CSS rules, and site chrome while preserving legal case text.
  */
 function cleanNoiseFromText(text) {
   if (!text) return '';
 
-  let clean = text;
+  let clean = decodeHtmlEntities(text);
 
   // 1. Strip JavaScript functions, dataLayer, gtag, jQuery
   clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, '');
@@ -40,7 +35,7 @@ function cleanNoiseFromText(text) {
   clean = clean.replace(/\(function\s*\([\s\S]*?\}\)\(\);?/gi, '');
   clean = clean.replace(/\$\s*\(document\)[\s\S]*?\);?/gi, '');
 
-  // 2. Strip CSS rules, root variables, keyframes
+  // 2. Strip CSS blocks and rules
   clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, '');
   clean = clean.replace(/@keyframes[\s\S]*?\}/gi, '');
   clean = clean.replace(/@media[\s\S]*?\}\s*\}/gi, '');
@@ -51,14 +46,13 @@ function cleanNoiseFromText(text) {
   const cleanLines = [];
 
   const noiseKeywords = [
-    'window.dataLayer', 'gtag(', 'function()', 'var ', 'const ', 'let ',
+    'window.dataLayer', 'gtag(', 'function()',
     ':root', '@keyframes', 'display:', 'color:', 'margin:', 'padding:',
-    'font-family:', 'transform:', 'background:', 'box-shadow:', 'border:',
-    'opacity:', 'border-radius:', 'position:', 'overflow:', 'backdrop-filter:',
-    'Search laws, court judgments', 'Free features', 'Premium', 'Prism AI',
-    'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure',
+    'font-family:', 'transform:', 'background:', 'box-shadow:',
+    'backdrop-filter:', 'Search laws, court judgments', 'Free features',
+    'Prism AI', 'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure',
     'Unlock Advanced Research', 'Integrated with over 4 crore', 'Get in PDF',
-    'Print it!', 'Download Court Copy', '[Cites ', 'Cited by ', 'Mobile Navigation',
+    'Print it!', 'Download Court Copy', 'Mobile Navigation',
     'Case Recast AI', 'Talk with IK Doc', 'Disclaimer', 'Privacy Policy'
   ];
 
@@ -76,7 +70,7 @@ function cleanNoiseFromText(text) {
     }
     if (isNoise) continue;
 
-    // Check for JS/CSS code syntax
+    // Check for CSS rule syntax
     if (
       trimmed.startsWith('{') || trimmed.endsWith('}') ||
       trimmed.includes('{ opacity:') || trimmed.includes('linear-gradient(') ||
@@ -89,18 +83,15 @@ function cleanNoiseFromText(text) {
   }
 
   let result = cleanLines.join('\n\n');
-  result = decodeHtmlEntities(result);
-
-  // Normalize multiple spaces and blank lines
   return result.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
  * Strips HTML tags, embedded CSS/JS code blocks, and site chrome from Indian Kanoon responses,
- * returning clean full judgment text formatted into paragraphs.
+ * returning the ENTIRE judgment document in full detail.
  *
  * @param {string} htmlString - Raw HTML document from Indian Kanoon or snippet text
- * @returns {string} Clean, formatted plain text judgment
+ * @returns {string} Complete plain text judgment
  */
 export const stripHtmlTags = (htmlString) => {
   if (!htmlString) return '';
@@ -122,7 +113,7 @@ export const stripHtmlTags = (htmlString) => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(preCleaned, 'text/html');
 
-      // Remove UI noise elements
+      // Remove website UI noise elements
       const noiseElements = doc.querySelectorAll(
         'script, style, noscript, nav, header, footer, iframe, svg, button, input, form, ' +
         '.premium-banner, #case-recast-fab, #google_translate_element, .search-autocomplete-list, ' +
@@ -132,49 +123,29 @@ export const stripHtmlTags = (htmlString) => {
       );
       noiseElements.forEach(el => el.remove());
 
-      // Extract document elements: .docsource_main (header) and body containers (.expanded_doc, #judgements, .judgements, #doc, .doc_input)
-      const docHeader = doc.querySelector('.docsource_main');
-      const docContainers = doc.querySelectorAll('.expanded_doc, #judgements, .judgements, #doc, .doc, .doc_input');
+      // Query ALL document content elements in exact DOM order:
+      // Includes .docsource_main (Title), .doc_author, .doc_bench, pre, blockquote, div.doc_input, p
+      const contentNodes = doc.querySelectorAll(
+        '.docsource_main, .doc_author, .doc_bench, .doc_title, ' +
+        '.expanded_doc pre, .expanded_doc blockquote, .expanded_doc p, .expanded_doc div.doc_input, ' +
+        '#judgements pre, #judgements blockquote, #judgements p, #judgements div.doc_input, ' +
+        '.judgements pre, .judgements blockquote, .judgements p, .judgements div.doc_input, ' +
+        '#doc pre, #doc blockquote, #doc p, #doc div.doc_input, ' +
+        'div.doc_input, pre, blockquote, p'
+      );
 
       let paragraphList = [];
 
-      if (docHeader) {
-        const headerTxt = (docHeader.innerText || docHeader.textContent || '').trim();
-        if (headerTxt) paragraphList.push(headerTxt);
-      }
-
-      if (docContainers && docContainers.length > 0) {
-        docContainers.forEach(container => {
-          const blockNodes = container.querySelectorAll('pre, blockquote, p, div.doc_input, div.item_title, h1, h2, h3, h4');
-          if (blockNodes && blockNodes.length > 0) {
-            blockNodes.forEach(node => {
-              const txt = (node.innerText || node.textContent || '').trim();
-              if (txt && !paragraphList.includes(txt)) {
-                paragraphList.push(txt);
-              }
-            });
-          } else {
-            const txt = (container.innerText || container.textContent || '').trim();
-            if (txt && !paragraphList.includes(txt)) {
-              paragraphList.push(txt);
-            }
+      if (contentNodes && contentNodes.length > 0) {
+        contentNodes.forEach(node => {
+          const txt = (node.innerText || node.textContent || '').trim();
+          if (txt && txt.length > 2 && !paragraphList.includes(txt)) {
+            paragraphList.push(txt);
           }
         });
       }
 
-      // Fallback for general HTML structures
-      if (paragraphList.length === 0) {
-        const allBlocks = doc.body ? doc.body.querySelectorAll('pre, blockquote, p, h1, h2, h3, h4, div') : [];
-        allBlocks.forEach(node => {
-          if (node.children.length === 0 || Array.from(node.children).every(c => ['BR', 'A', 'SPAN', 'B', 'I', 'STRONG', 'EM'].includes(c.tagName))) {
-            const txt = (node.innerText || node.textContent || '').trim();
-            if (txt && txt.length > 5 && !paragraphList.includes(txt)) {
-              paragraphList.push(txt);
-            }
-          }
-        });
-      }
-
+      // Fallback if contentNodes didn't capture text
       if (paragraphList.length === 0 && doc.body) {
         const bodyTxt = (doc.body.innerText || doc.body.textContent || '').trim();
         if (bodyTxt) paragraphList.push(bodyTxt);
