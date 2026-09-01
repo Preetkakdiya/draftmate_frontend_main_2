@@ -55,23 +55,29 @@ const JudgmentDetails = () => {
             setFullText(textData.data.text);
           }
         } else {
-          // Then check if it's a mock judgment
+          // Check if it's in mock database
           const mock = mockJudgments.find(j => j.id === judgmentId);
           if (mock) {
             setJudgment(mock);
           } else {
-            // Try API
+            // Try API metadata
             const metadata = await getMetadata(judgmentId);
             if (metadata) {
               setJudgment(metadata);
-              const textData = await getJudgment(judgmentId);
-              if (textData?.data?.text) {
-                setFullText(textData.data.text);
-              }
             } else {
               setApiError('Judgment not found');
             }
           }
+        }
+
+        // Always attempt to fetch real full judgment text from Indian Kanoon API
+        try {
+          const textData = await getJudgment(judgmentId);
+          if (textData?.data?.text) {
+            setFullText(textData.data.text);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch full judgment text:', err);
         }
       } catch (e) {
         console.error(e);
