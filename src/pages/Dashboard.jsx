@@ -766,7 +766,7 @@ export default function Dashboard() {
                             <Zap className="w-5 h-5 text-blue-600 fill-blue-600/10" /> Quick Actions
                         </h3>
                         <div className="space-y-3 relative z-10 flex-1 flex flex-col justify-center">
-                            <button onClick={() => navigate('/dashboard/pdf-tools')} className="w-full flex items-center justify-between bg-white hover:bg-blue-50 shadow-sm border border-slate-200 hover:border-blue-300 px-5 py-4 rounded-xl transition-all font-medium text-sm text-[#0F1C2E] group">
+                            <button onClick={() => navigate('/dashboard/pdf-editor')} className="w-full flex items-center justify-between bg-white hover:bg-blue-50 shadow-sm border border-slate-200 hover:border-blue-300 px-5 py-4 rounded-xl transition-all font-medium text-sm text-[#0F1C2E] group">
                                 <span className="group-hover:text-blue-700 transition-colors">PDF Tool Kit</span>
                                 <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-110 transition-all">
                                     <Layers className="w-4 h-4" />
