@@ -1375,52 +1375,29 @@ const Tools = () => {
                 </div>
             )}
             
-            {/* Sticky Filter Bar */}
-            <div className="sticky top-0 z-20 w-full bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-                <div className="w-full max-w-[1200px] mx-auto px-4 md:px-10 lg:px-40 py-3">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        {categories.map(cat => (
-                            <FilterButton
-                                key={cat.id}
-                                icon={cat.icon}
-                                label={cat.label}
-                                isActive={activeCategory === cat.id}
-                                onClick={() => setActiveCategory(cat.id)}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </div>
-
             {/* Content Container */}
             <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                key={activeCategory}
-                className={`flex-1 ${activeCategory === 'How to use ?' ? 'overflow-hidden flex flex-col justify-center' : 'overflow-y-auto pb-20'}`}
+                className="flex-1 overflow-y-auto pb-20"
             >
-                <div className={`w-full max-w-[1200px] mx-auto px-4 md:px-10 lg:px-40 ${activeCategory === 'How to use ?' ? '' : 'pt-6 pb-12 flex flex-col gap-16'}`}>
-
-                    {activeCategory !== 'How to use ?' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 pb-12">
-                            {allTools
-                                .filter(tool => activeCategory === 'All features' || tool.category === activeCategory)
-                                .map(tool => (
-                                    <ToolCard
-                                        key={tool.id}
-                                        icon={tool.icon}
-                                        title={tool.title}
-                                        description={tool.description}
-                                        onClick={tool.onClick}
-                                        accentColor={tool.accentColor}
-                                        badge={tool.badge}
-                                    >
-                                        {tool.children}
-                                    </ToolCard>
-                                ))}
-                        </div>
-                    )}
+                <div className="w-full max-w-[1200px] mx-auto px-4 md:px-10 lg:px-40 pt-6 pb-12 flex flex-col gap-16">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 pb-12">
+                        {allTools.map(tool => (
+                            <ToolCard
+                                key={tool.id}
+                                icon={tool.icon}
+                                title={tool.title}
+                                description={tool.description}
+                                onClick={tool.onClick}
+                                accentColor={tool.accentColor}
+                                badge={tool.badge}
+                            >
+                                {tool.children}
+                            </ToolCard>
+                        ))}
+                    </div>
 
                     {/* How to use? Section */}
                     {activeCategory === 'How to use ?' && (
