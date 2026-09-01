@@ -490,7 +490,16 @@ export default function Dashboard() {
     };
 
     const handleEditDraft = (draft) => {
-        handleWorkspaceDraftOpen(draft);
+        navigate('/dashboard/workspace', {
+            state: {
+                draftId: draft.id,
+                id: draft.id,
+                filename: draft.filename || draft.name,
+                documentKey: draft.documentKey || draft.id,
+                variablesDetected: draft.variablesDetected || [],
+                onlyofficeConfig: draft.onlyofficeConfig || null,
+            }
+        });
     };
 
     const monthName = currentDate.toLocaleString('default', { month: 'long' });

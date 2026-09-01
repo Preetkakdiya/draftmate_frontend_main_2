@@ -296,11 +296,14 @@ const JudgmentDetails = () => {
           )}
 
           {/* Full Text if available */}
-          {fullText && (
+          {fullText && fullText.trim().length > 50 && (
             <DetailSection icon="📄" title="Full Judgment Text" accent="slate">
-              <div className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
-                {fullText}
-              </div>
+              <pre
+                className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap font-serif max-h-[600px] overflow-y-auto pr-2 custom-scrollbar"
+                style={{ fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: '1.8' }}
+              >
+                {fullText.trim()}
+              </pre>
             </DetailSection>
           )}
 

@@ -478,7 +478,7 @@ export default function AdvocateDashboard() {
                     { id: 'analytics', icon: BarChart2, label: 'Analytics' },
                     { id: 'verification', icon: ShieldCheck, label: 'Verification' },
                 ].map(tab => (
-                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); navigate('/dashboard/' + tab.id); }}
+                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === 'profile') navigate('/dashboard/profile'); }}
                         className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 group ${activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_8px_24px_rgba(37,99,235,0.25)] -translate-y-0.5' : 'hover:bg-blue-50/50 hover:text-blue-700 text-slate-600 hover:translate-x-1'}`}>
                         <div className="flex items-center gap-3">
                             <tab.icon className={`w-5 h-5 transition-transform duration-300 ${activeTab === tab.id ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110'}`} /> {tab.label}
