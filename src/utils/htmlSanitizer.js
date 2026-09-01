@@ -1,15 +1,11 @@
 /**
- * HTML Sanitizer Utility
+ * HTML Sanitizer & Legal Text Extractor Utility
  *
- * Functions to strip HTML tags, embedded JS/CSS code, and site boilerplate
- * from legal text (e.g. Indian Kanoon scraped pages), returning clean plain text.
+ * Extracts clean, formatted legal judgment text from Indian Kanoon HTML responses,
+ * completely purging inline scripts (window.dataLayer, gtag), CSS stylesheets,
+ * navigation headers, and PRISM banners, while preserving court headers and numbered paragraphs.
  */
 
-/**
- * Decodes common HTML entities to their plain text equivalents
- * @param {string} text - Text with HTML entities
- * @returns {string} Text with decoded entities
- */
 export const decodeHtmlEntities = (text) => {
   if (!text) return text;
 
@@ -30,134 +26,169 @@ export const decodeHtmlEntities = (text) => {
 };
 
 /**
- * Purges JS statements, inline scripts, CSS rules, and site boilerplate
+ * Line-by-line cleaner that strips residual JS code, CSS variables/keyframes,
+ * and site boilerplate text.
  */
-function purgeJsAndCssNoise(text) {
-  if (!text) return text;
+function cleanNoiseFromText(text) {
+  if (!text) return '';
+
   let clean = text;
 
-  // 1. Remove JS patterns: window.dataLayer, gtag, IIFE, $(document).ready, function declarations
-  clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, ' ');
-  clean = clean.replace(/window\.\w+\s*=\s*[\s\S]*?;/gi, ' ');
-  clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, ' ');
-  clean = clean.replace(/\(function\s*\([^)]*\)\s*\{[\s\S]*?\}\s*\)\s*\([^)]*\)\s*;?/gi, ' ');
-  clean = clean.replace(/\$\s*\(document\)[\s\S]*?\)\s*;?/gi, ' ');
-  clean = clean.replace(/\$\s*\([^)]*\)[\s\S]*?;\s*/gi, ' ');
-  clean = clean.replace(/function\s+\w*\s*\([^)]*\)\s*\{[\s\S]*?\}/gi, ' ');
+  // 1. Strip JavaScript functions, dataLayer, gtag, jQuery
+  clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, '');
+  clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, '');
+  clean = clean.replace(/\(function\s*\([\s\S]*?\}\)\(\);?/gi, '');
+  clean = clean.replace(/\$\s*\(document\)[\s\S]*?\);?/gi, '');
 
-  // 2. Remove CSS rule blocks: :root { ... }, @keyframes { ... }, @media { ... }, .class { ... }
-  clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, ' ');
-  clean = clean.replace(/@keyframes\s+[\w-]+\s*\{[\s\S]*?\}/gi, ' ');
-  clean = clean.replace(/@media\s+[^{]+\{[\s\S]*?\}\s*\}/gi, ' ');
-  clean = clean.replace(/([.#][\w-]+|\w+)\s*\{[^}]*\}/gi, ' ');
-  clean = clean.replace(/--[\w-]+\s*:[^;\}]+;?/gi, ' ');
+  // 2. Strip CSS rules, root variables, keyframes
+  clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, '');
+  clean = clean.replace(/@keyframes[\s\S]*?\}/gi, '');
+  clean = clean.replace(/@media[\s\S]*?\}\s*\}/gi, '');
+  clean = clean.replace(/--[\w-]+\s*:[^;\}]+;?/gi, '');
+  clean = clean.replace(/([.#][\w-]+|\w+)\s*\{[^}]*\}/gi, '');
 
-  // 3. Remove Indian Kanoon navigation boilerplate and UI strings
-  const ikBoilerplate = [
-    /Skip to main content/gi,
-    /Indian Kanoon\s*[-–]\s*Search engine for Indian Law/gi,
-    /Search laws,?\s*court judgments/gi,
-    /Unlock Advanced Research/gi,
-    /Free features\s+Premium\s+Premium features\s+Prism AI\s+IKademy\s+Pricing\s+Login/gi,
-    /Tools for analyzing structure and cite text of judgments/gi,
-    /AI Integrated with over \d+ crore judgments[^\n]*/gi,
-    /\[Cites \d+\s*,\s*Cited by \d+\s*\]/gi,
-    /Case Recast AI/gi,
-    /Related AI tags, queries and research notes/gi,
-    /About\s+Disclaimer\s+Privacy Policy\s+Terms\s+Case Removal\s+Blog\s+Share URL\s+Mobile View/gi,
-    /Warning on translation/gi,
-    /The option to translate the legal documents is to overcome language barriers[^\n]*/gi,
-    /Signature Not Verified[^\n]*/gi,
-    /Digitally signed by[^\n]*/gi,
-    /Get in PDF/gi,
-    /Print it!/gi,
-    /Download Court Copy/gi,
-    /Mobile Navigation/gi,
-    /Know your Kanoon/gi,
-    /Doc Gen Hub/gi,
-    /Counter Argument/gi,
-    /Case Predict AI/gi,
-    /Talk with IK Doc/gi,
+  const lines = clean.split('\n');
+  const cleanLines = [];
+
+  const noiseKeywords = [
+    'window.dataLayer', 'gtag(', 'function()', 'var ', 'const ', 'let ',
+    ':root', '@keyframes', 'display:', 'color:', 'margin:', 'padding:',
+    'font-family:', 'transform:', 'background:', 'box-shadow:', 'border:',
+    'opacity:', 'border-radius:', 'position:', 'overflow:', 'backdrop-filter:',
+    'Search laws, court judgments', 'Free features', 'Premium', 'Prism AI',
+    'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure',
+    'Unlock Advanced Research', 'Integrated with over 4 crore', 'Get in PDF',
+    'Print it!', 'Download Court Copy', '[Cites ', 'Cited by ', 'Mobile Navigation',
+    'Case Recast AI', 'Talk with IK Doc', 'Disclaimer', 'Privacy Policy'
   ];
 
-  for (const pat of ikBoilerplate) {
-    clean = clean.replace(pat, ' ');
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Check for noise keywords
+    let isNoise = false;
+    for (const kw of noiseKeywords) {
+      if (trimmed.includes(kw)) {
+        isNoise = true;
+        break;
+      }
+    }
+    if (isNoise) continue;
+
+    // Check for JS/CSS code syntax
+    if (
+      trimmed.startsWith('{') || trimmed.endsWith('}') ||
+      trimmed.includes('{ opacity:') || trimmed.includes('linear-gradient(') ||
+      trimmed.includes('rgba(') || trimmed.includes('var(--')
+    ) {
+      continue;
+    }
+
+    cleanLines.push(trimmed);
   }
 
-  // Collapse whitespace
-  clean = clean.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  return decodeHtmlEntities(clean);
+  let result = cleanLines.join('\n\n');
+  result = decodeHtmlEntities(result);
+
+  // Normalize multiple spaces and blank lines
+  return result.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
- * Strips all HTML tags, embedded CSS/JS code blocks, and site header boilerplate
- * @param {string} text - Text containing HTML or scraped markup
- * @returns {string} Clean plain text without CSS/JS code or navigation noise
+ * Strips HTML tags, embedded CSS/JS code blocks, and site chrome from Indian Kanoon responses,
+ * returning clean full judgment text formatted into paragraphs.
+ *
+ * @param {string} htmlString - Raw HTML document from Indian Kanoon or snippet text
+ * @returns {string} Clean, formatted plain text judgment
  */
-export const stripHtmlTags = (text) => {
-  if (!text) return text;
+export const stripHtmlTags = (htmlString) => {
+  if (!htmlString) return '';
+  if (typeof htmlString !== 'string') return '';
 
-  // ── Strategy 1: Use DOMParser (browser) to parse HTML structure ────────
+  // If input is plain text without HTML markup, clean noise and return
+  if (!htmlString.includes('<')) {
+    return cleanNoiseFromText(htmlString);
+  }
+
+  // Pre-clean <script>, <style>, <noscript> blocks before DOM parsing
+  let preCleaned = htmlString
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
+
   if (typeof window !== 'undefined' && window.DOMParser) {
     try {
       const parser = new DOMParser();
-      const doc = parser.parseFromString(text, 'text/html');
+      const doc = parser.parseFromString(preCleaned, 'text/html');
 
-      // Remove script/style/nav/header/footer elements entirely
-      const removeSelectors = [
-        'script', 'style', 'noscript', 'nav', 'header', 'footer',
-        '.premium-banner', '.modal', '#google_translate_element',
-        '.search-autocomplete-list', '#case-recast-fab',
-        '.ui-dialog', '.ui-widget', '.ui-autocomplete',
-        '#translatewarn', '#courtcopyform', '#pdfdoc', '#printdoc',
-        '.mainnavigation', '.siteheader', '.sitefooter', '.navigation',
-        '[id^="google_translate"]', 'iframe',
-      ];
-      removeSelectors.forEach(sel => {
-        try { doc.querySelectorAll(sel).forEach(el => el.remove()); } catch {}
-      });
+      // Remove UI noise elements
+      const noiseElements = doc.querySelectorAll(
+        'script, style, noscript, nav, header, footer, iframe, svg, button, input, form, ' +
+        '.premium-banner, #case-recast-fab, #google_translate_element, .search-autocomplete-list, ' +
+        '.ui-dialog, .ui-widget, .ui-autocomplete, #translatewarn, #courtcopyform, ' +
+        '#pdfdoc, #printdoc, .mainnavigation, .siteheader, .sitefooter, .navigation, ' +
+        '[id^="google_translate"], .expanded_doc_header, .doc_options, .ad-box, .banner'
+      );
+      noiseElements.forEach(el => el.remove());
 
-      // Try Indian Kanoon container selectors (checking correct spelling variants)
-      const judgmentSelectors = [
-        '#judgements', '.judgements', '#judgments', '.judgments',
-        '.docsource_main', '.expanded_doc', '#doc', '.doc',
-        '#main-doc', '.main-doc', '#judgment-doc',
-        '.doc-content', '#doc-content', '.judgment-content',
-        'pre', '.judgment',
-      ];
-      let contentEl = null;
-      for (const sel of judgmentSelectors) {
-        contentEl = doc.querySelector(sel);
-        if (contentEl) break;
+      // Extract document elements: .docsource_main (header) and body containers (.expanded_doc, #judgements, .judgements, #doc, .doc_input)
+      const docHeader = doc.querySelector('.docsource_main');
+      const docContainers = doc.querySelectorAll('.expanded_doc, #judgements, .judgements, #doc, .doc, .doc_input');
+
+      let paragraphList = [];
+
+      if (docHeader) {
+        const headerTxt = (docHeader.innerText || docHeader.textContent || '').trim();
+        if (headerTxt) paragraphList.push(headerTxt);
       }
 
-      // Extract innerText or textContent
-      const rawText = (contentEl || doc.body).innerText
-        || (contentEl || doc.body).textContent
-        || '';
+      if (docContainers && docContainers.length > 0) {
+        docContainers.forEach(container => {
+          const blockNodes = container.querySelectorAll('pre, blockquote, p, div.doc_input, div.item_title, h1, h2, h3, h4');
+          if (blockNodes && blockNodes.length > 0) {
+            blockNodes.forEach(node => {
+              const txt = (node.innerText || node.textContent || '').trim();
+              if (txt && !paragraphList.includes(txt)) {
+                paragraphList.push(txt);
+              }
+            });
+          } else {
+            const txt = (container.innerText || container.textContent || '').trim();
+            if (txt && !paragraphList.includes(txt)) {
+              paragraphList.push(txt);
+            }
+          }
+        });
+      }
 
-      return purgeJsAndCssNoise(rawText);
-    } catch {
-      // Fall through to regex strategy
+      // Fallback for general HTML structures
+      if (paragraphList.length === 0) {
+        const allBlocks = doc.body ? doc.body.querySelectorAll('pre, blockquote, p, h1, h2, h3, h4, div') : [];
+        allBlocks.forEach(node => {
+          if (node.children.length === 0 || Array.from(node.children).every(c => ['BR', 'A', 'SPAN', 'B', 'I', 'STRONG', 'EM'].includes(c.tagName))) {
+            const txt = (node.innerText || node.textContent || '').trim();
+            if (txt && txt.length > 5 && !paragraphList.includes(txt)) {
+              paragraphList.push(txt);
+            }
+          }
+        });
+      }
+
+      if (paragraphList.length === 0 && doc.body) {
+        const bodyTxt = (doc.body.innerText || doc.body.textContent || '').trim();
+        if (bodyTxt) paragraphList.push(bodyTxt);
+      }
+
+      const combined = paragraphList.join('\n\n');
+      return cleanNoiseFromText(combined);
+    } catch (e) {
+      console.warn('DOMParser failed:', e);
     }
   }
 
-  // ── Strategy 2: Regex fallback ──────────────────────────────────────────
-  let cleanText = text;
-
-  // Remove block tags
-  cleanText = cleanText.replace(/<script[\s\S]*?<\/script>/gi, ' ');
-  cleanText = cleanText.replace(/<style[\s\S]*?<\/style>/gi, ' ');
-  cleanText = cleanText.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
-  cleanText = cleanText.replace(/<header[\s\S]*?<\/header>/gi, ' ');
-  cleanText = cleanText.replace(/<nav[\s\S]*?<\/nav>/gi, ' ');
-  cleanText = cleanText.replace(/<footer[\s\S]*?<\/footer>/gi, ' ');
-  cleanText = cleanText.replace(/<iframe[\s\S]*?<\/iframe>/gi, ' ');
-
-  // Remove all HTML tags
-  cleanText = cleanText.replace(/<[^>]*>/g, ' ');
-
-  return purgeJsAndCssNoise(cleanText);
+  // Regex Fallback
+  return cleanNoiseFromText(preCleaned.replace(/<[^>]*>/g, ' '));
 };
 
 export default {
