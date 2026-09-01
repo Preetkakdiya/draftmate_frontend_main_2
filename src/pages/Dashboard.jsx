@@ -932,6 +932,71 @@ export default function Dashboard() {
                 </div>
             </section>
 
+            {/* Create New Folder Portal Modal */}
+            {isNewFolderModalOpen && createPortal(
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                                    <FolderPlus className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900">Create New Folder</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Add a folder to organize your case documents</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsNewFolderModalOpen(false)}
+                                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateFolderSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                    Folder Name
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={newFolderNameInput}
+                                    onChange={(e) => setNewFolderNameInput(e.target.value)}
+                                    placeholder="e.g. Litigation Docs, Property Contracts..."
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium text-slate-900 transition-all"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsNewFolderModalOpen(false)}
+                                    className="flex-1 py-3 px-4 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 text-sm transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingFolder || !newFolderNameInput.trim()}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20"
+                                >
+                                    {isCreatingFolder ? 'Creating...' : 'Create Folder'}
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>,
+                document.body
+            )}
+
         </div>
     );
 }
@@ -1178,70 +1243,6 @@ function CreateEventModalTrigger({ onAdd }) {
                                     className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-colors"
                                 >
                                     Create Event
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>,
-                document.body
-            )}
-            {/* Create New Folder Portal Modal */}
-            {isNewFolderModalOpen && createPortal(
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100"
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
-                                    <FolderPlus className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-slate-900">Create New Folder</h3>
-                                    <p className="text-xs text-slate-500 font-medium">Add a folder to organize your case documents</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsNewFolderModalOpen(false)}
-                                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleCreateFolderSubmit} className="space-y-5">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                                    Folder Name
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={newFolderNameInput}
-                                    onChange={(e) => setNewFolderNameInput(e.target.value)}
-                                    placeholder="e.g. Litigation Docs, Property Contracts..."
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium text-slate-900 transition-all"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsNewFolderModalOpen(false)}
-                                    className="flex-1 py-3 px-4 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 text-sm transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isCreatingFolder || !newFolderNameInput.trim()}
-                                    className="flex-1 py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20"
-                                >
-                                    {isCreatingFolder ? 'Creating...' : 'Create Folder'}
                                 </button>
                             </div>
                         </form>

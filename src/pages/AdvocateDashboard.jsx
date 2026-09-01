@@ -32,28 +32,28 @@ import {
 } from '../services/advocateApi';
 
 const LANGUAGE_OPTIONS = [
-    'English', 'Hindi', 'Marathi', 'Kannada', 'Tamil', 'Telugu', 
-    'Urdu', 'Punjabi', 'Bengali', 'Odia', 'Assamese', 'Gujarati', 
+    'English', 'Hindi', 'Marathi', 'Kannada', 'Tamil', 'Telugu',
+    'Urdu', 'Punjabi', 'Bengali', 'Odia', 'Assamese', 'Gujarati',
     'Malayalam', 'Manipuri', 'Konkani', 'Sanskrit'
 ];
 
 const PRACTICE_AREA_OPTIONS = [
-    'Criminal Law', 'Civil Law', 'Constitutional Law', 'Corporate Law', 'Family Law', 
-    'Property Law', 'Intellectual Property Law', 'Labor and Employment Law', 'Tax Law', 
-    'Banking and Finance Law', 'Environmental Law', 'Immigration Law', 'Consumer Protection Law', 
-    'Cyber Law', 'Maritime Law', 'Alternative Dispute Resolution', 'Human Rights Law', 
-    'Administrative Law', 'Insurance Law', 'Medical Law', 'Real Estate Law', 
-    'Competition Law', 'Bankruptcy Law', 'International Law', 'Education Law', 
-    'Motor Vehicle Law', 'Public Interest Litigation', 'Service Law', 'Election Law', 
-    'Rent Control Law', 'Cooperative Society Law', 'Land Acquisition Law', 'Arbitration Law', 
-    'Customs and Excise Law', 'Trademark Law', 'Patent Law', 'Copyright Law', 
+    'Criminal Law', 'Civil Law', 'Constitutional Law', 'Corporate Law', 'Family Law',
+    'Property Law', 'Intellectual Property Law', 'Labor and Employment Law', 'Tax Law',
+    'Banking and Finance Law', 'Environmental Law', 'Immigration Law', 'Consumer Protection Law',
+    'Cyber Law', 'Maritime Law', 'Alternative Dispute Resolution', 'Human Rights Law',
+    'Administrative Law', 'Insurance Law', 'Medical Law', 'Real Estate Law',
+    'Competition Law', 'Bankruptcy Law', 'International Law', 'Education Law',
+    'Motor Vehicle Law', 'Public Interest Litigation', 'Service Law', 'Election Law',
+    'Rent Control Law', 'Cooperative Society Law', 'Land Acquisition Law', 'Arbitration Law',
+    'Customs and Excise Law', 'Trademark Law', 'Patent Law', 'Copyright Law',
     'Agricultural Law', 'Tribal Law', 'Religious Law'
 ];
 
 export default function AdvocateDashboard() {
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [activeTab, setActiveTab] = useState(() => {
         const path = location.pathname;
         if (path.includes('/dashboard/consultations')) return 'consultations';
@@ -99,7 +99,7 @@ export default function AdvocateDashboard() {
             const userStr = localStorage.getItem('user_profile');
             if (userStr) setAuthUser(JSON.parse(userStr));
         } catch (e) { console.warn("Failed to parse user", e); }
-    }, []);    const DEFAULT_PROFILE = {
+    }, []); const DEFAULT_PROFILE = {
         title: '',
         bar_council_number: '',
         years_experience: '',
@@ -146,14 +146,14 @@ export default function AdvocateDashboard() {
                         localStorage.removeItem('lawyer_profile');
                     }
                 }
-                
+
                 // Ensure array fields exist
                 initialProf.experience = Array.isArray(initialProf.experience) ? initialProf.experience : [];
                 initialProf.education = Array.isArray(initialProf.education) ? initialProf.education : [];
                 initialProf.certifications = Array.isArray(initialProf.certifications) ? initialProf.certifications : [];
                 initialProf.languages = Array.isArray(initialProf.languages) ? initialProf.languages : [];
                 initialProf.social_links = initialProf.social_links || { linkedin: '', twitter: '', facebook: '', instagram: '', website: '' };
-                
+
                 setProfile(initialProf);
                 setPracticeAreas(Array.isArray(initialProf.practice_areas) ? initialProf.practice_areas : []);
                 if (initialProf.profile_image_url) setImagePreview(initialProf.profile_image_url);
@@ -173,13 +173,13 @@ export default function AdvocateDashboard() {
                             if (p.profile_image_url) setImagePreview(p.profile_image_url);
                             localStorage.setItem('lawyer_profile', JSON.stringify(p));
                         }
-                        
+
                         // Fetch Consultations
                         const consultRes = await advocateConsultations.getMyConsultations();
                         if (consultRes && consultRes.data) {
                             setConsultations(Array.isArray(consultRes.data) ? consultRes.data : []);
                         }
-                        
+
                         // Fetch Messages
                         const msgRes = await advocateMessages.getConversations();
                         if (msgRes && msgRes.data) {
@@ -328,7 +328,7 @@ export default function AdvocateDashboard() {
             if (tokens.getAccess()) {
                 try {
                     let finalImageUrl = updatedProfile.profile_image_url;
-                    
+
                     // Upload image if a new one was selected
                     if (imageFile) {
                         try {
@@ -348,8 +348,8 @@ export default function AdvocateDashboard() {
                     }
 
                     const { id, user_id, slug, created_at, updated_at, is_verified,
-                            profile_completion_score, ...updateable } = updatedProfile;
-                    
+                        profile_completion_score, ...updateable } = updatedProfile;
+
                     const payload = {
                         ...updateable,
                         profile_image_url: finalImageUrl,
@@ -361,7 +361,7 @@ export default function AdvocateDashboard() {
 
                     if (payload.years_experience === '') payload.years_experience = null;
                     if (payload.consultation_fee === '') payload.consultation_fee = null;
-                    
+
                     await advocateProfile.updateMe(payload);
 
                     // FETCH LATEST PROFILE FROM SERVER TO AVOID STALE STATE BUG
@@ -393,7 +393,7 @@ export default function AdvocateDashboard() {
     };
 
     const [updatingStatus, setUpdatingStatus] = useState(null);
-    
+
     const handleUpdateConsultationStatus = async (id, status) => {
         if (updatingStatus === id) return;
         setUpdatingStatus(id);
@@ -466,1171 +466,1171 @@ export default function AdvocateDashboard() {
         <div className="relative min-h-screen pb-20" style={{ background: 'linear-gradient(135deg, #F8FAFF 0%, #F4F8FF 45%, #EEF5FF 100%)' }}>
             {/* Subtle premium background textures */}
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none z-0" />
-            
+
             <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 pt-24 flex flex-col md:flex-row gap-8">
                 {/* Sidebar */}
                 <div className="w-full md:w-64 flex-shrink-0 space-y-2 bg-white/60 backdrop-blur-xl border border-white p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-max md:sticky md:top-24">
-                <h2 className="text-xl font-bold mb-6 px-4">Dashboard</h2>
-                {[
-                    { id: 'profile', icon: User, label: 'Lawyer Profile' },
-                    { id: 'consultations', icon: Calendar, label: 'Consultations', badge: pendingConsultations },
-                    { id: 'messages', icon: MessageCircle, label: 'Messages', badge: unreadMessages },
-                    { id: 'analytics', icon: BarChart2, label: 'Analytics' },
-                    { id: 'verification', icon: ShieldCheck, label: 'Verification' },
-                ].map(tab => (
-                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === 'profile') navigate('/dashboard/profile'); }}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 group ${activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_8px_24px_rgba(37,99,235,0.25)] -translate-y-0.5' : 'hover:bg-blue-50/50 hover:text-blue-700 text-slate-600 hover:translate-x-1'}`}>
-                        <div className="flex items-center gap-3">
-                            <tab.icon className={`w-5 h-5 transition-transform duration-300 ${activeTab === tab.id ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110'}`} /> {tab.label}
-                        </div>
-                        {tab.badge > 0 && (
-                            <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeTab === tab.id ? 'bg-white text-blue-600' : 'bg-red-500 text-white shadow-sm'}`}>{tab.badge}</span>
-                        )}
-                    </button>
-                ))}
-            </div>
+                    <h2 className="text-xl font-bold mb-6 px-4">Dashboard</h2>
+                    {[
+                        { id: 'profile', icon: User, label: 'Lawyer Profile' },
+                        { id: 'consultations', icon: Calendar, label: 'Consultations', badge: pendingConsultations },
+                        { id: 'messages', icon: MessageCircle, label: 'Messages', badge: unreadMessages },
+                        { id: 'analytics', icon: BarChart2, label: 'Analytics' },
+                        { id: 'verification', icon: ShieldCheck, label: 'Verification' },
+                    ].map(tab => (
+                        <button key={tab.id} onClick={() => { setActiveTab(tab.id); navigate('/dashboard/' + tab.id); }}
+                            className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 group ${activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_8px_24px_rgba(37,99,235,0.25)] -translate-y-0.5' : 'hover:bg-blue-50/50 hover:text-blue-700 text-slate-600 hover:translate-x-1'}`}>
+                            <div className="flex items-center gap-3">
+                                <tab.icon className={`w-5 h-5 transition-transform duration-300 ${activeTab === tab.id ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'group-hover:scale-110'}`} /> {tab.label}
+                            </div>
+                            {tab.badge > 0 && (
+                                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeTab === tab.id ? 'bg-white text-blue-600' : 'bg-red-500 text-white shadow-sm'}`}>{tab.badge}</span>
+                            )}
+                        </button>
+                    ))}
+                </div>
 
-            {/* Main Content */}
-            <div className="flex-1 min-w-0">
+                {/* Main Content */}
+                <div className="flex-1 min-w-0">
 
-                {/* ── PROFILE TAB ── */}
-                {activeTab === 'profile' && (
-                    <motion.form 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        onSubmit={handleSaveProfile} 
-                        className="space-y-8 pb-10"
-                    >
-                        {/* Profile Hero Section (Glassmorphism) */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                    {/* ── PROFILE TAB ── */}
+                    {activeTab === 'profile' && (
+                        <motion.form
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
                             transition={{ duration: 0.5 }}
-                            className="relative overflow-hidden rounded-3xl border border-slate-200/60 shadow-sm"
+                            onSubmit={handleSaveProfile}
+                            className="space-y-8 pb-10"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/90 to-slate-50/90 backdrop-blur-xl z-0" />
-                            {/* Decorative background blobs */}
-                            <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 z-0 animate-blob" />
-                            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 z-0 animate-blob animation-delay-2000" />
-                            
-                            <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center md:items-start">
-                                <div className="relative flex-shrink-0 group">
-                                    {imagePreview ? (
-                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-br from-blue-400 to-sky-400 shadow-md">
-                                            <img src={imagePreview} alt="Profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
+                            {/* Profile Hero Section (Glassmorphism) */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5 }}
+                                className="relative overflow-hidden rounded-3xl border border-slate-200/60 shadow-sm"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/90 to-slate-50/90 backdrop-blur-xl z-0" />
+                                {/* Decorative background blobs */}
+                                <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 z-0 animate-blob" />
+                                <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 z-0 animate-blob animation-delay-2000" />
+
+                                <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center md:items-start">
+                                    <div className="relative flex-shrink-0 group">
+                                        {imagePreview ? (
+                                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-br from-blue-400 to-sky-400 shadow-md">
+                                                <img src={imagePreview} alt="Profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-br from-slate-200 to-slate-300 shadow-md">
+                                                <div className="w-full h-full rounded-full border-4 border-white bg-slate-50 flex items-center justify-center text-slate-400 text-4xl md:text-5xl font-bold">
+                                                    {(profile?.title || 'A')[0]}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <label className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-white rounded-full p-2 shadow-lg border border-slate-100 cursor-pointer hover:scale-110 hover:shadow-blue-500/20 transition-all duration-200 group-hover:bg-blue-50">
+                                            <Upload className="w-4 h-4 md:w-5 md:h-5 text-blue-600 group-hover:text-blue-700" />
+                                            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleImageChange} />
+                                        </label>
+                                    </div>
+
+                                    <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full">
+                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
+                                            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">{profile?.title || 'Your Name'}</h2>
+                                            {profile?.is_verified && (
+                                                <span className="flex items-center text-xs font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full border border-green-200">
+                                                    <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> VERIFIED
+                                                </span>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-br from-slate-200 to-slate-300 shadow-md">
-                                            <div className="w-full h-full rounded-full border-4 border-white bg-slate-50 flex items-center justify-center text-slate-400 text-4xl md:text-5xl font-bold">
-                                                {(profile?.title || 'A')[0]}
+                                        <p className="text-slate-600 font-medium mb-1">{profile?.court_affiliation || 'Court Affiliation'} • {profile?.location || 'Location'}</p>
+
+                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-4">
+                                            <span className={`flex items-center text-xs font-bold px-3 py-1.5 uppercase rounded-full border ${profile?.is_public ? 'bg-green-50 text-green-700 border-green-200 shadow-sm' : 'bg-slate-100 text-slate-600 border-slate-200 shadow-sm'}`}>
+                                                {profile?.is_public ? (
+                                                    <><span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" /> LIVE / PUBLIC</>
+                                                ) : (
+                                                    <><span className="w-2 h-2 rounded-full bg-slate-400 mr-2" /> DRAFT / PRIVATE</>
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Circular Progress Completion */}
+                                    <div className="flex-shrink-0 flex flex-col items-center bg-white/60 p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center">
+                                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="8" />
+                                                <motion.circle
+                                                    cx="50" cy="50" r="40"
+                                                    fill="transparent"
+                                                    stroke={completionScore === 100 ? '#10B981' : '#2563EB'}
+                                                    strokeWidth="8"
+                                                    strokeLinecap="round"
+                                                    strokeDasharray="251.2"
+                                                    initial={{ strokeDashoffset: 251.2 }}
+                                                    animate={{ strokeDashoffset: 251.2 - (251.2 * completionScore) / 100 }}
+                                                    transition={{ duration: 1.5, ease: "easeOut" }}
+                                                />
+                                            </svg>
+                                            <div className="absolute flex flex-col items-center justify-center text-center">
+                                                <span className="text-xl md:text-2xl font-bold text-slate-900">{completionScore}%</span>
                                             </div>
                                         </div>
-                                    )}
-                                    <label className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-white rounded-full p-2 shadow-lg border border-slate-100 cursor-pointer hover:scale-110 hover:shadow-blue-500/20 transition-all duration-200 group-hover:bg-blue-50">
-                                        <Upload className="w-4 h-4 md:w-5 md:h-5 text-blue-600 group-hover:text-blue-700" />
-                                        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleImageChange} />
-                                    </label>
-                                </div>
-                                
-                                <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full">
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
-                                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">{profile?.title || 'Your Name'}</h2>
-                                        {profile?.is_verified && (
-                                            <span className="flex items-center text-xs font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full border border-green-200">
-                                                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> VERIFIED
-                                            </span>
+                                        <p className="text-[10px] md:text-xs font-bold text-slate-500 mt-2 uppercase tracking-wide">
+                                            {completionScore === 100 ? <span className="text-green-600">Profile Complete</span> : completionScore >= 80 ? 'Strong Profile' : 'Needs Update'}
+                                        </p>
+                                        {completionScore === 100 ? (
+                                            <div className="mt-3 flex flex-col items-center gap-1.5 max-w-[140px] text-center">
+                                                <Sparkles className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                                <p className="text-[10px] text-slate-500 leading-tight">
+                                                    {profile?.is_public
+                                                        ? 'Your lawyer profile is complete and ready for discovery.'
+                                                        : 'Your profile is complete. Make it public to appear in Lawyer Search.'}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="mt-3 flex flex-col items-center gap-1.5 max-w-[160px]">
+                                                <div className="flex items-start gap-1.5 w-full">
+                                                    <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                                                    <p className="text-[10px] text-slate-500 leading-tight">Complete your profile to increase discovery.</p>
+                                                </div>
+                                                {missingFields.length > 0 && (
+                                                    <div className="w-full bg-slate-50/80 rounded p-2 mt-1 border border-slate-100/50">
+                                                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Missing:</p>
+                                                        <ul className="text-[10px] text-slate-600 space-y-0.5">
+                                                            {missingFields.slice(0, 3).map((field, idx) => (
+                                                                <li key={idx} className="truncate">• {field}</li>
+                                                            ))}
+                                                            {missingFields.length > 3 && (
+                                                                <li className="text-slate-400 italic">+{missingFields.length - 3} more</li>
+                                                            )}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                    <p className="text-slate-600 font-medium mb-1">{profile?.court_affiliation || 'Court Affiliation'} • {profile?.location || 'Location'}</p>
-                                    
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-4">
-                                        <span className={`flex items-center text-xs font-bold px-3 py-1.5 uppercase rounded-full border ${profile?.is_public ? 'bg-green-50 text-green-700 border-green-200 shadow-sm' : 'bg-slate-100 text-slate-600 border-slate-200 shadow-sm'}`}>
-                                            {profile?.is_public ? (
-                                                <><span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" /> LIVE / PUBLIC</>
-                                            ) : (
-                                                <><span className="w-2 h-2 rounded-full bg-slate-400 mr-2" /> DRAFT / PRIVATE</>
-                                            )}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Circular Progress Completion */}
-                                <div className="flex-shrink-0 flex flex-col items-center bg-white/60 p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                    <div className="relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center">
-                                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="8" />
-                                            <motion.circle 
-                                                cx="50" cy="50" r="40" 
-                                                fill="transparent" 
-                                                stroke={completionScore === 100 ? '#10B981' : '#2563EB'} 
-                                                strokeWidth="8" 
-                                                strokeLinecap="round"
-                                                strokeDasharray="251.2"
-                                                initial={{ strokeDashoffset: 251.2 }}
-                                                animate={{ strokeDashoffset: 251.2 - (251.2 * completionScore) / 100 }}
-                                                transition={{ duration: 1.5, ease: "easeOut" }}
-                                            />
-                                        </svg>
-                                        <div className="absolute flex flex-col items-center justify-center text-center">
-                                            <span className="text-xl md:text-2xl font-bold text-slate-900">{completionScore}%</span>
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] md:text-xs font-bold text-slate-500 mt-2 uppercase tracking-wide">
-                                        {completionScore === 100 ? <span className="text-green-600">Profile Complete</span> : completionScore >= 80 ? 'Strong Profile' : 'Needs Update'}
-                                    </p>
-                                    {completionScore === 100 ? (
-                                        <div className="mt-3 flex flex-col items-center gap-1.5 max-w-[140px] text-center">
-                                            <Sparkles className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                            <p className="text-[10px] text-slate-500 leading-tight">
-                                                {profile?.is_public 
-                                                    ? 'Your lawyer profile is complete and ready for discovery.' 
-                                                    : 'Your profile is complete. Make it public to appear in Lawyer Search.'}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="mt-3 flex flex-col items-center gap-1.5 max-w-[160px]">
-                                            <div className="flex items-start gap-1.5 w-full">
-                                                <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
-                                                <p className="text-[10px] text-slate-500 leading-tight">Complete your profile to increase discovery.</p>
-                                            </div>
-                                            {missingFields.length > 0 && (
-                                                <div className="w-full bg-slate-50/80 rounded p-2 mt-1 border border-slate-100/50">
-                                                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Missing:</p>
-                                                    <ul className="text-[10px] text-slate-600 space-y-0.5">
-                                                        {missingFields.slice(0, 3).map((field, idx) => (
-                                                            <li key={idx} className="truncate">• {field}</li>
-                                                        ))}
-                                                        {missingFields.length > 3 && (
-                                                            <li className="text-slate-400 italic">+{missingFields.length - 3} more</li>
-                                                        )}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Account Details */}
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}
-                                className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 p-6 flex flex-col"
-                            >
-                                <div className="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4">
-                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><User className="w-4 h-4" /></div>
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Account Details</h3>
-                                        <p className="text-xs text-slate-500">Your account and authentication information</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-4 flex-1">
-                                    <div>
-                                        <p className="text-xs font-medium text-slate-400 mb-1">Full Name</p>
-                                        <p className="text-sm font-semibold text-slate-900">{authUser.name || authUser.firstName || profile?.title || 'Not available'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-slate-400 mb-1">Email Address</p>
-                                        <p className="text-sm font-semibold text-slate-900">{authUser.email || 'Not available'}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-6 pt-4 border-t border-slate-100">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-100 text-xs font-semibold text-green-700">
-                                        <ShieldCheck className="w-4 h-4" />
-                                        {authUser.googleId ? 'Google Verified' : 'Email Verified'}
-                                    </span>
                                 </div>
                             </motion.div>
 
-                                                        {/* Profile Visibility */}
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}
-                                className={`bg-white rounded-2xl shadow-sm transition-shadow border p-6 flex flex-col ${profile?.is_public ? 'border-teal-200 shadow-[0_0_15px_rgba(20,184,166,0.05)]' : 'border-slate-200/60 hover:shadow-md'}`}
-                            >
-                                <div className="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4">
-                                    <div className={`p-2 rounded-lg ${profile?.is_public ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-600'}`}>
-                                        {profile?.is_public ? <Globe className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Account Details */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}
+                                    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 p-6 flex flex-col"
+                                >
+                                    <div className="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4">
+                                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><User className="w-4 h-4" /></div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Account Details</h3>
+                                            <p className="text-xs text-slate-500">Your account and authentication information</p>
+                                        </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Profile Visibility</h3>
-                                        <p className="text-xs text-slate-500">Manage public access to your profile</p>
+                                    <div className="space-y-4 flex-1">
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-400 mb-1">Full Name</p>
+                                            <p className="text-sm font-semibold text-slate-900">{authUser.name || authUser.firstName || profile?.title || 'Not available'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-400 mb-1">Email Address</p>
+                                            <p className="text-sm font-semibold text-slate-900">{authUser.email || 'Not available'}</p>
+                                        </div>
                                     </div>
-                                    {/* Premium Toggle Switch */}
-                                    <button type="button" disabled={isPublishing} onClick={async () => {
-                                        const newStatus = !profile?.is_public;
-                                        setProfile(prev => {
-                                            const updated = { ...prev, is_public: newStatus };
-                                            localStorage.setItem('lawyer_profile', JSON.stringify(updated));
-                                            return updated;
-                                        });
-                                        try {
-                                            setIsPublishing(true);
-                                            const { id, user_id, slug, created_at, updated_at, is_verified, profile_completion_score, practice_areas: _pa, experience, education, certifications, ...updateable } = profile || {};
-                                            const payload = { ...updateable, is_public: newStatus };
-                                            if (payload.years_experience === '') payload.years_experience = null;
-                                            if (payload.consultation_fee === '') payload.consultation_fee = null;
-                                            await advocateProfile.updateMe(payload).catch(e => console.info('Backend visibility update note:', e));
-                                            toast.success(`Profile is now ${newStatus ? 'Public (LIVE)' : 'Private (DRAFT)'}`);
-                                        } catch (err) {
-                                            console.info('Visibility toggle info:', err);
-                                        } finally {
-                                            setIsPublishing(false);
-                                        }
-                                    }} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${profile?.is_public ? 'bg-teal-500' : 'bg-slate-300'} ${isPublishing ? 'opacity-70 cursor-wait' : 'cursor-pointer'}`}>
-                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${profile?.is_public ? 'translate-x-6' : 'translate-x-1'}`} />
-                                    </button>
-                                </div>
-                                <div className="flex-1 flex flex-col justify-center">
-                                    <AnimatePresence mode="wait">
-                                        {isPublishing ? (
-                                            <motion.div key="publishing" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }} className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-slate-800 flex items-center justify-center">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <svg className="animate-spin h-6 w-6 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                    <span className="font-bold text-slate-600 text-xs tracking-wide uppercase">Updating status...</span>
-                                                </div>
-                                            </motion.div>
-                                        ) : profile?.is_public ? (
-                                            <motion.div key="live" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="bg-white border border-teal-100 shadow-sm rounded-xl p-5 text-sm h-full flex flex-col justify-between">
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="relative flex h-3 w-3">
-                                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                                                          <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
-                                                        </span>
-                                                        <strong className="text-teal-700 text-sm font-extrabold tracking-wide">LIVE &bull; Profile is public</strong>
+                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-100 text-xs font-semibold text-green-700">
+                                            <ShieldCheck className="w-4 h-4" />
+                                            {authUser.googleId ? 'Google Verified' : 'Email Verified'}
+                                        </span>
+                                    </div>
+                                </motion.div>
+
+                                {/* Profile Visibility */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}
+                                    className={`bg-white rounded-2xl shadow-sm transition-shadow border p-6 flex flex-col ${profile?.is_public ? 'border-teal-200 shadow-[0_0_15px_rgba(20,184,166,0.05)]' : 'border-slate-200/60 hover:shadow-md'}`}
+                                >
+                                    <div className="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4">
+                                        <div className={`p-2 rounded-lg ${profile?.is_public ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-600'}`}>
+                                            {profile?.is_public ? <Globe className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Profile Visibility</h3>
+                                            <p className="text-xs text-slate-500">Manage public access to your profile</p>
+                                        </div>
+                                        {/* Premium Toggle Switch */}
+                                        <button type="button" disabled={isPublishing} onClick={async () => {
+                                            const newStatus = !profile?.is_public;
+                                            setProfile(prev => {
+                                                const updated = { ...prev, is_public: newStatus };
+                                                localStorage.setItem('lawyer_profile', JSON.stringify(updated));
+                                                return updated;
+                                            });
+                                            try {
+                                                setIsPublishing(true);
+                                                const { id, user_id, slug, created_at, updated_at, is_verified, profile_completion_score, practice_areas: _pa, experience, education, certifications, ...updateable } = profile || {};
+                                                const payload = { ...updateable, is_public: newStatus };
+                                                if (payload.years_experience === '') payload.years_experience = null;
+                                                if (payload.consultation_fee === '') payload.consultation_fee = null;
+                                                await advocateProfile.updateMe(payload).catch(e => console.info('Backend visibility update note:', e));
+                                                toast.success(`Profile is now ${newStatus ? 'Public (LIVE)' : 'Private (DRAFT)'}`);
+                                            } catch (err) {
+                                                console.info('Visibility toggle info:', err);
+                                            } finally {
+                                                setIsPublishing(false);
+                                            }
+                                        }} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${profile?.is_public ? 'bg-teal-500' : 'bg-slate-300'} ${isPublishing ? 'opacity-70 cursor-wait' : 'cursor-pointer'}`}>
+                                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${profile?.is_public ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        <AnimatePresence mode="wait">
+                                            {isPublishing ? (
+                                                <motion.div key="publishing" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }} className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-slate-800 flex items-center justify-center">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <svg className="animate-spin h-6 w-6 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                        <span className="font-bold text-slate-600 text-xs tracking-wide uppercase">Updating status...</span>
                                                     </div>
-                                                    <p className="text-slate-600 mb-5 text-sm font-medium">Your profile is visible to clients in Lawyer Search.</p>
-                                                </div>
-                                                
-                                                {profile?.slug && (
+                                                </motion.div>
+                                            ) : profile?.is_public ? (
+                                                <motion.div key="live" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="bg-white border border-teal-100 shadow-sm rounded-xl p-5 text-sm h-full flex flex-col justify-between">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="relative flex h-3 w-3">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
+                                                            </span>
+                                                            <strong className="text-teal-700 text-sm font-extrabold tracking-wide">LIVE &bull; Profile is public</strong>
+                                                        </div>
+                                                        <p className="text-slate-600 mb-5 text-sm font-medium">Your profile is visible to clients in Lawyer Search.</p>
+                                                    </div>
+
+                                                    {profile?.slug && (
+                                                        <div className="mt-auto">
+                                                            <div className="flex items-center gap-3">
+                                                                <a href={`/advocate/${profile.slug}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors shadow-sm shadow-teal-500/20">
+                                                                    <Globe className="w-4 h-4" /> View Public Profile
+                                                                </a>
+                                                                <button type="button" onClick={() => {
+                                                                    navigator.clipboard.writeText(`${window.location.origin}/advocate/${profile.slug}`);
+                                                                    toast.success('Profile link copied to clipboard!');
+                                                                }} className="flex items-center justify-center gap-2 h-10 px-4 text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 rounded-lg transition-colors focus:outline-none">
+                                                                    <Share2 className="w-4 h-4" /> Share Profile
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </motion.div>
+                                            ) : (
+                                                <motion.div key="hidden" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="bg-slate-50 border border-slate-200 shadow-sm rounded-xl p-5 text-sm flex flex-col justify-between h-full">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="w-3 h-3 rounded-full bg-slate-400"></span>
+                                                            <strong className="text-slate-700 text-sm font-extrabold tracking-wide">DRAFT &bull; Profile is private</strong>
+                                                        </div>
+                                                        <p className="text-slate-600 text-sm font-medium mb-3">Your profile is not currently visible in Lawyer Search.</p>
+                                                        {completionScore < 100 && (
+                                                            <div className="flex items-start gap-2 bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200/50 mb-4">
+                                                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                                <p className="text-xs font-semibold">Complete your profile before making it live.</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <div className="mt-auto">
-                                                        <div className="flex items-center gap-3">
-                                                            <a href={`/advocate/${profile.slug}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors shadow-sm shadow-teal-500/20">
-                                                                <Globe className="w-4 h-4" /> View Public Profile
+                                                        <button type="button" disabled={isPublishing} onClick={async () => {
+                                                            setProfile(prev => {
+                                                                const updated = { ...prev, is_public: true };
+                                                                localStorage.setItem('lawyer_profile', JSON.stringify(updated));
+                                                                return updated;
+                                                            });
+                                                            try {
+                                                                setIsPublishing(true);
+                                                                const { id, user_id, slug, created_at, updated_at, is_verified, profile_completion_score, practice_areas: _pa, experience, education, certifications, ...updateable } = profile || {};
+                                                                const payload = { ...updateable, is_public: true };
+                                                                if (payload.years_experience === '') payload.years_experience = null;
+                                                                if (payload.consultation_fee === '') payload.consultation_fee = null;
+                                                                await advocateProfile.updateMe(payload).catch(e => console.info('Backend visibility update note:', e));
+                                                                toast.success('Profile is now LIVE & Public!');
+                                                            } catch (err) {
+                                                                console.info('Make live info:', err);
+                                                            } finally {
+                                                                setIsPublishing(false);
+                                                            }
+                                                        }} className="w-full flex items-center justify-center gap-2 h-10 text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors">
+                                                            Make Profile Live
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </motion.div>
+
+                            </div>
+
+                            {/* Share Your Lawyer Profile */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.25 }}
+                                className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-lg border border-slate-700/50 p-6 md:p-8 text-white relative overflow-hidden mt-6"
+                            >
+                                <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                                <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                                <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-stretch">
+                                    <div className="flex-1 flex flex-col justify-center text-center md:text-left w-full">
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-xs font-semibold text-teal-300 border border-white/10 w-fit mb-4 mx-auto md:mx-0">
+                                            <Sparkles className="w-3.5 h-3.5" /> Core Feature
+                                        </div>
+
+                                        <h3 className="text-2xl font-bold mb-2">Share Your Lawyer Profile</h3>
+                                        <p className="text-slate-300 text-sm mb-6 max-w-md mx-auto md:mx-0">
+                                            {profile?.is_public
+                                                ? (completionScore === 100 ? "Your profile is complete and ready to share." : "Complete your profile to create your strongest professional presence.")
+                                                : "Publish your profile to generate a public shareable link."
+                                            }
+                                        </p>
+
+                                        {(() => {
+                                            const currentSlug = profile?.slug || (profile?.title ? profile.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'advocate') + '-profile';
+                                            const publicUrl = `${window.location.origin}/advocate/${currentSlug}`;
+
+                                            return (
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center gap-2 bg-slate-950/50 border border-slate-700 rounded-xl px-4 py-3 overflow-hidden">
+                                                        <Link className="w-4 h-4 text-slate-400 shrink-0" />
+                                                        <span className="text-sm font-medium text-slate-300 truncate select-all flex-1">
+                                                            {publicUrl}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                                                        <button type="button" onClick={() => {
+                                                            navigator.clipboard.writeText(publicUrl)
+                                                                .then(() => toast.success('✓ Profile link copied!'))
+                                                                .catch(() => toast.error('Failed to copy link'));
+                                                        }} className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 h-11 text-sm font-bold text-slate-900 bg-white hover:bg-slate-100 rounded-xl transition-colors focus:outline-none shadow-sm">
+                                                            <Copy className="w-4 h-4" /> Copy Profile Link
+                                                        </button>
+
+                                                        <div className="flex w-full sm:w-auto gap-3 flex-1">
+                                                            <a href={`/advocate/${currentSlug}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 h-11 text-sm font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl transition-colors">
+                                                                View Profile
                                                             </a>
                                                             <button type="button" onClick={() => {
-                                                                navigator.clipboard.writeText(`${window.location.origin}/advocate/${profile.slug}`);
-                                                                toast.success('Profile link copied to clipboard!');
-                                                            }} className="flex items-center justify-center gap-2 h-10 px-4 text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 rounded-lg transition-colors focus:outline-none">
-                                                                <Share2 className="w-4 h-4" /> Share Profile
+                                                                if (!profile?.is_public) {
+                                                                    setProfile(prev => ({ ...prev, is_public: true }));
+                                                                    toast.success('Profile made LIVE!');
+                                                                }
+                                                                setIsShareModalOpen(true);
+                                                            }} className="flex-1 flex items-center justify-center gap-2 h-11 text-sm font-bold text-white bg-teal-600 hover:bg-teal-500 rounded-xl transition-colors focus:outline-none shadow-lg shadow-teal-500/20">
+                                                                <Share2 className="w-4 h-4" /> Share
                                                             </button>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </motion.div>
-                                        ) : (
-                                            <motion.div key="hidden" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="bg-slate-50 border border-slate-200 shadow-sm rounded-xl p-5 text-sm flex flex-col justify-between h-full">
-                                                <div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </motion.div>
+
+                            {/* Professional Information */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.3 }}
+                                className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
+                            >
+                                <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><BriefcaseBusiness className="w-5 h-5" /></div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900">Professional Information</h3>
+                                        <p className="text-sm text-slate-500">Your professional identity, legal credentials and practice details.</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div>
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Full Name / Title</Label>
+                                        <Input name="title" value={profile?.title || ''} onChange={handleChange} placeholder="e.g. Adv. Rajesh Sharma" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Phone Number</Label>
+                                        <Input name="phone" value={profile?.phone || ''} onChange={handleChange} placeholder="e.g. +91 9876543210" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Bar Council Number</Label>
+                                        <Input name="bar_council_number" value={profile?.bar_council_number || ''} onChange={handleChange} placeholder="e.g. MAH/12345/2020" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Years of Experience</Label>
+                                        <Input type="number" name="years_experience" min="0" value={profile?.years_experience || ''} onChange={handleChange} placeholder="e.g. 5" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Court Affiliation</Label>
+                                        <Input name="court_affiliation" value={profile?.court_affiliation || ''} onChange={handleChange} placeholder="e.g. High Court of Bombay" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Location (City, State)</Label>
+                                        <Input name="location" value={profile?.location || ''} onChange={handleChange} placeholder="e.g. Mumbai, Maharashtra" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                    </div>
+                                    <div className="md:col-span-2 lg:col-span-3">
+                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Office Address</Label>
+                                        <Textarea name="office_address" value={profile?.office_address || ''} onChange={handleChange} placeholder="e.g. Suite 402, Nariman Point, Mumbai, Maharashtra 400021" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all resize-none min-h-[80px]" />
+                                    </div>
+                                    <div className="md:col-span-2 lg:col-span-3">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide block m-0">Professional Bio</Label>
+                                            <span className="text-xs text-slate-400">Tell clients about your experience, expertise and approach.</span>
+                                        </div>
+                                        <Textarea name="bio" value={profile?.bio || ''} onChange={handleChange} maxLength={500} placeholder="Describe your expertise, experience, and what makes you unique..." className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all resize-none min-h-[120px]" />
+                                        <div className="text-right text-xs text-slate-400 mt-1">{(profile?.bio || '').length} / 500 characters</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+
+                            {/* Professional Metrics */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.4 }}
+                            >
+                                <div className="flex items-center justify-between mb-4 px-2">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900">Professional Metrics</h3>
+                                        <p className="text-xs text-slate-500 font-medium">Enter your actual court performance stats & consultation history</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                    {/* Cases Won */}
+                                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <Gavel className="w-5 h-5" />
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            name="cases_won"
+                                            min="0"
+                                            placeholder="0"
+                                            value={profile?.cases_won ?? ''}
+                                            onChange={handleChange}
+                                            className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1"
+                                        />
+                                        <Label className="text-xs font-semibold text-slate-600">Cases Won</Label>
+                                    </div>
+
+                                    {/* Total Cases / Clients */}
+                                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                                        <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <Users className="w-5 h-5" />
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            name="total_clients"
+                                            min="0"
+                                            placeholder="0"
+                                            value={profile?.total_clients ?? ''}
+                                            onChange={handleChange}
+                                            className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1"
+                                        />
+                                        <Label className="text-xs font-semibold text-slate-600">Total Cases / Clients</Label>
+                                    </div>
+
+                                    {/* Success Rate */}
+                                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                                        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <TrendingUp className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Input
+                                                type="number"
+                                                name="success_rate"
+                                                min="0"
+                                                max="100"
+                                                step="0.1"
+                                                placeholder="0"
+                                                value={profile?.success_rate ?? ''}
+                                                onChange={handleChange}
+                                                className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1 flex-1 min-w-0"
+                                            />
+                                            <span className="text-lg font-bold text-slate-900 mb-1">%</span>
+                                        </div>
+                                        <Label className="text-xs font-semibold text-slate-600">Success Rate (%)</Label>
+                                    </div>
+
+                                    {/* Total Consultations */}
+                                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <CalendarDays className="w-5 h-5" />
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            name="total_consultations"
+                                            min="0"
+                                            placeholder="0"
+                                            value={profile?.total_consultations ?? ''}
+                                            onChange={handleChange}
+                                            className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1"
+                                        />
+                                        <Label className="text-xs font-semibold text-slate-600">Total Consultations</Label>
+                                    </div>
+                                </div>
+                            </motion.div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Consultation Settings */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.5 }}
+                                    className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
+                                >
+                                    <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Clock className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900">Consultation Settings</h3>
+                                            <p className="text-sm text-slate-500">Configure how clients can consult with you.</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-5">
+                                        <div>
+                                            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Consultation Fee (₹)</Label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                                                <Input type="number" name="consultation_fee" min="0" value={profile?.consultation_fee || ''} onChange={handleChange} placeholder="1500" className="pl-9 bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Availability Settings</Label>
+                                            <Input name="availability_settings" value={profile?.availability_settings || ''} onChange={handleChange} placeholder="e.g. Mon-Fri, 10 AM to 6 PM" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                            {profile?.availability_settings && (
+                                                <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-green-600">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Available for consultation
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+
+                                {/* Social Links */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.6 }}
+                                    className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
+                                >
+                                    <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Globe className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900">Social Links</h3>
+                                            <p className="text-sm text-slate-500">Connect your professional profiles.</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {[
+                                            { id: 'linkedin', label: 'LinkedIn', icon: Link, placeholder: 'https://linkedin.com/in/...' },
+                                            { id: 'website', label: 'Website', icon: Globe, placeholder: 'https://...' },
+                                            { id: 'twitter', label: 'Twitter / X', icon: Link, placeholder: 'https://twitter.com/...' }
+                                        ].map(social => {
+                                            const val = profile?.social_links?.[social.id] || '';
+                                            const isValid = val.startsWith('http://') || val.startsWith('https://');
+                                            return (
+                                                <div key={social.id}>
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <span className="w-3 h-3 rounded-full bg-slate-400"></span>
-                                                        <strong className="text-slate-700 text-sm font-extrabold tracking-wide">DRAFT &bull; Profile is private</strong>
+                                                        <social.icon className="w-3.5 h-3.5 text-slate-400" />
+                                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide m-0">{social.label}</Label>
                                                     </div>
-                                                    <p className="text-slate-600 text-sm font-medium mb-3">Your profile is not currently visible in Lawyer Search.</p>
-                                                    {completionScore < 100 && (
-                                                        <div className="flex items-start gap-2 bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200/50 mb-4">
-                                                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                            <p className="text-xs font-semibold">Complete your profile before making it live.</p>
+                                                    <div className="relative group">
+                                                        <Input name={social.id} value={val} onChange={handleSocialLinkChange} placeholder={social.placeholder} className={`bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all pr-10 ${isValid ? 'border-green-200' : ''}`} />
+                                                        {isValid && <CheckCircle2 className="w-4 h-4 text-green-500 absolute right-3 top-1/2 -translate-y-1/2" />}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </motion.div>
+                            </div>
+
+                            {/* Languages */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.7 }}
+                                className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
+                            >
+                                <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><LanguagesIcon className="w-5 h-5" /></div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900">Languages</h3>
+                                        <p className="text-sm text-slate-500">Languages you speak fluently.</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2.5">
+                                    {LANGUAGE_OPTIONS.map(lang => (
+                                        <button key={lang} type="button" onClick={() => toggleLanguage(lang)}
+                                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200
+                                            ${languages.includes(lang)
+                                                    ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/20 scale-[1.02]'
+                                                    : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'}`}>
+                                            {lang}
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            {/* Practice Areas */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.8 }}
+                                className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
+                            >
+                                <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Scale className="w-5 h-5" /></div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900">Practice Areas</h3>
+                                        <p className="text-sm text-slate-500">Select the legal domains you specialize in.</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                                    {PRACTICE_AREA_OPTIONS.map(pa => (
+                                        <label key={pa}
+                                            className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 group
+                                            ${practiceAreas.includes(pa)
+                                                    ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-400 shadow-sm -translate-y-0.5'
+                                                    : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm hover:-translate-y-0.5'}`}>
+                                            <input type="checkbox" className="hidden" checked={practiceAreas.includes(pa)} onChange={() => togglePracticeArea(pa)} />
+                                            <div className={`w-5 h-5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors
+                                            ${practiceAreas.includes(pa) ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300 group-hover:border-blue-400'}`}>
+                                                {practiceAreas.includes(pa) && <Check className="w-3 h-3 text-white" />}
+                                            </div>
+                                            <span className={`text-sm font-semibold ${practiceAreas.includes(pa) ? 'text-blue-900' : 'text-slate-700'}`}>{pa}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            {/* Experience */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+                                className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
+                            >
+                                <div className="flex flex-wrap items-center justify-between mb-6 border-b border-slate-100 pb-4 gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><BriefcaseBusiness className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900">Experience</h3>
+                                            <p className="text-sm text-slate-500">Your professional timeline.</p>
+                                        </div>
+                                    </div>
+                                    <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl" onClick={handleAddExperience}>
+                                        <Plus className="w-4 h-4 mr-1.5" /> Add Experience
+                                    </Button>
+                                </div>
+                                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:ml-6 md:before:translate-x-0 before:h-full before:w-0.5 before:bg-blue-100">
+                                    {experience.length === 0 && <p className="text-slate-500 text-sm ml-8 md:ml-12">No experience added yet.</p>}
+                                    <AnimatePresence>
+                                        {experience.map((exp, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
+                                                className="relative flex items-start group"
+                                            >
+                                                {/* Timeline marker */}
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full border-4 border-white bg-blue-500 absolute left-0 md:left-2 shadow-sm shrink-0 md:group-hover:scale-110 transition-transform mt-2 z-10" />
+
+                                                {/* Card */}
+                                                <div className="w-[calc(100%-2.5rem)] md:w-[calc(100%-4rem)] p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all ml-10 md:ml-16">
+                                                    {editingExperience === index ? (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="col-span-1 md:col-span-2 flex justify-between items-center mb-2">
+                                                                <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Editing Experience</span>
+                                                                <div className="flex gap-2">
+                                                                    <Button type="button" size="sm" variant="ghost" onClick={() => removeListItem('experience', index)} className="h-8 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                    <Button type="button" size="sm" variant="outline" onClick={() => setEditingExperience(null)} className="h-8 px-3 text-slate-600">
+                                                                        Done
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Job Title / Position</Label>
+                                                                <Input value={exp.role} onChange={(e) => handleListChange('experience', index, 'role', e.target.value)} placeholder="e.g. Senior Advocate" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Organization</Label>
+                                                                <Input value={exp.company} onChange={(e) => handleListChange('experience', index, 'company', e.target.value)} placeholder="e.g. Supreme Court of India" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Location</Label>
+                                                                <Input value={exp.location} onChange={(e) => handleListChange('experience', index, 'location', e.target.value)} placeholder="e.g. New Delhi" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Start Date</Label>
+                                                                    <Input type="date" value={exp.start_date} onChange={(e) => handleListChange('experience', index, 'start_date', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
+                                                                </div>
+                                                                <div className="flex flex-col gap-1">
+                                                                    <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">End Date</Label>
+                                                                    {exp.is_current ? (
+                                                                        <Input disabled value="Present" className="bg-slate-100 text-slate-400 rounded-lg text-sm" />
+                                                                    ) : (
+                                                                        <Input type="date" value={exp.end_date} onChange={(e) => handleListChange('experience', index, 'end_date', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="col-span-1 md:col-span-2 flex items-center gap-2 mt-1">
+                                                                <input type="checkbox" id={`is-current-exp-${index}`} checked={exp.is_current}
+                                                                    onChange={(e) => handleListChange('experience', index, 'is_current', e.target.checked)}
+                                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                                                                <Label htmlFor={`is-current-exp-${index}`} className="text-xs font-semibold text-slate-600 cursor-pointer">I currently work here</Label>
+                                                            </div>
+                                                            <div className="col-span-1 md:col-span-2 mt-2">
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Description</Label>
+                                                                <Textarea value={exp.description} onChange={(e) => handleListChange('experience', index, 'description', e.target.value)}
+                                                                    placeholder="Describe your responsibilities and achievements..."
+                                                                    className="resize-none bg-slate-50/50 h-24 rounded-lg text-sm" />
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <h4 className="text-base font-bold text-slate-800">{exp.role || 'Position Title'}</h4>
+                                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEditingExperience(index)} className="h-7 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-sm font-medium text-slate-700 mb-2">
+                                                                {exp.company || 'Organization Name'}
+                                                                {exp.location && <span className="text-slate-400 font-normal"> • {exp.location}</span>}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 font-medium bg-slate-100/80 w-fit px-2.5 py-1 rounded-md mb-4">
+                                                                {exp.start_date || 'Start'} — {exp.is_current ? 'Present' : (exp.end_date || 'End')}
+                                                            </div>
+                                                            {exp.description && (
+                                                                <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
+                                                                    {exp.description}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="mt-auto">
-                                                    <button type="button" disabled={isPublishing} onClick={async () => {
-                                                        setProfile(prev => {
-                                                            const updated = { ...prev, is_public: true };
-                                                            localStorage.setItem('lawyer_profile', JSON.stringify(updated));
-                                                            return updated;
-                                                        });
-                                                        try {
-                                                            setIsPublishing(true);
-                                                            const { id, user_id, slug, created_at, updated_at, is_verified, profile_completion_score, practice_areas: _pa, experience, education, certifications, ...updateable } = profile || {};
-                                                            const payload = { ...updateable, is_public: true };
-                                                            if (payload.years_experience === '') payload.years_experience = null;
-                                                            if (payload.consultation_fee === '') payload.consultation_fee = null;
-                                                            await advocateProfile.updateMe(payload).catch(e => console.info('Backend visibility update note:', e));
-                                                            toast.success('Profile is now LIVE & Public!');
-                                                        } catch (err) {
-                                                            console.info('Make live info:', err);
-                                                        } finally {
-                                                            setIsPublishing(false);
-                                                        }
-                                                    }} className="w-full flex items-center justify-center gap-2 h-10 text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors">
-                                                        Make Profile Live
-                                                    </button>
-                                                </div>
                                             </motion.div>
-                                        )}
+                                        ))}
                                     </AnimatePresence>
                                 </div>
                             </motion.div>
 
-                        </div>
-
-                        {/* Share Your Lawyer Profile */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.25 }}
-                            className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-lg border border-slate-700/50 p-6 md:p-8 text-white relative overflow-hidden mt-6"
-                        >
-                            <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                            <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-                            <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-stretch">
-                                <div className="flex-1 flex flex-col justify-center text-center md:text-left w-full">
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-xs font-semibold text-teal-300 border border-white/10 w-fit mb-4 mx-auto md:mx-0">
-                                        <Sparkles className="w-3.5 h-3.5" /> Core Feature
-                                    </div>
-                                    
-                                    <h3 className="text-2xl font-bold mb-2">Share Your Lawyer Profile</h3>
-                                    <p className="text-slate-300 text-sm mb-6 max-w-md mx-auto md:mx-0">
-                                        {profile?.is_public 
-                                            ? (completionScore === 100 ? "Your profile is complete and ready to share." : "Complete your profile to create your strongest professional presence.")
-                                            : "Publish your profile to generate a public shareable link."
-                                        }
-                                    </p>
-                                    
-                                    {(() => {
-                                        const currentSlug = profile?.slug || (profile?.title ? profile.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'advocate') + '-profile';
-                                        const publicUrl = `${window.location.origin}/advocate/${currentSlug}`;
-
-                                        return (
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-2 bg-slate-950/50 border border-slate-700 rounded-xl px-4 py-3 overflow-hidden">
-                                                    <Link className="w-4 h-4 text-slate-400 shrink-0" />
-                                                    <span className="text-sm font-medium text-slate-300 truncate select-all flex-1">
-                                                        {publicUrl}
-                                                    </span>
-                                                </div>
-                                                
-                                                <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-                                                    <button type="button" onClick={() => {
-                                                        navigator.clipboard.writeText(publicUrl)
-                                                            .then(() => toast.success('✓ Profile link copied!'))
-                                                            .catch(() => toast.error('Failed to copy link'));
-                                                    }} className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 h-11 text-sm font-bold text-slate-900 bg-white hover:bg-slate-100 rounded-xl transition-colors focus:outline-none shadow-sm">
-                                                        <Copy className="w-4 h-4" /> Copy Profile Link
-                                                    </button>
-                                                    
-                                                    <div className="flex w-full sm:w-auto gap-3 flex-1">
-                                                        <a href={`/advocate/${currentSlug}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 h-11 text-sm font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl transition-colors">
-                                                            View Profile
-                                                        </a>
-                                                        <button type="button" onClick={() => {
-                                                            if (!profile?.is_public) {
-                                                                setProfile(prev => ({ ...prev, is_public: true }));
-                                                                toast.success('Profile made LIVE!');
-                                                            }
-                                                            setIsShareModalOpen(true);
-                                                        }} className="flex-1 flex items-center justify-center gap-2 h-11 text-sm font-bold text-white bg-teal-600 hover:bg-teal-500 rounded-xl transition-colors focus:outline-none shadow-lg shadow-teal-500/20">
-                                                            <Share2 className="w-4 h-4" /> Share
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        {/* Professional Information */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.3 }}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
-                        >
-                            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                                <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><BriefcaseBusiness className="w-5 h-5" /></div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900">Professional Information</h3>
-                                    <p className="text-sm text-slate-500">Your professional identity, legal credentials and practice details.</p>
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div>
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Full Name / Title</Label>
-                                    <Input name="title" value={profile?.title || ''} onChange={handleChange} placeholder="e.g. Adv. Rajesh Sharma" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Phone Number</Label>
-                                    <Input name="phone" value={profile?.phone || ''} onChange={handleChange} placeholder="e.g. +91 9876543210" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Bar Council Number</Label>
-                                    <Input name="bar_council_number" value={profile?.bar_council_number || ''} onChange={handleChange} placeholder="e.g. MAH/12345/2020" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Years of Experience</Label>
-                                    <Input type="number" name="years_experience" min="0" value={profile?.years_experience || ''} onChange={handleChange} placeholder="e.g. 5" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Court Affiliation</Label>
-                                    <Input name="court_affiliation" value={profile?.court_affiliation || ''} onChange={handleChange} placeholder="e.g. High Court of Bombay" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Location (City, State)</Label>
-                                    <Input name="location" value={profile?.location || ''} onChange={handleChange} placeholder="e.g. Mumbai, Maharashtra" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                </div>
-                                <div className="md:col-span-2 lg:col-span-3">
-                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Office Address</Label>
-                                    <Textarea name="office_address" value={profile?.office_address || ''} onChange={handleChange} placeholder="e.g. Suite 402, Nariman Point, Mumbai, Maharashtra 400021" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all resize-none min-h-[80px]" />
-                                </div>
-                                <div className="md:col-span-2 lg:col-span-3">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide block m-0">Professional Bio</Label>
-                                        <span className="text-xs text-slate-400">Tell clients about your experience, expertise and approach.</span>
-                                    </div>
-                                    <Textarea name="bio" value={profile?.bio || ''} onChange={handleChange} maxLength={500} placeholder="Describe your expertise, experience, and what makes you unique..." className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all resize-none min-h-[120px]" />
-                                    <div className="text-right text-xs text-slate-400 mt-1">{(profile?.bio || '').length} / 500 characters</div>
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        {/* Professional Metrics */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.4 }}
-                        >
-                            <div className="flex items-center justify-between mb-4 px-2">
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900">Professional Metrics</h3>
-                                    <p className="text-xs text-slate-500 font-medium">Enter your actual court performance stats & consultation history</p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                                {/* Cases Won */}
-                                <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                        <Gavel className="w-5 h-5" />
-                                    </div>
-                                    <Input 
-                                        type="number" 
-                                        name="cases_won" 
-                                        min="0" 
-                                        placeholder="0"
-                                        value={profile?.cases_won ?? ''} 
-                                        onChange={handleChange} 
-                                        className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1" 
-                                    />
-                                    <Label className="text-xs font-semibold text-slate-600">Cases Won</Label>
-                                </div>
-
-                                {/* Total Cases / Clients */}
-                                <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                    <Input 
-                                        type="number" 
-                                        name="total_clients" 
-                                        min="0" 
-                                        placeholder="0"
-                                        value={profile?.total_clients ?? ''} 
-                                        onChange={handleChange} 
-                                        className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1" 
-                                    />
-                                    <Label className="text-xs font-semibold text-slate-600">Total Cases / Clients</Label>
-                                </div>
-
-                                {/* Success Rate */}
-                                <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                        <TrendingUp className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Input 
-                                            type="number" 
-                                            name="success_rate" 
-                                            min="0" 
-                                            max="100" 
-                                            step="0.1" 
-                                            placeholder="0"
-                                            value={profile?.success_rate ?? ''} 
-                                            onChange={handleChange} 
-                                            className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1 flex-1 min-w-0" 
-                                        />
-                                        <span className="text-lg font-bold text-slate-900 mb-1">%</span>
-                                    </div>
-                                    <Label className="text-xs font-semibold text-slate-600">Success Rate (%)</Label>
-                                </div>
-
-                                {/* Total Consultations */}
-                                <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                        <CalendarDays className="w-5 h-5" />
-                                    </div>
-                                    <Input 
-                                        type="number" 
-                                        name="total_consultations" 
-                                        min="0" 
-                                        placeholder="0"
-                                        value={profile?.total_consultations ?? ''} 
-                                        onChange={handleChange} 
-                                        className="h-10 text-2xl font-bold text-slate-900 border border-slate-200 rounded-xl px-3 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-1" 
-                                    />
-                                    <Label className="text-xs font-semibold text-slate-600">Total Consultations</Label>
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Consultation Settings */}
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.5 }}
+                            {/* Education */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
                                 className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
                             >
-                                <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Clock className="w-5 h-5" /></div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900">Consultation Settings</h3>
-                                        <p className="text-sm text-slate-500">Configure how clients can consult with you.</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-5">
-                                    <div>
-                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Consultation Fee (₹)</Label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
-                                            <Input type="number" name="consultation_fee" min="0" value={profile?.consultation_fee || ''} onChange={handleChange} placeholder="1500" className="pl-9 bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
+                                <div className="flex flex-wrap items-center justify-between mb-6 border-b border-slate-100 pb-4 gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><GraduationCap className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900">Education</h3>
+                                            <p className="text-sm text-slate-500">Your academic background.</p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">Availability Settings</Label>
-                                        <Input name="availability_settings" value={profile?.availability_settings || ''} onChange={handleChange} placeholder="e.g. Mon-Fri, 10 AM to 6 PM" className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all" />
-                                        {profile?.availability_settings && (
-                                            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-green-600">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Available for consultation
-                                            </div>
-                                        )}
-                                    </div>
+                                    <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl" onClick={handleAddEducation}>
+                                        <Plus className="w-4 h-4 mr-1.5" /> Add Education
+                                    </Button>
                                 </div>
-                            </motion.div>
-
-                            {/* Social Links */}
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.6 }}
-                                className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
-                            >
-                                <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Globe className="w-5 h-5" /></div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900">Social Links</h3>
-                                        <p className="text-sm text-slate-500">Connect your professional profiles.</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    {[
-                                        { id: 'linkedin', label: 'LinkedIn', icon: Link, placeholder: 'https://linkedin.com/in/...' },
-                                        { id: 'website', label: 'Website', icon: Globe, placeholder: 'https://...' },
-                                        { id: 'twitter', label: 'Twitter / X', icon: Link, placeholder: 'https://twitter.com/...' }
-                                    ].map(social => {
-                                        const val = profile?.social_links?.[social.id] || '';
-                                        const isValid = val.startsWith('http://') || val.startsWith('https://');
-                                        return (
-                                            <div key={social.id}>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <social.icon className="w-3.5 h-3.5 text-slate-400" />
-                                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide m-0">{social.label}</Label>
-                                                </div>
-                                                <div className="relative group">
-                                                    <Input name={social.id} value={val} onChange={handleSocialLinkChange} placeholder={social.placeholder} className={`bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all pr-10 ${isValid ? 'border-green-200' : ''}`} />
-                                                    {isValid && <CheckCircle2 className="w-4 h-4 text-green-500 absolute right-3 top-1/2 -translate-y-1/2" />}
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </motion.div>
-                        </div>
-
-                        {/* Languages */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.7 }}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
-                        >
-                            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                                <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><LanguagesIcon className="w-5 h-5" /></div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900">Languages</h3>
-                                    <p className="text-sm text-slate-500">Languages you speak fluently.</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2.5">
-                                {LANGUAGE_OPTIONS.map(lang => (
-                                    <button key={lang} type="button" onClick={() => toggleLanguage(lang)}
-                                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200
-                                            ${languages.includes(lang)
-                                                ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/20 scale-[1.02]'
-                                                : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'}`}>
-                                        {lang}
-                                    </button>
-                                ))}
-                            </div>
-                        </motion.div>
-
-                        {/* Practice Areas */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.8 }}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
-                        >
-                            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                                <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Scale className="w-5 h-5" /></div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900">Practice Areas</h3>
-                                    <p className="text-sm text-slate-500">Select the legal domains you specialize in.</p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                                {PRACTICE_AREA_OPTIONS.map(pa => (
-                                    <label key={pa}
-                                        className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 group
-                                            ${practiceAreas.includes(pa)
-                                                ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-400 shadow-sm -translate-y-0.5'
-                                                : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm hover:-translate-y-0.5'}`}>
-                                        <input type="checkbox" className="hidden" checked={practiceAreas.includes(pa)} onChange={() => togglePracticeArea(pa)} />
-                                        <div className={`w-5 h-5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors
-                                            ${practiceAreas.includes(pa) ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300 group-hover:border-blue-400'}`}>
-                                            {practiceAreas.includes(pa) && <Check className="w-3 h-3 text-white" />}
-                                        </div>
-                                        <span className={`text-sm font-semibold ${practiceAreas.includes(pa) ? 'text-blue-900' : 'text-slate-700'}`}>{pa}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </motion.div>
-
-                                                {/* Experience */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
-                        >
-                            <div className="flex flex-wrap items-center justify-between mb-6 border-b border-slate-100 pb-4 gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><BriefcaseBusiness className="w-5 h-5" /></div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900">Experience</h3>
-                                        <p className="text-sm text-slate-500">Your professional timeline.</p>
-                                    </div>
-                                </div>
-                                <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl" onClick={handleAddExperience}>
-                                    <Plus className="w-4 h-4 mr-1.5" /> Add Experience
-                                </Button>
-                            </div>
-                            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:ml-6 md:before:translate-x-0 before:h-full before:w-0.5 before:bg-blue-100">
-                                {experience.length === 0 && <p className="text-slate-500 text-sm ml-8 md:ml-12">No experience added yet.</p>}
-                                <AnimatePresence>
-                                    {experience.map((exp, index) => (
-                                        <motion.div 
-                                            key={index} 
-                                            initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
-                                            className="relative flex items-start group"
-                                        >
-                                            {/* Timeline marker */}
-                                            <div className="flex items-center justify-center w-8 h-8 rounded-full border-4 border-white bg-blue-500 absolute left-0 md:left-2 shadow-sm shrink-0 md:group-hover:scale-110 transition-transform mt-2 z-10" />
-                                            
-                                            {/* Card */}
-                                            <div className="w-[calc(100%-2.5rem)] md:w-[calc(100%-4rem)] p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all ml-10 md:ml-16">
-                                                {editingExperience === index ? (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div className="col-span-1 md:col-span-2 flex justify-between items-center mb-2">
-                                                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Editing Experience</span>
-                                                            <div className="flex gap-2">
-                                                                <Button type="button" size="sm" variant="ghost" onClick={() => removeListItem('experience', index)} className="h-8 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </Button>
-                                                                <Button type="button" size="sm" variant="outline" onClick={() => setEditingExperience(null)} className="h-8 px-3 text-slate-600">
-                                                                    Done
-                                                                </Button>
+                                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:ml-6 md:before:translate-x-0 before:h-full before:w-0.5 before:bg-blue-100">
+                                    {education.length === 0 && <p className="text-slate-500 text-sm ml-8 md:ml-12">No education added yet.</p>}
+                                    <AnimatePresence>
+                                        {education.map((edu, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
+                                                className="relative flex items-start group"
+                                            >
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full border-4 border-white bg-slate-400 absolute left-0 md:left-2 shadow-sm shrink-0 md:group-hover:scale-110 transition-transform mt-2 z-10" />
+                                                <div className="w-[calc(100%-2.5rem)] md:w-[calc(100%-4rem)] p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all ml-10 md:ml-16">
+                                                    {editingEducation === index ? (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="col-span-1 md:col-span-2 flex justify-between items-center mb-2">
+                                                                <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Editing Education</span>
+                                                                <div className="flex gap-2">
+                                                                    <Button type="button" size="sm" variant="ghost" onClick={() => removeListItem('education', index)} className="h-8 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                    <Button type="button" size="sm" variant="outline" onClick={() => setEditingEducation(null)} className="h-8 px-3 text-slate-600">
+                                                                        Done
+                                                                    </Button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Job Title / Position</Label>
-                                                            <Input value={exp.role} onChange={(e) => handleListChange('experience', index, 'role', e.target.value)} placeholder="e.g. Senior Advocate" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Organization</Label>
-                                                            <Input value={exp.company} onChange={(e) => handleListChange('experience', index, 'company', e.target.value)} placeholder="e.g. Supreme Court of India" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Location</Label>
-                                                            <Input value={exp.location} onChange={(e) => handleListChange('experience', index, 'location', e.target.value)} placeholder="e.g. New Delhi" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div className="col-span-1 md:col-span-2">
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Institution</Label>
+                                                                <Input value={edu.institution} onChange={(e) => handleListChange('education', index, 'institution', e.target.value)} placeholder="e.g. National Law School" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
                                                             <div>
-                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Start Date</Label>
-                                                                <Input type="date" value={exp.start_date} onChange={(e) => handleListChange('experience', index, 'start_date', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Degree</Label>
+                                                                <Input value={edu.degree} onChange={(e) => handleListChange('education', index, 'degree', e.target.value)} placeholder="e.g. LL.B." className="bg-slate-50/50 rounded-lg text-sm" />
                                                             </div>
-                                                            <div className="flex flex-col gap-1">
-                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">End Date</Label>
-                                                                {exp.is_current ? (
-                                                                    <Input disabled value="Present" className="bg-slate-100 text-slate-400 rounded-lg text-sm" />
-                                                                ) : (
-                                                                    <Input type="date" value={exp.end_date} onChange={(e) => handleListChange('experience', index, 'end_date', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
-                                                                )}
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Field / Specialization</Label>
+                                                                <Input value={edu.field_of_study} onChange={(e) => handleListChange('education', index, 'field_of_study', e.target.value)} placeholder="e.g. Corporate Law" className="bg-slate-50/50 rounded-lg text-sm" />
                                                             </div>
-                                                        </div>
-                                                        <div className="col-span-1 md:col-span-2 flex items-center gap-2 mt-1">
-                                                            <input type="checkbox" id={`is-current-exp-${index}`} checked={exp.is_current}
-                                                                onChange={(e) => handleListChange('experience', index, 'is_current', e.target.checked)}
-                                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                                                            <Label htmlFor={`is-current-exp-${index}`} className="text-xs font-semibold text-slate-600 cursor-pointer">I currently work here</Label>
-                                                        </div>
-                                                        <div className="col-span-1 md:col-span-2 mt-2">
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Description</Label>
-                                                            <Textarea value={exp.description} onChange={(e) => handleListChange('experience', index, 'description', e.target.value)}
-                                                                placeholder="Describe your responsibilities and achievements..."
-                                                                className="resize-none bg-slate-50/50 h-24 rounded-lg text-sm" />
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <h4 className="text-base font-bold text-slate-800">{exp.role || 'Position Title'}</h4>
-                                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <Button type="button" size="sm" variant="ghost" onClick={() => setEditingExperience(index)} className="h-7 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
-                                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                                </Button>
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Start Year/Date</Label>
+                                                                <Input value={edu.start_year} onChange={(e) => handleListChange('education', index, 'start_year', e.target.value)} placeholder="YYYY" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">End Year/Date</Label>
+                                                                <Input value={edu.end_year} onChange={(e) => handleListChange('education', index, 'end_year', e.target.value)} placeholder="YYYY" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                            <div className="col-span-1 md:col-span-2 mt-2">
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Description</Label>
+                                                                <Textarea value={edu.description} onChange={(e) => handleListChange('education', index, 'description', e.target.value)}
+                                                                    placeholder="Extracurriculars, societies, achievements..."
+                                                                    className="resize-none bg-slate-50/50 h-20 rounded-lg text-sm" />
                                                             </div>
                                                         </div>
-                                                        <div className="text-sm font-medium text-slate-700 mb-2">
-                                                            {exp.company || 'Organization Name'} 
-                                                            {exp.location && <span className="text-slate-400 font-normal"> • {exp.location}</span>}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 font-medium bg-slate-100/80 w-fit px-2.5 py-1 rounded-md mb-4">
-                                                            {exp.start_date || 'Start'} — {exp.is_current ? 'Present' : (exp.end_date || 'End')}
-                                                        </div>
-                                                        {exp.description && (
-                                                            <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
-                                                                {exp.description}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-
-                        {/* Education */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8"
-                        >
-                            <div className="flex flex-wrap items-center justify-between mb-6 border-b border-slate-100 pb-4 gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><GraduationCap className="w-5 h-5" /></div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900">Education</h3>
-                                        <p className="text-sm text-slate-500">Your academic background.</p>
-                                    </div>
-                                </div>
-                                <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl" onClick={handleAddEducation}>
-                                    <Plus className="w-4 h-4 mr-1.5" /> Add Education
-                                </Button>
-                            </div>
-                            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:ml-6 md:before:translate-x-0 before:h-full before:w-0.5 before:bg-blue-100">
-                                {education.length === 0 && <p className="text-slate-500 text-sm ml-8 md:ml-12">No education added yet.</p>}
-                                <AnimatePresence>
-                                    {education.map((edu, index) => (
-                                        <motion.div 
-                                            key={index} 
-                                            initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
-                                            className="relative flex items-start group"
-                                        >
-                                            <div className="flex items-center justify-center w-8 h-8 rounded-full border-4 border-white bg-slate-400 absolute left-0 md:left-2 shadow-sm shrink-0 md:group-hover:scale-110 transition-transform mt-2 z-10" />
-                                            <div className="w-[calc(100%-2.5rem)] md:w-[calc(100%-4rem)] p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all ml-10 md:ml-16">
-                                                {editingEducation === index ? (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div className="col-span-1 md:col-span-2 flex justify-between items-center mb-2">
-                                                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Editing Education</span>
-                                                            <div className="flex gap-2">
-                                                                <Button type="button" size="sm" variant="ghost" onClick={() => removeListItem('education', index)} className="h-8 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </Button>
-                                                                <Button type="button" size="sm" variant="outline" onClick={() => setEditingEducation(null)} className="h-8 px-3 text-slate-600">
-                                                                    Done
-                                                                </Button>
+                                                    ) : (
+                                                        <div className="flex flex-col">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <h4 className="text-base font-bold text-slate-800">{edu.degree || 'Degree'} {edu.field_of_study ? `in ${edu.field_of_study}` : ''}</h4>
+                                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEditingEducation(index)} className="h-7 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="col-span-1 md:col-span-2">
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Institution</Label>
-                                                            <Input value={edu.institution} onChange={(e) => handleListChange('education', index, 'institution', e.target.value)} placeholder="e.g. National Law School" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Degree</Label>
-                                                            <Input value={edu.degree} onChange={(e) => handleListChange('education', index, 'degree', e.target.value)} placeholder="e.g. LL.B." className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Field / Specialization</Label>
-                                                            <Input value={edu.field_of_study} onChange={(e) => handleListChange('education', index, 'field_of_study', e.target.value)} placeholder="e.g. Corporate Law" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Start Year/Date</Label>
-                                                            <Input value={edu.start_year} onChange={(e) => handleListChange('education', index, 'start_year', e.target.value)} placeholder="YYYY" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">End Year/Date</Label>
-                                                            <Input value={edu.end_year} onChange={(e) => handleListChange('education', index, 'end_year', e.target.value)} placeholder="YYYY" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div className="col-span-1 md:col-span-2 mt-2">
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Description</Label>
-                                                            <Textarea value={edu.description} onChange={(e) => handleListChange('education', index, 'description', e.target.value)}
-                                                                placeholder="Extracurriculars, societies, achievements..."
-                                                                className="resize-none bg-slate-50/50 h-20 rounded-lg text-sm" />
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <h4 className="text-base font-bold text-slate-800">{edu.degree || 'Degree'} {edu.field_of_study ? `in ${edu.field_of_study}` : ''}</h4>
-                                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <Button type="button" size="sm" variant="ghost" onClick={() => setEditingEducation(index)} className="h-7 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
-                                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                                </Button>
+                                                            <div className="text-sm font-medium text-slate-700 mb-2">
+                                                                {edu.institution || 'Institution Name'}
                                                             </div>
-                                                        </div>
-                                                        <div className="text-sm font-medium text-slate-700 mb-2">
-                                                            {edu.institution || 'Institution Name'}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 font-medium bg-slate-100/80 w-fit px-2.5 py-1 rounded-md mb-4">
-                                                            {edu.start_year || 'Start'} — {edu.end_year || 'End'}
-                                                        </div>
-                                                        {edu.description && (
-                                                            <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
-                                                                {edu.description}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-
-                        {/* Certifications */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8 mb-10"
-                        >
-                            <div className="flex flex-wrap items-center justify-between mb-6 border-b border-slate-100 pb-4 gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Award className="w-5 h-5" /></div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900">Certifications</h3>
-                                        <p className="text-sm text-slate-500">Your professional credentials.</p>
-                                    </div>
-                                </div>
-                                <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl" onClick={handleAddCertification}>
-                                    <Plus className="w-4 h-4 mr-1.5" /> Add Certification
-                                </Button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {certifications.length === 0 && <p className="text-slate-500 text-sm col-span-full">No certifications added yet.</p>}
-                                <AnimatePresence>
-                                    {certifications.map((cert, index) => (
-                                        <motion.div 
-                                            key={index} 
-                                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}
-                                            className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
-                                        >
-                                            {editingCertification === index ? (
-                                                <div className="grid grid-cols-1 gap-4">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Editing Certification</span>
-                                                        <div className="flex gap-2">
-                                                            <Button type="button" size="sm" variant="ghost" onClick={() => removeListItem('certifications', index)} className="h-8 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button type="button" size="sm" variant="outline" onClick={() => setEditingCertification(null)} className="h-8 px-3 text-slate-600">
-                                                                Done
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Certification Name</Label>
-                                                        <Input value={cert.title} onChange={(e) => handleListChange('certifications', index, 'title', e.target.value)} placeholder="e.g. Certified Mediator" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Issuing Organization</Label>
-                                                        <Input value={cert.issuing_organization} onChange={(e) => handleListChange('certifications', index, 'issuing_organization', e.target.value)} placeholder="e.g. Indian Institute of Arbitration" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Issue Date</Label>
-                                                            <Input type="date" value={cert.date_achieved} onChange={(e) => handleListChange('certifications', index, 'date_achieved', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Expiry Date</Label>
-                                                            <Input type="date" value={cert.expiry_date} onChange={(e) => handleListChange('certifications', index, 'expiry_date', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Credential ID</Label>
-                                                        <Input value={cert.credential_id} onChange={(e) => handleListChange('certifications', index, 'credential_id', e.target.value)} placeholder="e.g. 1234ABCD" className="bg-slate-50/50 rounded-lg text-sm" />
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Credential URL</Label>
-                                                        <Input value={cert.credential_url} onChange={(e) => handleListChange('certifications', index, 'credential_url', e.target.value)} placeholder="https://..." className="bg-slate-50/50 rounded-lg text-sm" />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col h-full justify-between">
-                                                    <div>
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <div className="flex items-center gap-2 text-slate-500 mb-1">
-                                                                <BadgeCheck className="w-4 h-4 text-sky-500" />
-                                                                <span className="font-bold uppercase tracking-wider text-[10px]">Credential</span>
+                                                            <div className="text-xs text-slate-500 font-medium bg-slate-100/80 w-fit px-2.5 py-1 rounded-md mb-4">
+                                                                {edu.start_year || 'Start'} — {edu.end_year || 'End'}
                                                             </div>
-                                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <Button type="button" size="sm" variant="ghost" onClick={() => setEditingCertification(index)} className="h-7 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
-                                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                        <h4 className="text-base font-bold text-slate-800 mb-1">{cert.title || 'Certification Name'}</h4>
-                                                        <p className="text-sm font-medium text-slate-600 mb-3">{cert.issuing_organization || 'Issuing Organization'}</p>
-                                                        <div className="text-xs text-slate-500 mb-4 flex flex-col gap-1">
-                                                            {cert.date_achieved && <span>Issued {cert.date_achieved}</span>}
-                                                            {cert.expiry_date && <span>Expires {cert.expiry_date}</span>}
-                                                        </div>
-                                                    </div>
-                                                    {(cert.credential_id || cert.credential_url) && (
-                                                        <div className="pt-4 border-t border-slate-100">
-                                                            {cert.credential_id && (
-                                                                <p className="text-xs text-slate-500 mb-1 font-mono">ID: {cert.credential_id}</p>
-                                                            )}
-                                                            {cert.credential_url && (
-                                                                <a href={cert.credential_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 w-fit">
-                                                                    Show Credential <ExternalLink className="w-3 h-3" />
-                                                                </a>
+                                                            {edu.description && (
+                                                                <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
+                                                                    {edu.description}
+                                                                </p>
                                                             )}
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-
-{/* Sticky Save Action */}
-                        <div className="fixed bottom-4 left-4 right-4 md:left-72 md:right-8 z-50 pointer-events-none">
-                            <motion.div 
-                                initial={{ y: 50, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-xl rounded-2xl p-4 flex items-center justify-between pointer-events-auto max-w-4xl mx-auto"
-                            >
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-slate-800">Unsaved changes</span>
-                                    <span className="text-xs text-slate-500">Your profile has unpublished updates.</span>
-                                </div>
-                                <div className="flex gap-3">
-                                    <Button type="button" variant="outline" className="hidden sm:inline-flex rounded-xl border-slate-200">Cancel</Button>
-                                    <Button type="submit" disabled={saving} className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white shadow-md shadow-blue-500/20 rounded-xl px-6 transition-all active:scale-95 min-w-[140px]">
-                                        {saving ? (
-                                            <span className="flex items-center"><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2" /> Saving...</span>
-                                        ) : (
-                                            <><Save className="w-4 h-4 mr-2" /> Save Changes</>
-                                        )}
-                                    </Button>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
                                 </div>
                             </motion.div>
-                        </div>
-                    </motion.form>
-                )}
 
-
-
-                {/* ── COMING SOON TABS ── */}
-                {(activeTab === 'consultations' || activeTab === 'messages' || activeTab === 'analytics' || activeTab === 'verification') && (() => {
-                    const tabMeta = {
-                        consultations: {
-                            icon: Calendar,
-                            gradient: 'from-blue-500 to-indigo-600',
-                            lightBg: 'from-blue-50 to-indigo-50',
-                            ring: 'ring-blue-200',
-                            badge: 'bg-blue-100 text-blue-700',
-                            title: 'Consultations',
-                            subtitle: 'Manage your client consultation requests',
-                            description: 'Accept, reject, and track consultation requests from potential clients all in one place.',
-                            features: [
-                                'Real-time consultation request notifications',
-                                'Accept / Reject / Complete workflow',
-                                'Calendar integration with scheduling',
-                                'Video call & in-person booking management',
-                                'Auto-confirmation emails to clients',
-                            ],
-                            eta: 'Q4 2025',
-                        },
-                        messages: {
-                            icon: MessageCircle,
-                            gradient: 'from-violet-500 to-purple-600',
-                            lightBg: 'from-violet-50 to-purple-50',
-                            ring: 'ring-violet-200',
-                            badge: 'bg-violet-100 text-violet-700',
-                            title: 'Messages',
-                            subtitle: 'Inbox for client enquiries & contact messages',
-                            description: 'Read and respond to messages sent by potential clients through your public profile.',
-                            features: [
-                                'Unified inbox for all client messages',
-                                'One-click reply via email or platform',
-                                'Message status tracking (read / unread)',
-                                'Quick-reply templates',
-                                'Spam & automated-message filtering',
-                            ],
-                            eta: 'Q4 2025',
-                        },
-                        analytics: {
-                            icon: BarChart2,
-                            gradient: 'from-emerald-500 to-teal-600',
-                            lightBg: 'from-emerald-50 to-teal-50',
-                            ring: 'ring-emerald-200',
-                            badge: 'bg-emerald-100 text-emerald-700',
-                            title: 'Analytics',
-                            subtitle: 'Insights about your profile performance',
-                            description: 'Track profile views, consultation conversions, search ranking, and audience insights.',
-                            features: [
-                                'Profile views & search impressions',
-                                'Consultation conversion rate tracking',
-                                'Traffic sources & referral breakdown',
-                                '7-day & 30-day trend charts',
-                                'Keyword ranking in Lawyer Search',
-                            ],
-                            eta: 'Q1 2026',
-                        },
-                        verification: {
-                            icon: ShieldCheck,
-                            gradient: 'from-amber-500 to-orange-500',
-                            lightBg: 'from-amber-50 to-orange-50',
-                            ring: 'ring-amber-200',
-                            badge: 'bg-amber-100 text-amber-700',
-                            title: 'Verification',
-                            subtitle: 'Get the Verified Advocate badge',
-                            description: 'Submit your Bar Council ID and credentials for review. Verified advocates get 3× more visibility.',
-                            features: [
-                                'Bar Council ID document upload',
-                                'Secure admin review process',
-                                'Verified badge on your public profile',
-                                '3× priority placement in search results',
-                                'Re-submission on rejection',
-                            ],
-                            eta: 'Q4 2025',
-                        },
-                    };
-                    const meta = tabMeta[activeTab];
-                    const Icon = meta.icon;
-                    return (
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, y: 24 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden rounded-3xl"
-                        >
-                            {/* Background gradient */}
-                            <div className={`absolute inset-0 bg-gradient-to-br ${meta.lightBg} rounded-3xl`} />
-                            {/* Floating blobs */}
-                            <div className={`absolute -top-20 -right-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.12] blur-3xl pointer-events-none`} />
-                            <div className={`absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.08] blur-3xl pointer-events-none`} />
-
-                            {/* Content */}
-                            <div className="relative z-10 flex flex-col items-center text-center px-6 py-16 max-w-2xl mx-auto w-full">
-                                {/* Icon */}
-                                <motion.div
-                                    initial={{ scale: 0.7, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
-                                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-xl mb-6`}
-                                >
-                                    <Icon className="w-10 h-10 text-white drop-shadow" />
-                                </motion.div>
-
-                                {/* Badge */}
-                                <motion.span
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 }}
-                                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 ${meta.badge}`}
-                                >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                                    Coming Soon · {meta.eta}
-                                </motion.span>
-
-                                {/* Title */}
-                                <motion.h2
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.25 }}
-                                    className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2"
-                                >
-                                    {meta.title}
-                                </motion.h2>
-                                <motion.p
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="text-slate-500 font-medium mb-2"
-                                >
-                                    {meta.subtitle}
-                                </motion.p>
-                                <motion.p
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.35 }}
-                                    className="text-slate-400 text-sm max-w-md mb-8"
-                                >
-                                    {meta.description}
-                                </motion.p>
-
-                                {/* Feature list */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 12 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.4 }}
-                                    className="w-full max-w-md bg-white/70 backdrop-blur rounded-2xl border border-white shadow-sm p-5 mb-8 text-left"
-                                >
-                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">What's coming</p>
-                                    <ul className="space-y-2.5">
-                                        {meta.features.map((f, i) => (
-                                            <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
-                                                <span className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br ${meta.gradient} flex items-center justify-center`}>
-                                                    <Check className="w-3 h-3 text-white" />
-                                                </span>
-                                                {f}
-                                            </li>
+                            {/* Certifications */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+                                className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 md:p-8 mb-10"
+                            >
+                                <div className="flex flex-wrap items-center justify-between mb-6 border-b border-slate-100 pb-4 gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Award className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900">Certifications</h3>
+                                            <p className="text-sm text-slate-500">Your professional credentials.</p>
+                                        </div>
+                                    </div>
+                                    <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl" onClick={handleAddCertification}>
+                                        <Plus className="w-4 h-4 mr-1.5" /> Add Certification
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {certifications.length === 0 && <p className="text-slate-500 text-sm col-span-full">No certifications added yet.</p>}
+                                    <AnimatePresence>
+                                        {certifications.map((cert, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}
+                                                className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
+                                            >
+                                                {editingCertification === index ? (
+                                                    <div className="grid grid-cols-1 gap-4">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Editing Certification</span>
+                                                            <div className="flex gap-2">
+                                                                <Button type="button" size="sm" variant="ghost" onClick={() => removeListItem('certifications', index)} className="h-8 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button type="button" size="sm" variant="outline" onClick={() => setEditingCertification(null)} className="h-8 px-3 text-slate-600">
+                                                                    Done
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Certification Name</Label>
+                                                            <Input value={cert.title} onChange={(e) => handleListChange('certifications', index, 'title', e.target.value)} placeholder="e.g. Certified Mediator" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Issuing Organization</Label>
+                                                            <Input value={cert.issuing_organization} onChange={(e) => handleListChange('certifications', index, 'issuing_organization', e.target.value)} placeholder="e.g. Indian Institute of Arbitration" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Issue Date</Label>
+                                                                <Input type="date" value={cert.date_achieved} onChange={(e) => handleListChange('certifications', index, 'date_achieved', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Expiry Date</Label>
+                                                                <Input type="date" value={cert.expiry_date} onChange={(e) => handleListChange('certifications', index, 'expiry_date', e.target.value)} className="bg-slate-50/50 rounded-lg text-sm" />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Credential ID</Label>
+                                                            <Input value={cert.credential_id} onChange={(e) => handleListChange('certifications', index, 'credential_id', e.target.value)} placeholder="e.g. 1234ABCD" className="bg-slate-50/50 rounded-lg text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <Label className="text-[11px] font-bold text-slate-500 uppercase mb-1.5 block">Credential URL</Label>
+                                                            <Input value={cert.credential_url} onChange={(e) => handleListChange('certifications', index, 'credential_url', e.target.value)} placeholder="https://..." className="bg-slate-50/50 rounded-lg text-sm" />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col h-full justify-between">
+                                                        <div>
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <div className="flex items-center gap-2 text-slate-500 mb-1">
+                                                                    <BadgeCheck className="w-4 h-4 text-sky-500" />
+                                                                    <span className="font-bold uppercase tracking-wider text-[10px]">Credential</span>
+                                                                </div>
+                                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button type="button" size="sm" variant="ghost" onClick={() => setEditingCertification(index)} className="h-7 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                            <h4 className="text-base font-bold text-slate-800 mb-1">{cert.title || 'Certification Name'}</h4>
+                                                            <p className="text-sm font-medium text-slate-600 mb-3">{cert.issuing_organization || 'Issuing Organization'}</p>
+                                                            <div className="text-xs text-slate-500 mb-4 flex flex-col gap-1">
+                                                                {cert.date_achieved && <span>Issued {cert.date_achieved}</span>}
+                                                                {cert.expiry_date && <span>Expires {cert.expiry_date}</span>}
+                                                            </div>
+                                                        </div>
+                                                        {(cert.credential_id || cert.credential_url) && (
+                                                            <div className="pt-4 border-t border-slate-100">
+                                                                {cert.credential_id && (
+                                                                    <p className="text-xs text-slate-500 mb-1 font-mono">ID: {cert.credential_id}</p>
+                                                                )}
+                                                                {cert.credential_url && (
+                                                                    <a href={cert.credential_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 w-fit">
+                                                                        Show Credential <ExternalLink className="w-3 h-3" />
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </motion.div>
                                         ))}
-                                    </ul>
-                                </motion.div>
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
 
-                                {/* CTA */}
-                                <motion.button
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.5 }}
-                                    type="button"
-                                    onClick={() => setActiveTab('profile')}
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 shadow text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:shadow-md transition-all"
+                            {/* Sticky Save Action */}
+                            <div className="fixed bottom-4 left-4 right-4 md:left-72 md:right-8 z-50 pointer-events-none">
+                                <motion.div
+                                    initial={{ y: 50, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-xl rounded-2xl p-4 flex items-center justify-between pointer-events-auto max-w-4xl mx-auto"
                                 >
-                                    <User className="w-4 h-4" />
-                                    Back to Profile
-                                </motion.button>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-slate-800">Unsaved changes</span>
+                                        <span className="text-xs text-slate-500">Your profile has unpublished updates.</span>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <Button type="button" variant="outline" className="hidden sm:inline-flex rounded-xl border-slate-200">Cancel</Button>
+                                        <Button type="submit" disabled={saving} className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white shadow-md shadow-blue-500/20 rounded-xl px-6 transition-all active:scale-95 min-w-[140px]">
+                                            {saving ? (
+                                                <span className="flex items-center"><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2" /> Saving...</span>
+                                            ) : (
+                                                <><Save className="w-4 h-4 mr-2" /> Save Changes</>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </motion.div>
                             </div>
-                        </motion.div>
-                    );
-                })()}
+                        </motion.form>
+                    )}
 
 
+
+                    {/* ── COMING SOON TABS ── */}
+                    {(activeTab === 'consultations' || activeTab === 'messages' || activeTab === 'analytics' || activeTab === 'verification') && (() => {
+                        const tabMeta = {
+                            consultations: {
+                                icon: Calendar,
+                                gradient: 'from-blue-500 to-indigo-600',
+                                lightBg: 'from-blue-50 to-indigo-50',
+                                ring: 'ring-blue-200',
+                                badge: 'bg-blue-100 text-blue-700',
+                                title: 'Consultations',
+                                subtitle: 'Manage your client consultation requests',
+                                description: 'Accept, reject, and track consultation requests from potential clients all in one place.',
+                                features: [
+                                    'Real-time consultation request notifications',
+                                    'Accept / Reject / Complete workflow',
+                                    'Calendar integration with scheduling',
+                                    'Video call & in-person booking management',
+                                    'Auto-confirmation emails to clients',
+                                ],
+                                eta: 'Q4 ',
+                            },
+                            messages: {
+                                icon: MessageCircle,
+                                gradient: 'from-violet-500 to-purple-600',
+                                lightBg: 'from-violet-50 to-purple-50',
+                                ring: 'ring-violet-200',
+                                badge: 'bg-violet-100 text-violet-700',
+                                title: 'Messages',
+                                subtitle: 'Inbox for client enquiries & contact messages',
+                                description: 'Read and respond to messages sent by potential clients through your public profile.',
+                                features: [
+                                    'Unified inbox for all client messages',
+                                    'One-click reply via email or platform',
+                                    'Message status tracking (read / unread)',
+                                    'Quick-reply templates',
+                                    'Spam & automated-message filtering',
+                                ],
+                                eta: 'Q4',
+                            },
+                            analytics: {
+                                icon: BarChart2,
+                                gradient: 'from-emerald-500 to-teal-600',
+                                lightBg: 'from-emerald-50 to-teal-50',
+                                ring: 'ring-emerald-200',
+                                badge: 'bg-emerald-100 text-emerald-700',
+                                title: 'Analytics',
+                                subtitle: 'Insights about your profile performance',
+                                description: 'Track profile views, consultation conversions, search ranking, and audience insights.',
+                                features: [
+                                    'Profile views & search impressions',
+                                    'Consultation conversion rate tracking',
+                                    'Traffic sources & referral breakdown',
+                                    '7-day & 30-day trend charts',
+                                    'Keyword ranking in Lawyer Search',
+                                ],
+                                eta: 'Q1 2026',
+                            },
+                            verification: {
+                                icon: ShieldCheck,
+                                gradient: 'from-amber-500 to-orange-500',
+                                lightBg: 'from-amber-50 to-orange-50',
+                                ring: 'ring-amber-200',
+                                badge: 'bg-amber-100 text-amber-700',
+                                title: 'Verification',
+                                subtitle: 'Get the Verified Advocate badge',
+                                description: 'Submit your Bar Council ID and credentials for review. Verified advocates get 3× more visibility.',
+                                features: [
+                                    'Bar Council ID document upload',
+                                    'Secure admin review process',
+                                    'Verified badge on your public profile',
+                                    '3× priority placement in search results',
+                                    'Re-submission on rejection',
+                                ],
+                                eta: 'Q4 ',
+                            },
+                        };
+                        const meta = tabMeta[activeTab];
+                        const Icon = meta.icon;
+                        return (
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 24 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5 }}
+                                className="flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden rounded-3xl"
+                            >
+                                {/* Background gradient */}
+                                <div className={`absolute inset-0 bg-gradient-to-br ${meta.lightBg} rounded-3xl`} />
+                                {/* Floating blobs */}
+                                <div className={`absolute -top-20 -right-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.12] blur-3xl pointer-events-none`} />
+                                <div className={`absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.08] blur-3xl pointer-events-none`} />
+
+                                {/* Content */}
+                                <div className="relative z-10 flex flex-col items-center text-center px-6 py-16 max-w-2xl mx-auto w-full">
+                                    {/* Icon */}
+                                    <motion.div
+                                        initial={{ scale: 0.7, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
+                                        className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-xl mb-6`}
+                                    >
+                                        <Icon className="w-10 h-10 text-white drop-shadow" />
+                                    </motion.div>
+
+                                    {/* Badge */}
+                                    <motion.span
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.2 }}
+                                        className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 ${meta.badge}`}
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                        Coming Soon · {meta.eta}
+                                    </motion.span>
+
+                                    {/* Title */}
+                                    <motion.h2
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.25 }}
+                                        className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2"
+                                    >
+                                        {meta.title}
+                                    </motion.h2>
+                                    <motion.p
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.3 }}
+                                        className="text-slate-500 font-medium mb-2"
+                                    >
+                                        {meta.subtitle}
+                                    </motion.p>
+                                    <motion.p
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.35 }}
+                                        className="text-slate-400 text-sm max-w-md mb-8"
+                                    >
+                                        {meta.description}
+                                    </motion.p>
+
+                                    {/* Feature list */}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.4 }}
+                                        className="w-full max-w-md bg-white/70 backdrop-blur rounded-2xl border border-white shadow-sm p-5 mb-8 text-left"
+                                    >
+                                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">What's coming</p>
+                                        <ul className="space-y-2.5">
+                                            {meta.features.map((f, i) => (
+                                                <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
+                                                    <span className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br ${meta.gradient} flex items-center justify-center`}>
+                                                        <Check className="w-3 h-3 text-white" />
+                                                    </span>
+                                                    {f}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </motion.div>
+
+                                    {/* CTA */}
+                                    <motion.button
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.5 }}
+                                        type="button"
+                                        onClick={() => setActiveTab('profile')}
+                                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 shadow text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:shadow-md transition-all"
+                                    >
+                                        <User className="w-4 h-4" />
+                                        Back to Profile
+                                    </motion.button>
+                                </div>
+                            </motion.div>
+                        );
+                    })()}
+
+
+                </div>
             </div>
-        </div>
 
-            <ShareProfileModal 
-                isOpen={isShareModalOpen} 
-                onClose={() => setIsShareModalOpen(false)} 
-                advocate={profile} 
+            <ShareProfileModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                advocate={profile}
             />
         </div>
     );
