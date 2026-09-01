@@ -1451,74 +1451,34 @@ export default function AdvocateDashboard() {
                             consultations: {
                                 icon: Calendar,
                                 gradient: 'from-blue-500 to-indigo-600',
-                                lightBg: 'from-blue-50 to-indigo-50',
-                                ring: 'ring-blue-200',
+                                lightBg: 'from-blue-50/60 to-indigo-50/60',
                                 badge: 'bg-blue-100 text-blue-700',
                                 title: 'Consultations',
-                                subtitle: 'Manage your client consultation requests',
-                                description: 'Accept, reject, and track consultation requests from potential clients all in one place.',
-                                features: [
-                                    'Real-time consultation request notifications',
-                                    'Accept / Reject / Complete workflow',
-                                    'Calendar integration with scheduling',
-                                    'Video call & in-person booking management',
-                                    'Auto-confirmation emails to clients',
-                                ],
-                                eta: 'Q4 ',
+                                description: 'Manage your client consultation requests, appointments, and scheduling.',
                             },
                             messages: {
                                 icon: MessageCircle,
                                 gradient: 'from-violet-500 to-purple-600',
-                                lightBg: 'from-violet-50 to-purple-50',
-                                ring: 'ring-violet-200',
+                                lightBg: 'from-violet-50/60 to-purple-50/60',
                                 badge: 'bg-violet-100 text-violet-700',
                                 title: 'Messages',
-                                subtitle: 'Inbox for client enquiries & contact messages',
-                                description: 'Read and respond to messages sent by potential clients through your public profile.',
-                                features: [
-                                    'Unified inbox for all client messages',
-                                    'One-click reply via email or platform',
-                                    'Message status tracking (read / unread)',
-                                    'Quick-reply templates',
-                                    'Spam & automated-message filtering',
-                                ],
-                                eta: 'Q4',
+                                description: 'Direct messaging inbox for client enquiries and communications.',
                             },
                             analytics: {
                                 icon: BarChart2,
                                 gradient: 'from-emerald-500 to-teal-600',
-                                lightBg: 'from-emerald-50 to-teal-50',
-                                ring: 'ring-emerald-200',
+                                lightBg: 'from-emerald-50/60 to-teal-50/60',
                                 badge: 'bg-emerald-100 text-emerald-700',
                                 title: 'Analytics',
-                                subtitle: 'Insights about your profile performance',
-                                description: 'Track profile views, consultation conversions, search ranking, and audience insights.',
-                                features: [
-                                    'Profile views & search impressions',
-                                    'Consultation conversion rate tracking',
-                                    'Traffic sources & referral breakdown',
-                                    '7-day & 30-day trend charts',
-                                    'Keyword ranking in Lawyer Search',
-                                ],
-                                eta: 'Q1 2026',
+                                description: 'Profile performance, view counts, and search visibility metrics.',
                             },
                             verification: {
                                 icon: ShieldCheck,
                                 gradient: 'from-amber-500 to-orange-500',
-                                lightBg: 'from-amber-50 to-orange-50',
-                                ring: 'ring-amber-200',
+                                lightBg: 'from-amber-50/60 to-orange-50/60',
                                 badge: 'bg-amber-100 text-amber-700',
                                 title: 'Verification',
-                                subtitle: 'Get the Verified Advocate badge',
-                                description: 'Submit your Bar Council ID and credentials for review. Verified advocates get 3× more visibility.',
-                                features: [
-                                    'Bar Council ID document upload',
-                                    'Secure admin review process',
-                                    'Verified badge on your public profile',
-                                    '3× priority placement in search results',
-                                    'Re-submission on rejection',
-                                ],
-                                eta: 'Q4 ',
+                                description: 'Bar Council ID verification badge and credential management.',
                             },
                         };
                         const meta = tabMeta[activeTab];
@@ -1526,98 +1486,43 @@ export default function AdvocateDashboard() {
                         return (
                             <motion.div
                                 key={activeTab}
-                                initial={{ opacity: 0, y: 24 }}
+                                initial={{ opacity: 0, y: 16 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5 }}
-                                className="flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden rounded-3xl"
+                                transition={{ duration: 0.3 }}
+                                className={`relative flex flex-col items-center justify-center min-h-[420px] p-8 rounded-3xl bg-gradient-to-br ${meta.lightBg} border border-slate-200/80 shadow-sm overflow-hidden text-center`}
                             >
-                                {/* Background gradient */}
-                                <div className={`absolute inset-0 bg-gradient-to-br ${meta.lightBg} rounded-3xl`} />
-                                {/* Floating blobs */}
-                                <div className={`absolute -top-20 -right-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.12] blur-3xl pointer-events-none`} />
-                                <div className={`absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.08] blur-3xl pointer-events-none`} />
+                                {/* Background Glow */}
+                                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-gradient-to-br ${meta.gradient} opacity-[0.08] blur-3xl pointer-events-none`} />
 
-                                {/* Content */}
-                                <div className="relative z-10 flex flex-col items-center text-center px-6 py-16 max-w-2xl mx-auto w-full">
+                                <div className="relative z-10 flex flex-col items-center max-w-md mx-auto">
                                     {/* Icon */}
-                                    <motion.div
-                                        initial={{ scale: 0.7, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
-                                        className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-xl mb-6`}
-                                    >
-                                        <Icon className="w-10 h-10 text-white drop-shadow" />
-                                    </motion.div>
+                                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/10 mb-5`}>
+                                        <Icon className="w-8 h-8 text-white" />
+                                    </div>
 
                                     {/* Badge */}
-                                    <motion.span
-                                        initial={{ opacity: 0, y: 8 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.2 }}
-                                        className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 ${meta.badge}`}
-                                    >
+                                    <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 ${meta.badge}`}>
                                         <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                                        Coming Soon · {meta.eta}
-                                    </motion.span>
+                                        Coming Soon
+                                    </span>
 
-                                    {/* Title */}
-                                    <motion.h2
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.25 }}
-                                        className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2"
-                                    >
+                                    {/* Title & Description */}
+                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">
                                         {meta.title}
-                                    </motion.h2>
-                                    <motion.p
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.3 }}
-                                        className="text-slate-500 font-medium mb-2"
-                                    >
-                                        {meta.subtitle}
-                                    </motion.p>
-                                    <motion.p
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.35 }}
-                                        className="text-slate-400 text-sm max-w-md mb-8"
-                                    >
+                                    </h2>
+                                    <p className="text-slate-500 text-sm mb-6 leading-relaxed">
                                         {meta.description}
-                                    </motion.p>
-
-                                    {/* Feature list */}
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 12 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.4 }}
-                                        className="w-full max-w-md bg-white/70 backdrop-blur rounded-2xl border border-white shadow-sm p-5 mb-8 text-left"
-                                    >
-                                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">What's coming</p>
-                                        <ul className="space-y-2.5">
-                                            {meta.features.map((f, i) => (
-                                                <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
-                                                    <span className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br ${meta.gradient} flex items-center justify-center`}>
-                                                        <Check className="w-3 h-3 text-white" />
-                                                    </span>
-                                                    {f}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </motion.div>
+                                    </p>
 
                                     {/* CTA */}
-                                    <motion.button
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 0.5 }}
+                                    <button
                                         type="button"
                                         onClick={() => setActiveTab('profile')}
-                                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 shadow text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:shadow-md transition-all"
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-slate-200 shadow-sm text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
                                     >
                                         <User className="w-4 h-4" />
                                         Back to Profile
-                                    </motion.button>
+                                    </button>
                                 </div>
                             </motion.div>
                         );

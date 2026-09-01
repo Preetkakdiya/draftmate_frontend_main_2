@@ -255,8 +255,12 @@ function App() {
 
                 <Route path="cases" element={<Navigate to="/dashboard/documents" replace />} />
                 <Route path="documents" element={<DocumentManagement />} />
-                {/* Visibility & Reach -> direct Lawyer Profile editing without auth guard */}
+                {/* Advocate Profile & Tabs */}
                 <Route path="profile" element={<AdvocateDashboard />} />
+                <Route path="consultations" element={<AdvocateDashboard />} />
+                <Route path="messages" element={<AdvocateDashboard />} />
+                <Route path="analytics" element={<AdvocateDashboard />} />
+                <Route path="verification" element={<AdvocateDashboard />} />
                 <Route path="ecourt" element={<CaseTracking />} />
 
                 {/* Catch-all relative to dashboard */}
