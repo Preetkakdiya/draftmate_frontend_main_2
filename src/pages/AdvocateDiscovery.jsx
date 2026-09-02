@@ -681,7 +681,7 @@ export default function AdvocateDiscovery() {
                   <p className="text-slate-500 font-medium max-w-md mx-auto text-[15px] leading-relaxed mb-6">
                     No advocate profiles are currently set to public. Go to your Lawyer Profile Dashboard and turn <span className="font-bold text-slate-800">Profile Visibility ON</span> to display your profile live here.
                   </p>
-                  <Link to="/dashboard/profile">
+                  <Link to="/login">
                     <Button className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-8 rounded-xl font-bold transition-all shadow-md shadow-blue-600/20">
                       Go to Lawyer Dashboard
                     </Button>
