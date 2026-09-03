@@ -29,6 +29,10 @@ function cleanNoiseFromText(text) {
 
   let clean = decodeHtmlEntities(text);
 
+  // 0. Remove stray leading/trailing syntax like ");" or "});"
+  clean = clean.replace(/^\s*\);\s*/g, '');
+  clean = clean.replace(/^\s*\}\);\s*/g, '');
+
   // 1. Strip JavaScript functions, dataLayer, gtag, jQuery
   clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, '');
   clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, '');
@@ -48,23 +52,28 @@ function cleanNoiseFromText(text) {
   const noiseKeywords = [
     'window.dataLayer', 'gtag(', 'function()',
     ':root', '@keyframes', 'display:', 'font-family:', 'backdrop-filter:',
-    'Search laws, court judgments', 'Free features', 'IKademy', 'Pricing',
-    'Login', 'Tools for analyzing structure', 'Unlock Advanced Research',
-    'Integrated with over 4 crore', 'Print it!', 'Download Court Copy',
-    'Mobile Navigation', 'Case Recast AI', 'Talk with IK Doc'
+    'Skip to main content', 'Indian Kanoon - Search engine', 'Search Indian laws',
+    'Main Navigation', 'Premium features', 'Prism AI', 'Upgrade to Premium',
+    'Integrated with over 4 crore', 'Know your Kanoon', 'Doc Gen Hub',
+    'Counter Argument', 'Case Predict AI', 'Talk with IK Doc', 'Case Recast AI',
+    'Document Options', 'Get in PDF', 'Print it!', 'Download Court Copy',
+    'Cites 0', 'Cited by 0', 'Related AI tags', 'Disclaimer', 'Privacy Policy',
+    'Terms', 'Case Removal', 'Share URL', 'Mobile View', '.premium-banner',
+    'Free features', 'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure'
   ];
 
   for (let line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+    if (trimmed === ');' || trimmed === '});' || trimmed === '}') continue;
 
     // Legal sentence protection: Do NOT strip lines that are substantial legal text (> 80 chars or legal keywords)
-    const isSubstantialLegalText = trimmed.length > 80 || /^\d+[\.\)]\s/.test(trimmed) || /^(ORDER|JUDGMENT|HELD|Bench:|Petitioner|Respondent|Court|Section|Act|Versus|VS\.)/i.test(trimmed);
+    const isSubstantialLegalText = trimmed.length > 80 || /^\d+[\.\)]\s/.test(trimmed) || /^(ORDER|JUDGMENT|HELD|Bench:|Petitioner|Respondent|Court|Section|Act|Versus|VS\.|ITEM NO|S U P R E M E|RECORD OF|Date :|CORAM :)/i.test(trimmed);
 
     // Check for noise keywords
     let isNoise = false;
     for (const kw of noiseKeywords) {
-      if (trimmed.includes(kw) && !isSubstantialLegalText) {
+      if (trimmed.toLowerCase().includes(kw.toLowerCase()) && !isSubstantialLegalText) {
         isNoise = true;
         break;
       }
@@ -73,7 +82,7 @@ function cleanNoiseFromText(text) {
 
     // Check for CSS rule syntax
     if (
-      (!isSubstantialLegalText && (trimmed.startsWith('{') || trimmed.endsWith('}'))) ||
+      (!isSubstantialLegalText && (trimmed.startsWith('{') || trimmed.endsWith('}') || trimmed.startsWith('.'))) ||
       trimmed.includes('{ opacity:') || trimmed.includes('linear-gradient(') ||
       trimmed.includes('rgba(') || trimmed.includes('var(--')
     ) {
@@ -116,6 +125,9 @@ export const stripHtmlTags = (htmlString) => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(preCleaned, 'text/html');
 
+      // Target judgment container directly if present
+      const judgmentContainer = doc.querySelector('.judgements, #doc_content, .expanded_doc, .doc_content, #content');
+      
       // Remove website UI noise elements
       const noiseElements = doc.querySelectorAll(
         'script, style, noscript, nav, header, footer, iframe, svg, button, input, form, ' +
@@ -126,8 +138,8 @@ export const stripHtmlTags = (htmlString) => {
       );
       noiseElements.forEach(el => el.remove());
 
-      // Extract all text content preserving newlines
-      const bodyTxt = doc.body ? (doc.body.innerText || doc.body.textContent || '') : doc.documentElement.textContent;
+      const targetEl = judgmentContainer || doc.body || doc.documentElement;
+      const bodyTxt = targetEl ? (targetEl.innerText || targetEl.textContent || '') : '';
       if (bodyTxt && bodyTxt.trim().length > 30) {
         return cleanNoiseFromText(bodyTxt);
       }

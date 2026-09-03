@@ -95,9 +95,17 @@ class IndianKanoonService:
     def _clean_text(self, text: str) -> str:
         """
         Clean HTML markup while preserving paragraph double-newlines and legal structure.
+        Strips website navigation chrome, headers, and footers.
         """
         if not text:
             return ""
+
+        # 0. Extract judgment container if full HTML document was passed
+        match = re.search(r'<div\s+class=["\'](?:judgements|doc_content|expanded_doc)["\'][^>]*>([\s\S]*?)</div>\s*<div\s+class=["\'](?:bottom_nav|footer|doc_options|related_num)["\']', text, re.IGNORECASE)
+        if not match:
+            match = re.search(r'<div\s+class=["\'](?:judgements|doc_content|expanded_doc)["\'][^>]*>([\s\S]*?)</div>', text, re.IGNORECASE)
+        if match:
+            text = match.group(1)
 
         # 1. Replace block closing tags with double newlines to preserve paragraphs
         cleaned = re.sub(r"<\s*/\s*(?:p|div|pre|blockquote|h[1-6]|tr|li)\s*>", "\n\n", text, flags=re.IGNORECASE)
@@ -116,10 +124,50 @@ class IndianKanoonService:
             .replace("&quot;", '"')
         )
 
+        noise_patterns = [
+            r"^Skip to main content",
+            r"^Indian Kanoon",
+            r"^Search Indian laws",
+            r"^Main Navigation",
+            r"^Premium",
+            r"^Prism AI",
+            r"^\.premium-banner",
+            r"^Integrated with over",
+            r"^Know your Kanoon",
+            r"^Doc Gen Hub",
+            r"^Counter Argument",
+            r"^Case Predict AI",
+            r"^Upgrade to Premium",
+            r"^Document Options",
+            r"^Get in PDF",
+            r"^\[Cites 0",
+            r"^Cited by 0",
+            r"^Related AI tags",
+            r"^Disclaimer",
+            r"^Privacy Policy",
+            r"^Terms",
+            r"^Case Removal",
+            r"^Share URL",
+            r"^Mobile View",
+            r"^\);?$",
+            r"^\}\);?$",
+        ]
+
         # 4. Clean up inline whitespace while keeping double newlines between paragraphs
         lines = [re.sub(r"[ \t]+", " ", line).strip() for line in cleaned.splitlines()]
-        non_empty = [line for line in lines if line]
-        return "\n\n".join(non_empty)
+        clean_lines = []
+        for line in lines:
+            if not line:
+                continue
+            is_noise = False
+            for pat in noise_patterns:
+                if re.search(pat, line, re.IGNORECASE):
+                    is_noise = True
+                    break
+            if not is_noise:
+                clean_lines.append(line)
+
+        return "\n\n".join(clean_lines)
 
     async def get_document(self, doc_id: str) -> Optional[str]:
         """
@@ -137,12 +185,19 @@ class IndianKanoonService:
                 logger.warning(f"Official API get_document failed for {doc_id}: {e}, falling back to web fetch...")
 
         try:
-            url = f"https://indiankanoon.org/doc/{doc_id}/"
+            url_print = f"https://indiankanoon.org/docpath/{doc_id}/"
+            url_main = f"https://indiankanoon.org/doc/{doc_id}/"
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             async with httpx.AsyncClient(timeout=15.0) as client:
-                res = await client.get(url, headers=headers, follow_redirects=True)
-                if res.status_code == 200:
-                    return self._clean_text(res.text)
+                res_p = await client.get(url_print, headers=headers, follow_redirects=True)
+                if res_p.status_code == 200 and len(res_p.text.strip()) > 100:
+                    cleaned_p = self._clean_text(res_p.text)
+                    if len(cleaned_p.strip()) > 50:
+                        return cleaned_p
+
+                res_m = await client.get(url_main, headers=headers, follow_redirects=True)
+                if res_m.status_code == 200:
+                    return self._clean_text(res_m.text)
         except Exception as web_err:
             logger.error(f"Web fetch for doc {doc_id} failed: {web_err}")
 
