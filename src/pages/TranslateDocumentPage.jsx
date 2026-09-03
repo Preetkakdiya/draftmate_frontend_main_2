@@ -369,6 +369,50 @@ const TranslateDocumentPage = () => {
     return name.endsWith('.pdf') || name.endsWith('.html') || name.endsWith('.htm');
   }, [job?.file_name, selectedFile]);
 
+  // Fetch authenticated blob URLs for inline side-by-side preview
+  const [inlineSourceBlobUrl, setInlineSourceBlobUrl] = useState(null);
+  const [inlineDownloadBlobUrl, setInlineDownloadBlobUrl] = useState(null);
+
+  React.useEffect(() => {
+    if (!selectedJobId || !isCompleted) {
+      setInlineSourceBlobUrl(null);
+      setInlineDownloadBlobUrl(null);
+      return;
+    }
+
+    let isMounted = true;
+    let sBlobUrl = null;
+    let dBlobUrl = null;
+
+    const headers = userId ? { 'X-User-Id': userId } : {};
+
+    fetch(api.getTranslationSourceUrl(selectedJobId), { headers })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => {
+        if (blob && isMounted) {
+          sBlobUrl = URL.createObjectURL(blob);
+          setInlineSourceBlobUrl(sBlobUrl);
+        }
+      })
+      .catch(() => {});
+
+    fetch(api.getTranslationDownloadUrl(selectedJobId) + '?raw=1', { headers })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => {
+        if (blob && isMounted) {
+          dBlobUrl = URL.createObjectURL(blob);
+          setInlineDownloadBlobUrl(dBlobUrl);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+      if (sBlobUrl) URL.revokeObjectURL(sBlobUrl);
+      if (dBlobUrl) URL.revokeObjectURL(dBlobUrl);
+    };
+  }, [selectedJobId, isCompleted, userId]);
+
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -815,7 +859,7 @@ const TranslateDocumentPage = () => {
                   Original ({getLanguageLabel(job?.source_language || sourceLanguage)})
                 </div>
                 <iframe
-                  src={sourceUrl}
+                  src={inlineSourceBlobUrl || sourceUrl}
                   className="h-[460px] w-full border-0 bg-white"
                   title="Original document preview"
                 />
@@ -827,7 +871,7 @@ const TranslateDocumentPage = () => {
                   Translation ({getLanguageLabel(job?.target_language || targetLanguage)})
                 </div>
                 <iframe
-                  src={downloadUrl}
+                  src={inlineDownloadBlobUrl || downloadUrl}
                   className="h-[460px] w-full border-0 bg-white"
                   title="Translated document preview"
                 />

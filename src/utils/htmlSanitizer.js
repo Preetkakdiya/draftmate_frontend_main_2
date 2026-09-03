@@ -47,23 +47,24 @@ function cleanNoiseFromText(text) {
 
   const noiseKeywords = [
     'window.dataLayer', 'gtag(', 'function()',
-    ':root', '@keyframes', 'display:', 'color:', 'margin:', 'padding:',
-    'font-family:', 'transform:', 'background:', 'box-shadow:',
-    'backdrop-filter:', 'Search laws, court judgments', 'Free features',
-    'Prism AI', 'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure',
-    'Unlock Advanced Research', 'Integrated with over 4 crore', 'Get in PDF',
-    'Print it!', 'Download Court Copy', 'Mobile Navigation',
-    'Case Recast AI', 'Talk with IK Doc', 'Disclaimer', 'Privacy Policy'
+    ':root', '@keyframes', 'display:', 'font-family:', 'backdrop-filter:',
+    'Search laws, court judgments', 'Free features', 'IKademy', 'Pricing',
+    'Login', 'Tools for analyzing structure', 'Unlock Advanced Research',
+    'Integrated with over 4 crore', 'Print it!', 'Download Court Copy',
+    'Mobile Navigation', 'Case Recast AI', 'Talk with IK Doc'
   ];
 
   for (let line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
+    // Legal sentence protection: Do NOT strip lines that are substantial legal text (> 80 chars or legal keywords)
+    const isSubstantialLegalText = trimmed.length > 80 || /^\d+[\.\)]\s/.test(trimmed) || /^(ORDER|JUDGMENT|HELD|Bench:|Petitioner|Respondent|Court|Section|Act|Versus|VS\.)/i.test(trimmed);
+
     // Check for noise keywords
     let isNoise = false;
     for (const kw of noiseKeywords) {
-      if (trimmed.includes(kw)) {
+      if (trimmed.includes(kw) && !isSubstantialLegalText) {
         isNoise = true;
         break;
       }
@@ -72,7 +73,7 @@ function cleanNoiseFromText(text) {
 
     // Check for CSS rule syntax
     if (
-      trimmed.startsWith('{') || trimmed.endsWith('}') ||
+      (!isSubstantialLegalText && (trimmed.startsWith('{') || trimmed.endsWith('}'))) ||
       trimmed.includes('{ opacity:') || trimmed.includes('linear-gradient(') ||
       trimmed.includes('rgba(') || trimmed.includes('var(--')
     ) {
@@ -106,7 +107,9 @@ export const stripHtmlTags = (htmlString) => {
   let preCleaned = htmlString
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<\s*\/\s*(?:p|div|pre|blockquote|h[1-6]|tr|li)\s*>/gi, '\n\n')
+    .replace(/<\s*br\s*\/?>/gi, '\n');
 
   if (typeof window !== 'undefined' && window.DOMParser) {
     try {
@@ -123,36 +126,11 @@ export const stripHtmlTags = (htmlString) => {
       );
       noiseElements.forEach(el => el.remove());
 
-      // Query ALL document content elements in exact DOM order:
-      // Includes .docsource_main (Title), .doc_author, .doc_bench, pre, blockquote, div.doc_input, p
-      const contentNodes = doc.querySelectorAll(
-        '.docsource_main, .doc_author, .doc_bench, .doc_title, ' +
-        '.expanded_doc pre, .expanded_doc blockquote, .expanded_doc p, .expanded_doc div.doc_input, ' +
-        '#judgements pre, #judgements blockquote, #judgements p, #judgements div.doc_input, ' +
-        '.judgements pre, .judgements blockquote, .judgements p, .judgements div.doc_input, ' +
-        '#doc pre, #doc blockquote, #doc p, #doc div.doc_input, ' +
-        'div.doc_input, pre, blockquote, p'
-      );
-
-      let paragraphList = [];
-
-      if (contentNodes && contentNodes.length > 0) {
-        contentNodes.forEach(node => {
-          const txt = (node.innerText || node.textContent || '').trim();
-          if (txt && txt.length > 2 && !paragraphList.includes(txt)) {
-            paragraphList.push(txt);
-          }
-        });
+      // Extract all text content preserving newlines
+      const bodyTxt = doc.body ? (doc.body.innerText || doc.body.textContent || '') : doc.documentElement.textContent;
+      if (bodyTxt && bodyTxt.trim().length > 30) {
+        return cleanNoiseFromText(bodyTxt);
       }
-
-      // Fallback if contentNodes didn't capture text
-      if (paragraphList.length === 0 && doc.body) {
-        const bodyTxt = (doc.body.innerText || doc.body.textContent || '').trim();
-        if (bodyTxt) paragraphList.push(bodyTxt);
-      }
-
-      const combined = paragraphList.join('\n\n');
-      return cleanNoiseFromText(combined);
     } catch (e) {
       console.warn('DOMParser failed:', e);
     }

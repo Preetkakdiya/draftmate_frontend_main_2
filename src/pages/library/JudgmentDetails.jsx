@@ -46,39 +46,40 @@ const JudgmentDetails = () => {
       setIsLoading(true);
       setApiError(null);
       try {
-        // First check for judgment in router state
-        const stateJudgment = location.state?.judgment;
-        if (stateJudgment && stateJudgment.id === judgmentId) {
-          setJudgment(stateJudgment);
-          const textData = await getJudgment(judgmentId);
-          if (textData?.data?.text) {
-            setFullText(textData.data.text);
-          }
-        } else {
-          // Then check if it's a mock judgment
+        let activeJudgment = location.state?.judgment;
+
+        if (!activeJudgment || activeJudgment.id !== judgmentId) {
           const mock = mockJudgments.find(j => j.id === judgmentId);
           if (mock) {
-            setJudgment(mock);
+            activeJudgment = mock;
           } else {
-            // Try API
             const metadata = await getMetadata(judgmentId);
             if (metadata) {
-              setJudgment(metadata);
-              const textData = await getJudgment(judgmentId);
-              if (textData?.data?.text) {
-                setFullText(textData.data.text);
-              }
-            } else {
-              setApiError('Judgment not found');
+              activeJudgment = metadata;
             }
           }
         }
+
+        if (activeJudgment) {
+          setJudgment(activeJudgment);
+
+          // Fetch full text
+          const textData = await getJudgment(judgmentId);
+          const rawText = textData?.data?.text || textData?.text || textData?.doc || (typeof textData === 'string' ? textData : '');
+          if (rawText && rawText.trim().length > 10) {
+            setFullText(rawText);
+          } else if (activeJudgment.fullText || activeJudgment.text || activeJudgment.summary) {
+            setFullText(activeJudgment.fullText || activeJudgment.text || activeJudgment.summary);
+          }
+        } else {
+          setApiError('Judgment not found');
+        }
       } catch (e) {
         console.error(e);
-        // Fallback to mock if exists
         const mock = mockJudgments.find(j => j.id === judgmentId);
         if (mock) {
           setJudgment(mock);
+          setFullText(mock.fullText || mock.text || mock.summary || '');
         } else {
           setApiError('Failed to load judgment');
         }
@@ -295,15 +296,36 @@ const JudgmentDetails = () => {
             </DetailSection>
           )}
 
-          {/* Full Text if available */}
-          {fullText && fullText.trim().length > 50 && (
+          {/* Full Text */}
+          {fullText && fullText.trim().length > 20 ? (
             <DetailSection icon="📄" title="Full Judgment Text" accent="slate">
-              <pre
-                className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap font-serif max-h-[600px] overflow-y-auto pr-2 custom-scrollbar"
+              <div
+                className="text-sm leading-relaxed text-slate-800 dark:text-slate-200 font-serif max-h-[700px] overflow-y-auto pr-3 space-y-4 custom-scrollbar"
                 style={{ fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: '1.8' }}
               >
-                {fullText.trim()}
-              </pre>
+                {fullText.split('\n\n').map((para, idx) => (
+                  <p key={idx} className="whitespace-pre-wrap">
+                    {para.trim()}
+                  </p>
+                ))}
+              </div>
+            </DetailSection>
+          ) : (
+            <DetailSection icon="📄" title="Full Judgment Text" accent="slate">
+              <div className="text-center py-6 space-y-3">
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                  Full text available directly on Indian Kanoon database
+                </p>
+                <a
+                  href={`https://indiankanoon.org/doc/${judgment.id}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-base">open_in_new</span>
+                  Read Full Judgment on Indian Kanoon
+                </a>
+              </div>
             </DetailSection>
           )}
 
