@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Loader2, Download, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Loader2, Download, AlertCircle, RefreshCw, Link2 } from 'lucide-react';
 import { api } from '../services/api';
 import { toast } from 'sonner';
 
@@ -200,107 +200,62 @@ const TranslateComparePage = () => {
     }, [isDragging]);
 
     // Synchronized Scrolling Implementation
-    useEffect(() => {
+    const handleLeftScroll = () => {
+        if (!synchronizedScrolling || isSyncing.current) return;
+        const leftEl = leftPanelRef.current;
+        const rightEl = rightPanelRef.current;
+        if (!leftEl || !rightEl) return;
+
+        isSyncing.current = true;
+        const leftMax = leftEl.scrollHeight - leftEl.clientHeight;
+        const rightMax = rightEl.scrollHeight - rightEl.clientHeight;
+
+        if (leftMax > 0 && rightMax > 0) {
+            const ratio = leftEl.scrollTop / leftMax;
+            rightEl.scrollTop = ratio * rightMax;
+        }
+
+        requestAnimationFrame(() => {
+            isSyncing.current = false;
+        });
+    };
+
+    const handleRightScroll = () => {
+        if (!synchronizedScrolling || isSyncing.current) return;
+        const leftEl = leftPanelRef.current;
+        const rightEl = rightPanelRef.current;
+        if (!leftEl || !rightEl) return;
+
+        isSyncing.current = true;
+        const leftMax = leftEl.scrollHeight - leftEl.clientHeight;
+        const rightMax = rightEl.scrollHeight - rightEl.clientHeight;
+
+        if (leftMax > 0 && rightMax > 0) {
+            const ratio = rightEl.scrollTop / rightMax;
+            leftEl.scrollTop = ratio * leftMax;
+        }
+
+        requestAnimationFrame(() => {
+            isSyncing.current = false;
+        });
+    };
+
+    const handleWheelSync = (e, targetSide) => {
         if (!synchronizedScrolling) return;
+        const activeEl = targetSide === 'left' ? leftPanelRef.current : rightPanelRef.current;
+        const otherEl = targetSide === 'left' ? rightPanelRef.current : leftPanelRef.current;
 
-        const leftIframe = leftIframeRef.current;
-        const rightIframe = rightIframeRef.current;
-        const leftOuter = leftPanelRef.current;
-        const rightOuter = rightPanelRef.current;
+        if (!activeEl || !otherEl) return;
 
-        const getWinDoc = (iframe) => {
-            try {
-                const win = iframe?.contentWindow;
-                const doc = iframe?.contentDocument || win?.document;
-                const targetEl = doc?.scrollingElement || doc?.documentElement || doc?.body;
-                return { win, doc, targetEl };
-            } catch (e) {
-                return { win: null, doc: null, targetEl: null };
-            }
-        };
+        activeEl.scrollTop += e.deltaY;
+        const activeMax = activeEl.scrollHeight - activeEl.clientHeight;
+        const otherMax = otherEl.scrollHeight - otherEl.clientHeight;
 
-        const syncScroll = (sourceIsLeft) => {
-            if (isSyncing.current) return;
-            isSyncing.current = true;
-
-            const srcIframe = sourceIsLeft ? leftIframe : rightIframe;
-            const tgtIframe = sourceIsLeft ? rightIframe : leftIframe;
-            const srcOuter = sourceIsLeft ? leftOuter : rightOuter;
-            const tgtOuter = sourceIsLeft ? rightOuter : leftOuter;
-
-            const { targetEl: srcEl } = getWinDoc(srcIframe);
-            const { targetEl: tgtEl } = getWinDoc(tgtIframe);
-
-            if (srcEl && tgtEl) {
-                const maxSrc = srcEl.scrollHeight - srcEl.clientHeight;
-                const maxTgt = tgtEl.scrollHeight - tgtEl.clientHeight;
-                if (maxSrc > 0 && maxTgt > 0) {
-                    const ratio = srcEl.scrollTop / maxSrc;
-                    tgtEl.scrollTop = ratio * maxTgt;
-                }
-            }
-
-            if (srcOuter && tgtOuter) {
-                const maxSrcOut = srcOuter.scrollHeight - srcOuter.clientHeight;
-                const maxTgtOut = tgtOuter.scrollHeight - tgtOuter.clientHeight;
-                if (maxSrcOut > 0 && maxTgtOut > 0) {
-                    tgtOuter.scrollTop = (srcOuter.scrollTop / maxSrcOut) * maxTgtOut;
-                }
-            }
-
-            requestAnimationFrame(() => {
-                isSyncing.current = false;
-            });
-        };
-
-        let cleanupFns = [];
-
-        const attachListeners = () => {
-            cleanupFns.forEach(fn => fn());
-            cleanupFns = [];
-
-            const leftWin = getWinDoc(leftIframe).win;
-            const rightWin = getWinDoc(rightIframe).win;
-
-            const onLeft = () => syncScroll(true);
-            const onRight = () => syncScroll(false);
-
-            if (leftWin) {
-                try {
-                    leftWin.addEventListener('scroll', onLeft, { passive: true });
-                    cleanupFns.push(() => leftWin.removeEventListener('scroll', onLeft));
-                } catch(e){}
-            }
-            if (rightWin) {
-                try {
-                    rightWin.addEventListener('scroll', onRight, { passive: true });
-                    cleanupFns.push(() => rightWin.removeEventListener('scroll', onRight));
-                } catch(e){}
-            }
-            if (leftOuter) {
-                leftOuter.addEventListener('scroll', onLeft, { passive: true });
-                cleanupFns.push(() => leftOuter.removeEventListener('scroll', onLeft));
-            }
-            if (rightOuter) {
-                rightOuter.addEventListener('scroll', onRight, { passive: true });
-                cleanupFns.push(() => rightOuter.removeEventListener('scroll', onRight));
-            }
-        };
-
-        attachListeners();
-
-        const onLeftLoad = () => attachListeners();
-        const onRightLoad = () => attachListeners();
-
-        leftIframe?.addEventListener('load', onLeftLoad);
-        rightIframe?.addEventListener('load', onRightLoad);
-
-        return () => {
-            cleanupFns.forEach(fn => fn());
-            leftIframe?.removeEventListener('load', onLeftLoad);
-            rightIframe?.removeEventListener('load', onRightLoad);
-        };
-    }, [synchronizedScrolling, isLoadingSource, isLoadingTranslated]);
+        if (activeMax > 0 && otherMax > 0) {
+            const ratio = activeEl.scrollTop / activeMax;
+            otherEl.scrollTop = ratio * otherMax;
+        }
+    };
 
     if (isLoading) {
         return (
@@ -386,13 +341,20 @@ const TranslateComparePage = () => {
 
                     {/* Synchronized Scrolling Toggle */}
                     <label className="hidden sm:flex items-center cursor-pointer select-none">
-                        <span className="mr-2 text-xs font-medium text-slate-300">Sync Scroll</span>
+                        <span className="mr-2 text-xs font-medium text-slate-300 flex items-center gap-1">
+                            {synchronizedScrolling && <Link2 size={13} className="text-indigo-400 animate-pulse" />}
+                            Sync Scroll
+                        </span>
                         <div className="relative">
                             <input
                                 type="checkbox"
                                 className="sr-only"
                                 checked={synchronizedScrolling}
-                                onChange={() => setSynchronizedScrolling(!synchronizedScrolling)}
+                                onChange={() => {
+                                    const nextState = !synchronizedScrolling;
+                                    setSynchronizedScrolling(nextState);
+                                    toast.success(nextState ? 'Sync Scroll Enabled' : 'Sync Scroll Disabled');
+                                }}
                             />
                             <div className={`block w-9 h-5 rounded-full transition-colors ${synchronizedScrolling ? 'bg-indigo-600' : 'bg-slate-700'}`}></div>
                             <div
@@ -449,7 +411,12 @@ const TranslateComparePage = () => {
                         )}
                     </div>
                     
-                    <div ref={leftPanelRef} className="flex-grow overflow-auto p-4 bg-slate-950 relative">
+                    <div 
+                        ref={leftPanelRef}
+                        onScroll={handleLeftScroll}
+                        onWheel={(e) => handleWheelSync(e, 'left')}
+                        className="flex-grow overflow-auto p-4 bg-slate-950 relative custom-scrollbar"
+                    >
                         {isLoadingSource ? (
                             <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 space-y-3">
                                 <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -472,8 +439,12 @@ const TranslateComparePage = () => {
                                 ref={leftIframeRef}
                                 src={sourceBlobUrl} 
                                 title="Original Source Document" 
-                                className="w-full h-full border-none bg-white rounded-xl shadow-2xl transition-transform duration-300"
-                                style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}
+                                className={`w-full border-none bg-white rounded-xl shadow-2xl transition-transform duration-300 ${synchronizedScrolling ? 'pointer-events-none' : 'pointer-events-auto'}`}
+                                style={{ 
+                                    height: synchronizedScrolling ? `${Math.max(2200, (jobDetails?.page_count || 4) * 1200 * (zoomLevel / 100))}px` : '100%',
+                                    transform: `scale(${zoomLevel / 100})`, 
+                                    transformOrigin: 'top left' 
+                                }}
                             />
                         )}
                     </div>
@@ -505,7 +476,12 @@ const TranslateComparePage = () => {
                         )}
                     </div>
 
-                    <div ref={rightPanelRef} className="flex-grow overflow-auto p-4 bg-slate-950 relative">
+                    <div 
+                        ref={rightPanelRef}
+                        onScroll={handleRightScroll}
+                        onWheel={(e) => handleWheelSync(e, 'right')}
+                        className="flex-grow overflow-auto p-4 bg-slate-950 relative custom-scrollbar"
+                    >
                         {isLoadingTranslated ? (
                             <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 space-y-3">
                                 <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -528,8 +504,12 @@ const TranslateComparePage = () => {
                                 ref={rightIframeRef}
                                 src={translatedBlobUrl} 
                                 title="Translated Document" 
-                                className="w-full h-full border-none bg-white rounded-xl shadow-2xl transition-transform duration-300"
-                                style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}
+                                className={`w-full border-none bg-white rounded-xl shadow-2xl transition-transform duration-300 ${synchronizedScrolling ? 'pointer-events-none' : 'pointer-events-auto'}`}
+                                style={{ 
+                                    height: synchronizedScrolling ? `${Math.max(2200, (jobDetails?.page_count || 4) * 1200 * (zoomLevel / 100))}px` : '100%',
+                                    transform: `scale(${zoomLevel / 100})`, 
+                                    transformOrigin: 'top left' 
+                                }}
                             />
                         )}
                     </div>
