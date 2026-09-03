@@ -20,7 +20,7 @@ docx2pdf
 python-docx
 reportlab
 pypandoc
-wkhtmltopdf
+pdfkit
 
 # Other Dependencies
 cachetools

@@ -54,7 +54,7 @@ docx2pdf
 python-docx
 reportlab
 pypandoc
-wkhtmltopdf
+pdfkit
 
 # Google API Clients
 google-api-python-client
