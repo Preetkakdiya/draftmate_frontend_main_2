@@ -351,7 +351,56 @@ const OnlyOfficeWorkspace = () => {
     };
   }, [navigate]);
 
-  const activeConfig = dynamicConfig || onlyofficeConfig;
+  const stateConfig = useMemo(() => {
+    const state = location?.state || {};
+    const searchParams = new URLSearchParams(location.search || '');
+    const fileUrl = state.initialUrl || state.s3_url || state.url || searchParams.get('url') || searchParams.get('initialUrl');
+    const fName = state.filename || state.name || searchParams.get('filename') || searchParams.get('name') || filename || 'Document.docx';
+    const docKey = state.documentKey || searchParams.get('documentKey') || documentKey || draftId || `doc_${Date.now()}`;
+
+    if (state.onlyofficeConfig) return state.onlyofficeConfig;
+
+    if (fileUrl) {
+      const ext = fName.split('.').pop().toLowerCase() || 'docx';
+      const fileType = ['docx', 'doc', 'pdf', 'txt', 'rtf'].includes(ext) ? ext : 'docx';
+      const docType = (fileType === 'pdf' || fileType === 'txt') ? 'word' : 'word';
+      return {
+        document: {
+          fileType: fileType,
+          key: docKey,
+          title: fName,
+          url: fileUrl,
+          permissions: { edit: true, download: true, print: true }
+        },
+        documentType: docType,
+        editorConfig: {
+          mode: 'edit',
+          user: {
+            id: localStorage.getItem('user_id') || 'user_1',
+            name: 'User'
+          },
+          customization: {
+            forcesave: true,
+            chat: true,
+            uiTheme: 'theme-light'
+          }
+        }
+      };
+    }
+    return null;
+  }, [location, filename, documentKey, draftId]);
+
+  const activeConfig = useMemo(() => {
+    if (stateConfig && stateConfig.document?.url) {
+      if (dynamicConfig && dynamicConfig.document?.title && (dynamicConfig.document.title.startsWith("Draft doc-") || dynamicConfig.document.title.startsWith("Untitled"))) {
+        if (stateConfig.document.title && !stateConfig.document.title.startsWith("Draft doc-")) {
+          return stateConfig;
+        }
+      }
+      return dynamicConfig || stateConfig;
+    }
+    return dynamicConfig || onlyofficeConfig || stateConfig;
+  }, [dynamicConfig, stateConfig, onlyofficeConfig]);
 
   useEffect(() => {
     console.log("[OnlyOfficeWorkspace] Editor init useEffect triggered. docsApiReady =", docsApiReady, "activeConfig =", activeConfig);

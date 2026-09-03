@@ -501,12 +501,15 @@ const DocumentManagement = () => {
 
   // Open any document directly in ONLYOFFICE Editor Workspace
   const handleDocumentClick = (doc) => {
-    const docKey = doc.id || doc.document_key || doc.name;
+    const docKey = doc.id || doc.document_key || doc.name || `doc_${Date.now()}`;
     const fileName = doc.filename || doc.name || 'Document.docx';
-    let fileUrl = doc.url || doc.s3_url;
+    let fileUrl = doc.url || doc.s3_url || doc.file_url || doc.path;
 
     if (!fileUrl && doc.id) {
       fileUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${doc.id}/${encodeURIComponent(fileName)}`;
+    }
+    if (!fileUrl) {
+      fileUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${encodeURIComponent(fileName)}`;
     }
 
     const toastId = toast.loading(`Opening "${fileName}" in ONLYOFFICE Workspace...`);
@@ -516,9 +519,10 @@ const DocumentManagement = () => {
         state: {
           documentKey: docKey,
           filename: fileName,
-          draftId: doc.id,
+          draftId: doc.id || docKey,
           initialUrl: fileUrl,
           s3_url: fileUrl,
+          url: fileUrl,
           isOnlyOfficeEdit: true
         }
       });
