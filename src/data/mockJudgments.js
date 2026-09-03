@@ -125,7 +125,45 @@ Deputy REGISTRAR COURT MASTER (NSH)`
     ratiodecidendi: 'General and omnibus allegations against relatives without specific factual accusations cannot sustain criminal prosecution.',
     pdfUrl: 'https://indiankanoon.org/doc/147009264/',
     source: 'Indian Kanoon',
-    tags: ['Criminal Law', 'Supreme Court', 'Section 498A']
+    tags: ['Criminal Law', 'Supreme Court', 'Section 498A'],
+    fullText: `Pratima vs State of U.P. And 2 Others on 23 April, 2024
+Author: Vikram Nath
+Bench: Vikram Nath, Prashant Kumar Mishra
+
+IN THE SUPREME COURT OF INDIA
+CRIMINAL APPELLATE JURISDICTION
+
+CRIMINAL APPEAL NO. 2314 OF 2024
+(Arising out of SLP (Crl.) No. 12948 of 2023)
+
+PRATIMA ... APPELLANT(S)
+VERSUS
+STATE OF U.P. AND 2 OTHERS ... RESPONDENT(S)
+
+J U D G M E N T
+
+VIKRAM NATH, J.
+
+1. Leave granted.
+
+2. This appeal arises out of the judgment and order dated 04.08.2023 passed by the High Court of Judicature at Allahabad in Criminal Miscellaneous Writ Petition No. 11204 of 2023, whereby the High Court dismissed the petition filed by the appellant seeking quashing of the First Information Report (FIR) registered under Sections 498A, 323, 504, 506 IPC and Sections 3/4 of the Dowry Prohibition Act.
+
+3. We have heard learned counsel for the parties and perused the material on record.
+
+4. Having regard to the nature of allegations and the omnibus statements made against the in-laws without specific overt acts attributed to each respondent, we find that continuing the criminal proceedings against the family members would amount to an abuse of the process of the court.
+
+5. In view of the above, the impugned order of the High Court is set aside. The FIR and subsequent criminal proceedings against the appellant and co-accused in-laws stand quashed.
+
+6. The appeal is allowed accordingly.
+
+...................................................J.
+(VIKRAM NATH)
+
+...................................................J.
+(PRASHANT KUMAR MISHRA)
+
+NEW DELHI;
+APRIL 23, 2024.`
   },
   {
     id: '172598580',

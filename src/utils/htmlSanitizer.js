@@ -24,22 +24,30 @@ export const decodeHtmlEntities = (text) => {
  * Line-by-line cleaner that decodes HTML entities and strips residual JS code,
  * CSS rules, and site chrome while preserving legal case text.
  */
+/**
+ * Line-by-line NLP cleaner that decodes HTML entities and strips CSS declarations,
+ * JS code, site navigation, and mobile chrome while preserving 100% legal case text.
+ */
 function cleanNoiseFromText(text) {
   if (!text) return '';
 
   let clean = decodeHtmlEntities(text);
 
-  // 0. Remove stray leading/trailing syntax like ");" or "});"
-  clean = clean.replace(/^\s*\);\s*/g, '');
-  clean = clean.replace(/^\s*\}\);\s*/g, '');
+  // 0. Remove stray leading/trailing code syntax like ");", "});", "{", "}"
+  clean = clean.replace(/^\s*\);\s*/gm, '');
+  clean = clean.replace(/^\s*\}\);\s*/gm, '');
+  clean = clean.replace(/^\s*\}\s*/gm, '');
+  clean = clean.replace(/^\s*\{\s*/gm, '');
 
-  // 1. Strip JavaScript functions, dataLayer, gtag, jQuery
+  // 1. Strip embedded <style> and <script> blocks if present in plain string
+  clean = clean.replace(/<style[\s\S]*?<\/style>/gi, '');
+  clean = clean.replace(/<script[\s\S]*?<\/script>/gi, '');
   clean = clean.replace(/window\.dataLayer\s*=\s*[\s\S]*?;/gi, '');
   clean = clean.replace(/gtag\s*\([^)]*\)\s*;?/gi, '');
   clean = clean.replace(/\(function\s*\([\s\S]*?\}\)\(\);?/gi, '');
   clean = clean.replace(/\$\s*\(document\)[\s\S]*?\);?/gi, '');
 
-  // 2. Strip CSS blocks and rules
+  // 2. Strip CSS rule blocks
   clean = clean.replace(/:root\s*\{[\s\S]*?\}/gi, '');
   clean = clean.replace(/@keyframes[\s\S]*?\}/gi, '');
   clean = clean.replace(/@media[\s\S]*?\}\s*\}/gi, '');
@@ -53,19 +61,59 @@ function cleanNoiseFromText(text) {
     'window.dataLayer', 'gtag(', 'function()',
     ':root', '@keyframes', 'display:', 'font-family:', 'backdrop-filter:',
     'Skip to main content', 'Indian Kanoon - Search engine', 'Search Indian laws',
-    'Main Navigation', 'Premium features', 'Prism AI', 'Upgrade to Premium',
-    'Integrated with over 4 crore', 'Know your Kanoon', 'Doc Gen Hub',
-    'Counter Argument', 'Case Predict AI', 'Talk with IK Doc', 'Case Recast AI',
+    'Main Navigation', 'Mobile Navigation', 'Legal Document View', 'Premium features',
+    'Prism AI', 'Upgrade to Premium', 'Integrated with over 4 crore', 'Know your Kanoon',
+    'Doc Gen Hub', 'Counter Argument', 'Case Predict AI', 'Talk with IK Doc', 'Case Recast AI',
     'Document Options', 'Get in PDF', 'Print it!', 'Download Court Copy',
     'Cites 0', 'Cited by 0', 'Related AI tags', 'Disclaimer', 'Privacy Policy',
     'Terms', 'Case Removal', 'Share URL', 'Mobile View', '.premium-banner',
-    'Free features', 'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure'
+    'Free features', 'IKademy', 'Pricing', 'Login', 'Tools for analyzing structure',
+    'Search', 'Translation', 'About', 'Blog'
   ];
+
+  const isCssLine = (str) => {
+    const s = str.trim().toLowerCase();
+    if (!s) return false;
+
+    // Check for CSS property key: value declarations
+    if (/^[a-z0-9_-]+\s*:\s*[^;]+;?$/.test(s)) {
+      const knownCssProps = [
+        'position', 'max-width', 'min-width', 'max-height', 'min-height',
+        'margin', 'margin-top', 'margin-bottom', 'margin-left', 'margin-right',
+        'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+        'border', 'border-radius', 'border-top', 'border-bottom', 'border-left', 'border-right',
+        'overflow', 'overflow-x', 'overflow-y', 'animation', 'transform', 'transition',
+        'font-size', 'font-weight', 'font-family', 'font-style', 'letter-spacing', 'line-height',
+        'text-align', 'text-transform', 'text-fill-color', 'background', 'background-clip',
+        'background-color', 'color', 'opacity', 'display', 'flex', 'flex-wrap', 'flex-direction',
+        'justify-content', 'align-items', 'gap', 'inset', 'top', 'left', 'bottom', 'right',
+        'width', 'height', 'z-index', 'cursor', 'vertical-align', 'box-shadow', 'visibility',
+        'pointer-events', 'user-select', '-webkit-background-clip', '-webkit-text-fill-color'
+      ];
+      const propKey = s.split(':')[0].trim();
+      if (knownCssProps.includes(propKey)) return true;
+    }
+
+    // Check for CSS values and syntax
+    if (
+      /:\s*[\d.]+(px|em|rem|%|vw|vh|deg|s|ms)\b/.test(s) ||
+      /:\s*(relative|absolute|fixed|sticky|auto|center|none|inline-block|flex|grid|uppercase|lowercase|nowrap|transparent|inherit|initial)\b/.test(s) ||
+      /^(position|margin|padding|border|font|text|background|align|justify|flex|transform|transition|animation|width|height|gap):/.test(s) ||
+      s.includes('{ opacity:') || s.includes('linear-gradient(') || s.includes('rgba(') || s.includes('var(--')
+    ) {
+      return true;
+    }
+
+    return false;
+  };
 
   for (let line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    if (trimmed === ');' || trimmed === '});' || trimmed === '}') continue;
+    if (trimmed === ');' || trimmed === '});' || trimmed === '}' || trimmed === '{' || trimmed === '- ...' || trimmed === '...') continue;
+
+    // Check if line is CSS rule/property line
+    if (isCssLine(trimmed)) continue;
 
     // Legal sentence protection: Do NOT strip lines that are substantial legal text (> 80 chars or legal keywords)
     const isSubstantialLegalText = trimmed.length > 80 || /^\d+[\.\)]\s/.test(trimmed) || /^(ORDER|JUDGMENT|HELD|Bench:|Petitioner|Respondent|Court|Section|Act|Versus|VS\.|ITEM NO|S U P R E M E|RECORD OF|Date :|CORAM :)/i.test(trimmed);
@@ -73,21 +121,12 @@ function cleanNoiseFromText(text) {
     // Check for noise keywords
     let isNoise = false;
     for (const kw of noiseKeywords) {
-      if (trimmed.toLowerCase().includes(kw.toLowerCase()) && !isSubstantialLegalText) {
+      if (trimmed.toLowerCase() === kw.toLowerCase() || (trimmed.toLowerCase().includes(kw.toLowerCase()) && !isSubstantialLegalText)) {
         isNoise = true;
         break;
       }
     }
     if (isNoise) continue;
-
-    // Check for CSS rule syntax
-    if (
-      (!isSubstantialLegalText && (trimmed.startsWith('{') || trimmed.endsWith('}') || trimmed.startsWith('.'))) ||
-      trimmed.includes('{ opacity:') || trimmed.includes('linear-gradient(') ||
-      trimmed.includes('rgba(') || trimmed.includes('var(--')
-    ) {
-      continue;
-    }
 
     cleanLines.push(trimmed);
   }
