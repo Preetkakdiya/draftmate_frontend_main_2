@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import JudgmentCard from '../../components/library/JudgmentCard';
-import { judgmentCategories, judgmentCourts } from '../../data/mockJudgments';
+import { judgmentCategories, judgmentCourts, mockJudgments } from '../../data/mockJudgments';
 import { searchJudgments } from '../../services/library/judgmentApi';
 import { judgmentService } from '../../services/library/judgmentService';
 import { Link } from 'react-router-dom';

@@ -499,64 +499,30 @@ const DocumentManagement = () => {
     }
   };
 
-  // Document Viewer Modal State
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [viewingDoc, setViewingDoc] = useState(null);
-  const [viewingBlobUrl, setViewingBlobUrl] = useState(null);
-  const [isViewingLoading, setIsViewingLoading] = useState(false);
-
-  const handleDocumentClick = async (doc) => {
+  // Open any document directly in ONLYOFFICE Editor Workspace
+  const handleDocumentClick = (doc) => {
     const docKey = doc.id || doc.document_key || doc.name;
     const fileName = doc.filename || doc.name || 'Document.docx';
-    const ext = fileName.split('.').pop()?.toLowerCase();
     let fileUrl = doc.url || doc.s3_url;
 
     if (!fileUrl && doc.id) {
       fileUrl = `${API_CONFIG.DRAFTER.BASE_URL}/v2/draft/serve/${doc.id}/${encodeURIComponent(fileName)}`;
     }
 
-    if (ext === 'docx' || ext === 'doc') {
-      const toastId = toast.loading(`Opening "${fileName}" in ONLYOFFICE Editor...`);
-      setTimeout(() => {
-        toast.dismiss(toastId);
-        navigate('/dashboard/workspace', {
-          state: {
-            documentKey: docKey,
-            filename: fileName,
-            draftId: doc.id,
-            initialUrl: fileUrl,
-            s3_url: fileUrl,
-            isOnlyOfficeEdit: true
-          }
-        });
-      }, 300);
-      return;
-    }
-
-    // PDF / Image / Text: Fetch from database & EFS storage and show on screen in Document Viewer Modal
-    setViewingDoc(doc);
-    setIsViewModalOpen(true);
-    setIsViewingLoading(true);
-    setViewingBlobUrl(null);
-
-    try {
-      const token = localStorage.getItem('session_id') || localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const targetFetchUrl = fileUrl.includes('?') ? `${fileUrl}&raw=1` : `${fileUrl}?raw=1`;
-      const res = await fetch(targetFetchUrl, { headers });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      setViewingBlobUrl(objectUrl);
-    } catch (err) {
-      console.warn("Failed to fetch document blob from DB for preview:", err);
-      // Fallback: if direct fetch fails, use fileUrl if available
-      if (fileUrl) {
-        setViewingBlobUrl(fileUrl);
-      }
-    } finally {
-      setIsViewingLoading(false);
-    }
+    const toastId = toast.loading(`Opening "${fileName}" in ONLYOFFICE Workspace...`);
+    setTimeout(() => {
+      toast.dismiss(toastId);
+      navigate('/dashboard/workspace', {
+        state: {
+          documentKey: docKey,
+          filename: fileName,
+          draftId: doc.id,
+          initialUrl: fileUrl,
+          s3_url: fileUrl,
+          isOnlyOfficeEdit: true
+        }
+      });
+    }, 250);
   };
 
   // Navigations: If selectedCaseId is null, default to General Documents case matter
@@ -1125,91 +1091,7 @@ const DocumentManagement = () => {
         </div>
       )}
 
-      {/* In-App Interactive Document Viewer Modal */}
-      {isViewModalOpen && viewingDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-          <div 
-            className="absolute inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity" 
-            onClick={() => {
-              setIsViewModalOpen(false);
-              if (viewingBlobUrl) URL.revokeObjectURL(viewingBlobUrl);
-            }}
-          />
-          <div className="relative bg-white dark:bg-slate-900 rounded-3xl w-full max-w-5xl h-[88vh] flex flex-col border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="size-10 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white truncate" title={viewingDoc.name || viewingDoc.filename}>
-                    {viewingDoc.name || viewingDoc.filename}
-                  </h3>
-                  <p className="text-xs text-slate-500 truncate">Fetched from Database & EFS Storage</p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDownloadDocument(viewingDoc)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
-                >
-                  <span className="material-symbols-outlined text-base">download</span>
-                  Download
-                </button>
-                {viewingBlobUrl && (
-                  <a
-                    href={viewingBlobUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-base">open_in_new</span>
-                    Open in Tab
-                  </a>
-                )}
-                <button
-                  onClick={() => {
-                    setIsViewModalOpen(false);
-                    if (viewingBlobUrl) URL.revokeObjectURL(viewingBlobUrl);
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ml-2"
-                >
-                  <span className="material-symbols-outlined text-2xl">close</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Viewer Canvas */}
-            <div className="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center">
-              {isViewingLoading ? (
-                <div className="flex flex-col items-center gap-3 text-slate-400">
-                  <span className="material-symbols-outlined animate-spin text-4xl text-blue-500">progress_activity</span>
-                  <p className="text-sm font-semibold">Fetching document from database...</p>
-                </div>
-              ) : viewingBlobUrl ? (
-                <iframe
-                  src={viewingBlobUrl}
-                  className="w-full h-full border-0 bg-white"
-                  title={viewingDoc.name || viewingDoc.filename}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3 text-slate-400 text-center p-6">
-                  <span className="material-symbols-outlined text-4xl text-amber-500">warning</span>
-                  <p className="text-sm font-semibold text-white">Direct preview unavailable</p>
-                  <button
-                    onClick={() => handleDownloadDocument(viewingDoc)}
-                    className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors"
-                  >
-                    Download Document File
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Dedicated Custom Delete / Confirmation Modal */}
       <ConfirmModal
