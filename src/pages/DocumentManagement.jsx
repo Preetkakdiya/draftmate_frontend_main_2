@@ -859,8 +859,7 @@ const DocumentManagement = () => {
                       key={doc.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, doc.id)}
-                      onClick={() => handleDocumentClick(doc)}
-                      className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 group"
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 group"
                     >
                       <td className="min-w-0">
                         <div className="flex items-center gap-3 text-slate-800 dark:text-slate-200 min-w-0 pr-2">
