@@ -12,11 +12,11 @@ const Judgments = () => {
   const [selectedCourt, setSelectedCourt]     = useState('All');
   const [activeTab, setActiveTab]             = useState('all'); // 'all' | 'saved'
   const [savedRefresh, setSavedRefresh]       = useState(0);
-  const [judgments, setJudgments]             = useState(mockJudgments);
+  const [judgments, setJudgments]             = useState([]);
   const [isLoading, setIsLoading]             = useState(false);
   const [apiError, setApiError]               = useState(null);
 
-  // 100% Real-time Indian Kanoon API fetch on mount, search term change, or category change
+  // 100% Real-time Indian Kanoon API search effect
   useEffect(() => {
     let isSubscribed = true;
 
@@ -24,33 +24,41 @@ const Judgments = () => {
       setIsLoading(true);
       setApiError(null);
 
-      // Determine real-time search query for Indian Kanoon API
-      const query = searchTerm.trim() 
-        ? searchTerm.trim() 
-        : (selectedCategory !== 'All' ? `${selectedCategory} Supreme Court` : 'Supreme Court 2024');
+      // Build real-time search query for Indian Kanoon API
+      let queryParts = [];
+      const term = searchTerm.trim();
+      if (term) {
+        queryParts.push(term);
+      }
+      if (selectedCategory !== 'All') {
+        queryParts.push(selectedCategory);
+      }
+      if (selectedCourt !== 'All') {
+        queryParts.push(selectedCourt);
+      }
+
+      const query = queryParts.length > 0 ? queryParts.join(' ') : 'Supreme Court 2024';
 
       try {
         const results = await searchJudgments(query);
         if (isSubscribed) {
           if (Array.isArray(results) && results.length > 0) {
-            setJudgments(results);
-          } else if (!searchTerm.trim()) {
-            setJudgments(mockJudgments);
+            // Apply category tag if specified for display consistency
+            const tagged = results.map(r => ({
+              ...r,
+              category: selectedCategory !== 'All' ? selectedCategory : (r.category || 'Indian Kanoon'),
+              tags: [selectedCategory !== 'All' ? selectedCategory : 'Indian Kanoon', r.court].filter(Boolean)
+            }));
+            setJudgments(tagged);
           } else {
-            // Filter fallback cases if search term returned no API results
-            const q = searchTerm.trim().toLowerCase();
-            const fallback = mockJudgments.filter(j => 
-              j.title.toLowerCase().includes(q) || 
-              j.summary.toLowerCase().includes(q) ||
-              (j.category && j.category.toLowerCase().includes(q))
-            );
-            setJudgments(fallback.length > 0 ? fallback : results || []);
+            setJudgments([]);
           }
         }
       } catch (e) {
-        console.error('Real-time Kanoon API search error:', e);
+        console.error('Indian Kanoon API search error:', e);
         if (isSubscribed) {
-          setJudgments(mockJudgments);
+          setApiError(e.message || 'Failed to search judgments');
+          setJudgments([]);
         }
       } finally {
         if (isSubscribed) {
@@ -63,29 +71,21 @@ const Judgments = () => {
     return () => { isSubscribed = false; };
   }, [searchTerm, selectedCategory, selectedCourt]);
 
-  // 100% Real-time Indian Kanoon API results
+  // Display real-time API judgments directly without falling back to mockJudgments on empty search
   const filteredJudgments = useMemo(() => {
-    let filtered = judgments;
-    if (selectedCategory !== 'All') {
-      const matchCat = filtered.filter(j => 
-        (j.category && j.category.toLowerCase() === selectedCategory.toLowerCase()) || 
-        (j.tags && j.tags.some(t => t.toLowerCase().includes(selectedCategory.toLowerCase()))) ||
-        j.source === 'Indian Kanoon'
-      );
-      if (matchCat.length > 0) filtered = matchCat;
+    if (judgments && judgments.length > 0) {
+      return judgments;
     }
-    if (selectedCourt !== 'All') {
-      const matchCourt = filtered.filter(j => j.court && j.court.toLowerCase().includes(selectedCourt.toLowerCase()));
-      if (matchCourt.length > 0) filtered = matchCourt;
+    // Only show default initial judgments if user hasn't typed or selected any filter
+    if (!searchTerm.trim() && selectedCategory === 'All' && selectedCourt === 'All') {
+      return mockJudgments;
     }
-    return filtered.length > 0 ? filtered : mockJudgments;
-  }, [judgments, selectedCategory, selectedCourt]);
+    return [];
+  }, [judgments, searchTerm, selectedCategory, selectedCourt]);
 
   return (
     <div className="p-6 md:p-8 h-full overflow-y-auto flex flex-col">
       <div className="max-w-7xl mx-auto w-full space-y-6 flex-1">
-
-        {/* ── Header ── */}
         <Link to="/dashboard/library" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#2563EB] mb-2 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Back to Library
