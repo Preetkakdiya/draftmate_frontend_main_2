@@ -94,6 +94,7 @@ def get_production_backend_url() -> str:
 def get_development_backend_url() -> str:
     """
     Development Environment Function: Returns the base URL for Local Machine / Docker Compose.
+    Non-blocking 0ms instant execution.
     """
     raw_override = os.getenv("DRAFTER_SELF_URL")
     if raw_override:
@@ -102,15 +103,7 @@ def get_development_backend_url() -> str:
             clean_url = clean_url[:-8]
         return clean_url
 
-    import socket
-    for target_host in ["host.docker.internal", "127.0.0.1", "backend"]:
-        try:
-            socket.getaddrinfo(target_host, 8080, proto=socket.IPPROTO_TCP)
-            return f"http://{target_host}:8080"
-        except Exception:
-            continue
-
-    return "http://127.0.0.1:8080"
+    return "http://localhost:8080"
 
 
 def get_internal_backend_url() -> str:
