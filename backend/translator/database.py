@@ -8,12 +8,15 @@ from sqlalchemy.orm import sessionmaker
 load_dotenv()
 
 def _get_database_url() -> str:
-    return (
+    raw_url = (
         os.getenv("TRANSLATOR_DATABASE_URL")
         or os.getenv("DATABASE_URL")
         or os.getenv("POSTGRES_DSN")
-        or "postgresql://lawuser:Siddchick2506@free-lawdb-useast1.cqrmc40e80ow.us-east-1.rds.amazonaws.com:5432/postgres"
+        or "postgresql+psycopg2://lawuser:Siddchick2506@free-lawdb-useast1.cqrmc40e80ow.us-east-1.rds.amazonaws.com:5432/postgres"
     )
+    if raw_url.startswith("postgresql://"):
+        raw_url = raw_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return raw_url
 
 DATABASE_URL = _get_database_url()
 
