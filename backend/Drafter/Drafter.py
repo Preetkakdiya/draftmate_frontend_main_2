@@ -94,7 +94,7 @@ def get_production_backend_url() -> str:
 def get_development_backend_url() -> str:
     """
     Development Environment Function: Returns the base URL for Local Machine / Docker Compose.
-    Non-blocking 0ms instant execution.
+    Uses host.docker.internal so the OnlyOffice container can reach host machine backend.
     """
     raw_override = os.getenv("DRAFTER_SELF_URL")
     if raw_override:
@@ -103,7 +103,7 @@ def get_development_backend_url() -> str:
             clean_url = clean_url[:-8]
         return clean_url
 
-    return "http://localhost:8080"
+    return "http://host.docker.internal:8080"
 
 
 def get_internal_backend_url() -> str:
