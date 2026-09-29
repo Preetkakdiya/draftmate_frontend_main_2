@@ -21,11 +21,18 @@ FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
 INDIAN_KANOON_API_KEY = os.getenv("IKApi", "").strip()
 # Database Config
 POSTGRES_DSN = os.getenv("POSTGRES_DSN")
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or POSTGRES_DSN
 
-# Fallback: Use POSTGRES_DSN if DATABASE_URL is not set
-if not DATABASE_URL and POSTGRES_DSN:
-    DATABASE_URL = POSTGRES_DSN.replace("postgres://", "postgresql://")
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+else:
+    _local_db_dir = Path.home() / ".draftmate_local_db"
+    _local_db_dir.mkdir(parents=True, exist_ok=True)
+    _local_db_path = _local_db_dir / "local_draftmate.db"
+    DATABASE_URL = f"sqlite:///{_local_db_path}"
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")  # Future: voyage-law-2
 
 # --- LLM MODES ---

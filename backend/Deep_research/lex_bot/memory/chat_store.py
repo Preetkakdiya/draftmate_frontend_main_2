@@ -91,24 +91,39 @@ class ChatStore:
                 pass
     
     def _init_db(self):
-        """Initialize database engine and create tables."""
+        """Initialize database engine and create tables with local drive fallback."""
         try:
-            self.engine = create_engine(
-                self.db_url,
-                connect_args={
+            connect_args = {}
+            if self.db_url and "postgresql" in self.db_url:
+                connect_args = {
                     "keepalives": 1,
                     "keepalives_idle": 30,
                     "keepalives_interval": 10,
                     "keepalives_count": 5,
                 }
-            )
+            elif self.db_url and "sqlite" in self.db_url:
+                connect_args = {"check_same_thread": False}
+
+            self.engine = create_engine(self.db_url, connect_args=connect_args)
             Base.metadata.create_all(self.engine)
             self.SessionLocal = sessionmaker(bind=self.engine)
             self._initialized = True
             logger.info("[OK] ChatStore database initialized")
         except Exception as e:
             logger.error(f"[ERROR] ChatStore init failed: {e}")
-            self._initialized = False
+            try:
+                import os
+                local_db_dir = os.path.join(os.path.expanduser("~"), ".draftmate_local_db")
+                os.makedirs(local_db_dir, exist_ok=True)
+                sqlite_path = os.path.join(local_db_dir, "local_draftmate.db")
+                self.engine = create_engine(f"sqlite:///{sqlite_path}", connect_args={"check_same_thread": False})
+                Base.metadata.create_all(self.engine)
+                self.SessionLocal = sessionmaker(bind=self.engine)
+                self._initialized = True
+                logger.info(f"[OK] ChatStore fallback local disk SQLite database initialized at {sqlite_path}")
+            except Exception as e2:
+                logger.error(f"[CRITICAL] ChatStore fallback failed: {e2}")
+                self._initialized = False
     
     def update_session_title(self, session_id: str, user_id: str, title: str) -> bool:
         """Update or create session title."""

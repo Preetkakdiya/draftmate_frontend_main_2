@@ -40,13 +40,15 @@ def get_db_connection():
             server.start()
             print(f"[OK] Tunnel active on port {server.local_bind_port}")
             
-            # Connect to local forwarded port
+            db_user = os.getenv("POSTGRES_USER", "postgres")
+            db_pass = os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or ""
+            db_name = os.getenv("POSTGRES_DB", "postgres")
             conn = psycopg2.connect(
                 host='127.0.0.1',
                 port=server.local_bind_port,
-                user=os.getenv("POSTGRES_USER", "lawuser"),
-                password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
-                dbname=os.getenv("POSTGRES_DB", "postgres")
+                user=db_user,
+                password=db_pass,
+                dbname=db_name
             )
             return conn, server
         except Exception as e:
@@ -59,10 +61,10 @@ def get_db_connection():
              conn = psycopg2.connect(POSTGRES_DSN)
         else:
             conn = psycopg2.connect(
-                host=os.getenv("POSTGRES_HOST", "localhost"),
-                dbname=os.getenv("POSTGRES_DB", "lex_bot_db"),
+                host=os.getenv("POSTGRES_HOST", "db"),
+                dbname=os.getenv("POSTGRES_DB", "postgres"),
                 user=os.getenv("POSTGRES_USER", "postgres"),
-                password=os.getenv("POSTGRES_PASSWORD", "password"),
+                password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "",
                 port=os.getenv("POSTGRES_PORT", "5432")
             )
         return conn, None

@@ -157,14 +157,34 @@ def get_db_connection():
             return psycopg2.connect(dsn, cursor_factory=RealDictCursor)
         except Exception:
             pass
-    return psycopg2.connect(
-        host=os.getenv("POSTGRES_HOST", "db"),
-        dbname=os.getenv("POSTGRES_DB", "postgres"),
-        user=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "",
-        port=os.getenv("POSTGRES_PORT", "5432"),
-        cursor_factory=RealDictCursor,
-    )
+    try:
+        return psycopg2.connect(
+            host=os.getenv("POSTGRES_HOST", "db"),
+            dbname=os.getenv("POSTGRES_DB", "postgres"),
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "",
+            port=os.getenv("POSTGRES_PORT", "5432"),
+            cursor_factory=RealDictCursor,
+        )
+    except Exception as e:
+        logger.warning(f"PostgreSQL connection failed: {e}. Falling back to SQLite local drive DB.")
+        local_db_dir = os.path.join(os.path.expanduser("~"), ".draftmate_local_db")
+        os.makedirs(local_db_dir, exist_ok=True)
+        sqlite_path = os.path.join(local_db_dir, "advocate_profile.db")
+        import sqlite3
+        class SQLiteDictCursorProxy:
+            def __init__(self, db_path):
+                self.conn = sqlite3.connect(db_path, check_same_thread=False)
+                self.conn.row_factory = sqlite3.Row
+            def cursor(self, *args, **kwargs):
+                return self.conn.cursor()
+            def commit(self):
+                self.conn.commit()
+            def rollback(self):
+                self.conn.rollback()
+            def close(self):
+                self.conn.close()
+        return SQLiteDictCursorProxy(sqlite_path)
 
 
 # ── File Storage Abstraction ──────────────────────────────────────────────────

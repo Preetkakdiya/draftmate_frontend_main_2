@@ -85,28 +85,28 @@ def get_db_connection():
                     print(f"[ERROR] Tunnel connection failed: {e}")
                     raise
 
-            # Connect to local forwarded port
+            db_user = os.getenv("POSTGRES_USER", "postgres")
+            db_pass = os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or ""
+            db_name = os.getenv("POSTGRES_DB", "postgres")
             conn = psycopg2.connect(
                 host='127.0.0.1',
                 port=_tunnel.local_bind_port,
-                user=os.getenv("POSTGRES_USER", "lawuser"),
-                password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
-                dbname=os.getenv("POSTGRES_DB", "postgres")
+                user=db_user,
+                password=db_pass,
+                dbname=db_name
             )
             return conn
         else:
             # Direct connection or Local Docker
             dsn = os.getenv("POSTGRES_DSN")
-            # If DSN targets the Remote DB but we don't have tunnel, it might fail or connect to empty usage.
-            # But let's fallback to it.
             if dsn:
                 conn = psycopg2.connect(dsn)
             else:
                  conn = psycopg2.connect(
                     host=os.getenv("POSTGRES_HOST", "db"),
-                    dbname=os.getenv("POSTGRES_DB", "lex_bot_db"),
+                    dbname=os.getenv("POSTGRES_DB", "postgres"),
                     user=os.getenv("POSTGRES_USER", "postgres"),
-                    password=os.getenv("POSTGRES_PASSWORD", "password"),
+                    password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "",
                     port=os.getenv("POSTGRES_PORT", "5432")
                 )
             return conn

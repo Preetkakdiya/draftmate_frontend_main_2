@@ -1275,29 +1275,8 @@ async def sync_variable_value(request: VariableSyncRequest, authorization: Optio
         raise HTTPException(status_code=500, detail=f"XML modification failed: {str(e)}")
 
 
-@app.get("/v2/draft/serve/{filename}")
-def serve_draft_file(filename: str):
-    shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
-    if not shared_storage_path:
-        raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
-
-    safe_name = os.path.basename((filename or "").replace("\\", "/"))
-    if not safe_name:
-        raise HTTPException(status_code=400, detail="Invalid filename.")
-
-    file_path = os.path.join(shared_storage_path, safe_name)
-    if not os.path.isfile(file_path):
-        raise HTTPException(status_code=404, detail="File not found.")
-
-    return FileResponse(
-        path=file_path,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename=safe_name,
-    )
-
-
-@app.get("/v2/draft/serve/{draft_id}/{filename}")
-async def serve_draft(draft_id: str, filename: str):
+@app.api_route("/v2/draft/serve/{draft_id}/{filename}", methods=["GET", "HEAD"])
+async def serve_draft(draft_id: str, filename: str, request: Request):
     shared_storage_path = os.getenv("SHARED_STORAGE_PATH", "/app/shared_drafts")
     alt_storage = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../shared_storage"))
 
@@ -1405,6 +1384,19 @@ async def serve_draft(draft_id: str, filename: str):
             logger.error(f"Failed to generate fallback document: {gen_err}")
             raise HTTPException(status_code=404, detail=f"File '{safe_name}' not found.")
 
+    if request and request.method == "HEAD":
+        from fastapi.responses import Response
+        return Response(
+            status_code=200,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Length": str(os.path.getsize(file_path)) if os.path.isfile(file_path) else "0",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+
     return FileResponse(
         path=file_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1415,6 +1407,21 @@ async def serve_draft(draft_id: str, filename: str):
             "Expires": "0"
         }
     )
+
+
+@app.api_route("/v2/draft/serve/{filename}", methods=["GET", "HEAD"])
+def serve_draft_file(filename: str):
+    shared_storage_path = os.getenv("SHARED_STORAGE_PATH")
+    if not shared_storage_path:
+        raise HTTPException(status_code=500, detail="SHARED_STORAGE_PATH is not set.")
+
+    safe_name = os.path.basename((filename or "").replace("\\", "/"))
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid filename.")
+
+    file_path = os.path.join(shared_storage_path, safe_name)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found.")
 
 
 @app.get("/v2/draft/pdf/{draft_id}/{filename}")
