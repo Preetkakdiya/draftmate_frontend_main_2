@@ -81,28 +81,38 @@ PLACEHOLDER_REGEX = re.compile(r'\b[A-Z][A-Z0-9_]{3,}\b')
 def get_internal_backend_url() -> str:
     """
     Returns the absolute base URL of the backend service.
-    Guarantees compatibility between Docker Compose networks and AWS ECS Fargate awsvpc.
+    Dynamically switches between Production (AWS ECS / draftmate.in) and Localhost (host.docker.internal / Docker Compose).
     """
-    # 1. Check for explicit environmental overrides first
-    raw_override = os.getenv("ONLYOFFICE_CALLBACK_HOST") or os.getenv("EXTERNAL_SERVER_URL")
+    env_type = os.getenv("ENVIRONMENT", "development").strip().lower()
+
+    # 1. Check for explicit environmental overrides first (e.g. DRAFTER_SELF_URL)
+    raw_override = (
+        os.getenv("DRAFTER_SELF_URL") or 
+        os.getenv("ONLYOFFICE_CALLBACK_HOST") or 
+        os.getenv("EXTERNAL_SERVER_URL")
+    )
     if raw_override:
         clean_url = raw_override.strip().rstrip('/')
-        # Security Strip: Remove trailing '/drafter' suffix if accidentally hardcoded in ECS env
         if clean_url.endswith('/drafter'):
             clean_url = clean_url[:-8]
         return clean_url
 
-    # 2. Local Docker Compose Bridge network discovery
+    # 2. Production Environment (AWS ECS / Production Domain)
+    if env_type in ["production", "prod"]:
+        prod_url = os.getenv("FRONTEND_URL_PROD", "https://draftmate.in").strip().rstrip('/')
+        return prod_url
+
+    # 3. Local Development (Docker Compose / Localhost)
+    # Uses host.docker.internal so OnlyOffice container reaches host backend
     import socket
-    for target_host in ["backend", "drafter-service"]:
+    for target_host in ["host.docker.internal", "backend", "drafter-service"]:
         try:
             socket.getaddrinfo(target_host, 8080, proto=socket.IPPROTO_TCP)
             return f"http://{target_host}:8080"
         except Exception:
             continue
 
-    # 3. AWS ECS Fargate (awsvpc network mode) localhost loopback fallback
-    return "http://127.0.0.1:8080"
+    return "http://host.docker.internal:8080"
 
 def extract_and_cache_docx(file_path: str):
     try:

@@ -101,7 +101,7 @@ services:
       - "8080:8080"
       - "8003:8003"
     environment:
-      - DRAFTER_SELF_URL=http://backend:8003
+      - DRAFTER_SELF_URL=${DRAFTER_SELF_URL:-http://host.docker.internal:8080}
       - HF_HUB_OFFLINE=1
       - TRANSFORMERS_OFFLINE=1
       - HF_HUB_ENABLE_HF_TRANSFER=0
