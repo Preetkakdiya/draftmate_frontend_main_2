@@ -338,13 +338,23 @@ class RedlineChangeStatusUpdate(BaseModel):
 def get_profile_internal(cur, user_id):
     try:
         cur.execute("""
-            SELECT first_name, last_name, role, workplace, bio, profile_image_url 
-            FROM profiles 
-            WHERE user_id = %s
+            SELECT p.first_name, p.last_name, p.role, p.workplace, p.bio, p.profile_image_url,
+                   COALESCE(u.ai_consent, 'no')
+            FROM profiles p
+            LEFT JOIN users u ON u.id = p.user_id
+            WHERE p.user_id = %s
         """, (user_id,))
         result = cur.fetchone()
         
         if not result:
+            # Even if no profile exists, still check ai_consent from users table
+            try:
+                cur.execute("SELECT COALESCE(ai_consent, 'no') FROM users WHERE id = %s", (user_id,))
+                user_row = cur.fetchone()
+                if user_row:
+                    return {"ai_consent": user_row[0]}
+            except Exception:
+                pass
             return {}
             
         return {
@@ -353,7 +363,8 @@ def get_profile_internal(cur, user_id):
             "role": result[2],
             "workplace": result[3],
             "bio": result[4],
-            "image": result[5]
+            "image": result[5],
+            "ai_consent": result[6]
         }
     except Exception:
         return {}

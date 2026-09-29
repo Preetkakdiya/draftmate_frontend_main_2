@@ -143,6 +143,11 @@ const Login = () => {
                 localStorage.setItem('user_profile', JSON.stringify({
                     ...data.profile, id: data.user_id, email
                 }));
+                // Restore consent state from backend if already accepted
+                if (data.profile.ai_consent === 'yes') {
+                    localStorage.setItem('draftmate_ai_consent_accepted', 'true');
+                    localStorage.setItem('draftmate_ai_consent_value', 'yes');
+                }
             } else {
                 localStorage.setItem('user_profile', JSON.stringify({ email, id: data.user_id }));
             }
@@ -216,12 +221,10 @@ const Login = () => {
                     // Check onboarding status
                     const hasOnboarded = !!(profileData.professional_background || profileData.role || profileData.bar_council || profileData.college_name);
 
-                    // Clear stale consent if not consented
-                    if (profileData.ai_consent !== 'yes') {
-                        localStorage.removeItem('draftmate_ai_consent_accepted');
-                        localStorage.removeItem('draftmate_ai_consent_value');
-                        localStorage.removeItem('draftmate_ai_consent_details');
-                        window.dispatchEvent(new Event('draftmate_consent_updated'));
+                    // Restore consent state from backend if already accepted
+                    if (profileData.ai_consent === 'yes') {
+                        localStorage.setItem('draftmate_ai_consent_accepted', 'true');
+                        localStorage.setItem('draftmate_ai_consent_value', 'yes');
                     }
 
                     toast.dismiss(loadingToast);
@@ -256,11 +259,6 @@ const Login = () => {
                 lastName: userName.split(' ').slice(1).join(' ') || '',
                 google: true
             }));
-
-            localStorage.removeItem('draftmate_ai_consent_accepted');
-            localStorage.removeItem('draftmate_ai_consent_value');
-            localStorage.removeItem('draftmate_ai_consent_details');
-            window.dispatchEvent(new Event('draftmate_consent_updated'));
 
             toast.dismiss(loadingToast);
             toast.success(`Welcome to DraftMate, ${userName}!`);

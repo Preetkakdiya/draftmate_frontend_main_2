@@ -92,7 +92,6 @@ import Features from './pages/Features';
 import HowItWorks from './pages/HowItWorks';
 import Blogs from './pages/Blogs';
 import BlogPost from './pages/BlogPost';
-import FAQs from './pages/FAQs';
 import Disclaimer from './pages/Disclaimer';
 import PrivacyPolicy from './pages/Privacy';
 import TermsOfUse from './pages/Terms';
@@ -104,14 +103,6 @@ import { NotificationProvider } from './context/NotificationContext';
 import Pricing from './pages/Pricing';
 import Billing from './pages/billing';
 import ErrorBoundary from './components/ErrorBoundary';
-
-const RequireAuth = ({ children }) => {
-  const profile = localStorage.getItem('user_profile');
-  if (!profile) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
 
 function LibraryRedirect() {
   const location = useLocation();
@@ -181,14 +172,11 @@ function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/terms" element={<TermsOfUse />} />
-              <Route path="/blogs" element={<ComingSoon title="Blog" />} />
               <Route path="/advocates" element={<AdvocateDiscovery />} />
               <Route path="/advocate/onboarding" element={<AdvocateOnboarding />} />
               <Route path="/advocate/:slug" element={<AdvocateProfile />} />
               <Route path="/admin/verifications" element={<AdminDashboard />} />
 
-
-              <Route path="/blogs" element={<ComingSoon title="Blog" />} />
               <Route path="/academy" element={<LjAcademy />} />
               <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
 

@@ -10,7 +10,6 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 from QueryParsing import normalize_query
-from scoring import score_match 
 from sql import search_documents
 from sentence_transformers import SentenceTransformer
 
