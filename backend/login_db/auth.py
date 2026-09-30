@@ -64,6 +64,15 @@ class SQLitePooledConnectionProxy:
     def __init__(self, db_path):
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.execute("PRAGMA foreign_keys = ON")
+        try:
+            self.conn.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, google_id TEXT, full_name TEXT, ai_consent TEXT DEFAULT 'no')")
+            self.conn.execute("CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, user_id TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+            self.conn.execute("CREATE TABLE IF NOT EXISTS profiles (profile_id TEXT PRIMARY KEY, user_id TEXT UNIQUE, first_name TEXT, last_name TEXT, role TEXT, workplace TEXT, bio TEXT, profile_image_url TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+            self.conn.execute("CREATE TABLE IF NOT EXISTS password_reset_otps (email TEXT PRIMARY KEY, otp_code TEXT, expires_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+            self.conn.commit()
+        except Exception as e:
+            print(f"[WARN] SQLite auto schema init warning: {e}")
+
     def cursor(self, *args, **kwargs):
         cur = self.conn.cursor()
         class SQLiteCursorAdapter:
@@ -73,9 +82,11 @@ class SQLitePooledConnectionProxy:
                 q = query.replace('%s', '?')
                 q = q.replace('gen_random_uuid()', 'lower(hex(randomblob(16)))')
                 q = q.replace('CURRENT_TIMESTAMP', "datetime('now')")
-                if 'ON CONFLICT' in q and 'DO UPDATE' in q and 'users' in q:
-                    # Strip Postgres-specific EXCLUDED syntax for SQLite compatibility
-                    q = "INSERT OR REPLACE INTO users (id, email, password_hash, google_id, full_name) VALUES (?, ?, ?, ?, ?)"
+                if 'ON CONFLICT' in q and 'DO UPDATE' in q:
+                    if 'password_reset_otps' in q:
+                        q = "INSERT OR REPLACE INTO password_reset_otps (email, otp_code, expires_at) VALUES (?, ?, ?)"
+                    elif 'users' in q:
+                        q = "INSERT OR REPLACE INTO users (id, email, password_hash, google_id, full_name) VALUES (?, ?, ?, ?, ?)"
                 try:
                     return self.c.execute(q, params)
                 except sqlite3.OperationalError as oe:
@@ -89,6 +100,7 @@ class SQLitePooledConnectionProxy:
                         self.c.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, google_id TEXT, full_name TEXT, ai_consent TEXT DEFAULT 'no')")
                         self.c.execute("CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, user_id TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
                         self.c.execute("CREATE TABLE IF NOT EXISTS profiles (profile_id TEXT PRIMARY KEY, user_id TEXT UNIQUE, first_name TEXT, last_name TEXT, role TEXT, workplace TEXT, bio TEXT, profile_image_url TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+                        self.c.execute("CREATE TABLE IF NOT EXISTS password_reset_otps (email TEXT PRIMARY KEY, otp_code TEXT, expires_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
                         return self.c.execute(q, params)
                     raise oe
             def fetchone(self):
