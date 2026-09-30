@@ -830,18 +830,21 @@ def login(user: UserLogin):
         user_id, stored_hash, google_id = result
         
         if not stored_hash:
-            raise HTTPException(
-                status_code=400,
-                detail="This account was registered using Google Sign-In. Please sign in with Google, or reset your password to set a manual login password."
-            )
-            
-        if not verify_password(user.password, stored_hash):
-            if google_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="This account was registered using Google Sign-In. Please sign in with Google, or reset your password to set a manual login password."
-                )
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            if user.password:
+                new_hash = hash_password(user.password)
+                cur.execute("UPDATE users SET password_hash = %s WHERE LOWER(email) = %s", (new_hash, email_lower))
+                conn.commit()
+            else:
+                raise HTTPException(status_code=400, detail="Please enter a valid password.")
+        else:
+            if not verify_password(user.password, stored_hash):
+                if google_id:
+                    # Update password for Google account if a new manual password is provided
+                    new_hash = hash_password(user.password)
+                    cur.execute("UPDATE users SET password_hash = %s WHERE LOWER(email) = %s", (new_hash, email_lower))
+                    conn.commit()
+                else:
+                    raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # Create Session
         session_id = str(uuid.uuid4())
