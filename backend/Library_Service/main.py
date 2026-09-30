@@ -55,6 +55,50 @@ try:
 except Exception as schema_err:
     logger.warning(f"Schema update check completed with notice: {schema_err}")
 
+# Auto-seed legal_terms table on startup if it is empty
+try:
+    from pathlib import Path
+    import re as _re
+    from sqlalchemy.orm import Session as _Session
+
+    _dict_file = Path(__file__).parent / "dictionary_data" / "indian_legal_explanations.txt"
+    if _dict_file.exists():
+        with engine.connect() as _conn:
+            _count = _conn.execute(text("SELECT COUNT(*) FROM legal_terms")).scalar()
+        if _count == 0:
+            logger.info("legal_terms table is empty — seeding dictionary data...")
+            _content = _dict_file.read_text(encoding="utf-8")
+            _matches = _re.findall(
+                r"TERM:\s*(.*?)\s*EXPLANATION:\s*(.*?)(?=\n\s*TERM:|\Z)",
+                _content,
+                flags=_re.DOTALL,
+            )
+            _inserted = 0
+            with engine.begin() as _conn:
+                for _term, _explanation in _matches:
+                    _term = _term.strip()
+                    _normalized = _term.casefold()
+                    _explanation = _explanation.strip()
+                    if _term and _explanation:
+                        _conn.execute(
+                            text(
+                                """
+                                INSERT INTO legal_terms (term, normalized_term, explanation, status)
+                                VALUES (:term, :normalized_term, :explanation, 'active')
+                                ON CONFLICT (normalized_term) DO NOTHING
+                                """
+                            ),
+                            {"term": _term, "normalized_term": _normalized, "explanation": _explanation},
+                        )
+                        _inserted += 1
+            logger.info(f"Legal dictionary seeded: {_inserted} terms inserted.")
+        else:
+            logger.info(f"legal_terms table already has {_count} terms — skipping seed.")
+    else:
+        logger.warning(f"Dictionary file not found at {_dict_file} — skipping seed.")
+except Exception as _seed_err:
+    logger.warning(f"Legal dictionary auto-seed skipped: {_seed_err}")
+
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="DraftMate Library Service", version="1.0.0")
 app.state.limiter = limiter
