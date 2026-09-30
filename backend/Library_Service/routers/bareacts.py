@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from services.bareacts_service import bare_acts_service
 
 router = APIRouter(

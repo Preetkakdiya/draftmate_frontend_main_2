@@ -2,7 +2,6 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from extract_metadata import extract_metadata_from_html
-from s3_upload import upload_to_s3
 import tempfile
 import shutil
 import os

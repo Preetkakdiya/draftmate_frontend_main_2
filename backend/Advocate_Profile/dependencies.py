@@ -6,7 +6,6 @@ Fixes:
 - Returns 401 with clear messages on token issues
 """
 
-import os
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials

@@ -16,7 +16,6 @@ import os
 import sys
 import uuid
 import json
-import random
 import bcrypt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv

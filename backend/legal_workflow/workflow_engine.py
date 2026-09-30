@@ -11,7 +11,6 @@ State machine:
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from backend.legal_workflow.agents.intake_agent import handle_intake
 from backend.legal_workflow.agents.context_collector import handle_context_collection
@@ -178,7 +177,6 @@ async def _handle_upload_review(
 
     # Accept document upload
     if payload.message_type == "document" and payload.document and payload.document.file_bytes:
-        import base64
         from backend.legal_workflow.agents.context_collector import _extract_text_from_document
 
         doc_text = _extract_text_from_document(

@@ -6,12 +6,11 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
-from celery.schedules import schedule
 
 from backend.translator.crud import update_translation_job
 from backend.translator.extractors.docx import extract_docx_blocks
 from backend.translator.extractors.pdf import extract_pdf_blocks
-from backend.translator.database import SessionLocal, init_engine
+from backend.translator.database import init_engine
 from backend.translator.models import Base
 from backend.translator.models.translation_job import TranslationJob
 from backend.translator.rebuilders import rebuild_docx_document, rebuild_html_document, rebuild_pdf_document

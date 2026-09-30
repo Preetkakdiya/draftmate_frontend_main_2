@@ -1,8 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
 import os
-import argparse
 from dotenv import load_dotenv
 
 # Import ikapi script components

@@ -21,7 +21,7 @@ import logging
 import hashlib
 import json
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse, urlunparse, quote, unquote
+from urllib.parse import urlparse, urlunparse, quote
 
 import httpx
 import jwt
@@ -940,7 +940,6 @@ def _clean_pdf2docx_output(docx_path: str) -> None:
     try:
         from docx import Document as _Doc
         from docx.oxml.ns import qn as _qn
-        from lxml import etree as _et
 
         # Page-number patterns that pdf2docx copies verbatim from PDF footer/header
         _PAGE_NUM_RE = _re.compile(
@@ -3649,7 +3648,7 @@ async def judge_draft(request: Dict[str, Any], authorization: Optional[str] = He
                 payload = ast.literal_eval(raw_text)
                 if not isinstance(payload, dict):
                     raise ValueError("Parsed object is not a dictionary")
-            except Exception as ast_err:
+            except Exception:
                 logger.error(f"Both JSON and AST parsing failed. Raw response: {raw_text}")
                 raise json_err
             

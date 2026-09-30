@@ -2,7 +2,6 @@
 
 from logging.config import fileConfig
 from pathlib import Path
-import os
 import sys
 
 from alembic import context

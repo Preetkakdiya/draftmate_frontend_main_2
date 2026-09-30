@@ -8,7 +8,7 @@ from typing import Sequence
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Inches, Pt
+from docx.shared import Pt
 
 from backend.translator.extractors.models import Block
 

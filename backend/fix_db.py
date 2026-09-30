@@ -42,7 +42,6 @@ def fix_db():
         
         # Now run seed_ecosystem
         print("Running seed_ecosystem.py...")
-        import seed_ecosystem
         
     except Exception as e:
         print(f"[ERROR] Error: {e}")

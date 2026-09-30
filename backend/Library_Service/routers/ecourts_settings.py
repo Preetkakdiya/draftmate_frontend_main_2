@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 
-from services.ecourts_service import ECourtsService, ECourtsAPIError
+from services.ecourts_service import ECourtsService
 
 router = APIRouter(tags=["e-Courts Integration"])
 

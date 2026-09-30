@@ -1,5 +1,4 @@
 from bs4 import BeautifulSoup as bs
-import time
 
 def extract_metadata_from_html(html_content : str, md: dict) -> dict:
     """Extract metadata such as title and headings from HTML content.

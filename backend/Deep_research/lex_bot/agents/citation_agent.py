@@ -6,13 +6,10 @@ verifies candidates, performs multi-criteria ranking (relevance, SC/HC hierarchy
 later treatment, statutory match, recency), and selects 5-10 authoritative citations.
 """
 
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 import logging
 import re
-from datetime import datetime
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 
 from lex_bot.agents.base_agent import BaseAgent
 from lex_bot.tools import indian_kanoon_api as ik

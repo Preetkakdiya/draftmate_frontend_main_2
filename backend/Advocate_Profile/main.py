@@ -20,7 +20,6 @@ from fastapi import FastAPI, HTTPException, Depends, Query, Request, UploadFile,
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
@@ -28,12 +27,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import uuid
-import shutil
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
 
-from auth import router as auth_router, SECRET_KEY, ALGORITHM
+from auth import router as auth_router
 from dependencies import get_current_user, get_admin_user
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
@@ -1078,7 +1076,6 @@ def update_practice_areas(data: PracticeAreaUpdate, current_user: dict = Depends
     conn = None
     try:
         conn = get_db_connection()
-        import json as _json
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM advocate_profiles WHERE user_id = %s", (user_id,))
             res = cur.fetchone()
@@ -1544,13 +1541,13 @@ def request_consultation(request: Request, req: ConsultationRequestCreate):
                 "created_at": created_at
             },
         }
-    except psycopg2.Error as e:
+    except psycopg2.Error:
         if conn:
             conn.rollback()
         raise HTTPException(status_code=500, detail="Failed to create consultation request. Please try again later.")
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
@@ -1637,13 +1634,13 @@ def update_consultation_status(
                 "updated_at": updated.get("updated_at", None)
             }
         }
-    except psycopg2.Error as e:
+    except psycopg2.Error:
         if conn:
             conn.rollback()
         raise HTTPException(status_code=500, detail="Failed to update status. Please try again later.")
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
@@ -1789,7 +1786,7 @@ def send_message(request: Request, req: NewMessage):
             "message": "Message sent successfully.",
             "data": {"message_id": str(msg_id), "created_at": created_at}
         }
-    except psycopg2.Error as e:
+    except psycopg2.Error:
         if conn:
             conn.rollback()
         raise HTTPException(status_code=500, detail="Failed to send message. Please try again later.")

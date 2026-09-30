@@ -2,7 +2,6 @@ import logging
 from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import fitz  # PyMuPDF
-from pdf2image import convert_from_path
 
 try:
     import easyocr

@@ -7,8 +7,6 @@ when specialized agents encounter errors or timeouts.
 
 import logging
 from typing import Dict, Any, Optional
-from functools import wraps
-import asyncio
 
 from lex_bot.tools.web_search import web_search_tool
 from lex_bot.config import WEB_SEARCH_MAX_RESULTS

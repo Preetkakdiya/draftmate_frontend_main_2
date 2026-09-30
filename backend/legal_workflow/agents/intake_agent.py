@@ -11,8 +11,6 @@ import logging
 from backend.legal_workflow.delivery.messages import (
     Button,
     CTAMessage,
-    ListMessage,
-    Section,
     TextMessage,
 )
 

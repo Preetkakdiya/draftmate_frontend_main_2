@@ -54,7 +54,6 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 from lex_bot.graph import run_query, prepare_initial_state, app as langgraph_app
-from lex_bot.memory import UserMemoryManager
 from lex_bot.memory.chat_store import ChatStore
 from lex_bot.config import MEM0_ENABLED, DATABASE_URL
 from lex_bot.tools.session_cache import get_session_cache
@@ -581,7 +580,6 @@ async def _stream_chat(request: ChatRequest, user_id: str):
     try:
         logger.info(f"[INFO] Calling graph for session {session_id} with node tracking...")
         
-        import queue
         
         tracked_nodes = {
             "memory_recall", "router", "research_agent", "document_agent", 

@@ -8,13 +8,12 @@ Features:
 """
 
 import hashlib
-import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
 import numpy as np
 
-from lex_bot.config import SESSION_CACHE_TTL_MINUTES, EMBEDDING_MODEL_NAME
+from lex_bot.config import SESSION_CACHE_TTL_MINUTES
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,6 @@ class SessionCache:
         self._faiss = None
         self._initialized = False
         
-        from lex_bot.core.embeddings import get_embedding_model
         
         self._init_dependencies()
         

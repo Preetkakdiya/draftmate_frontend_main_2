@@ -1,11 +1,10 @@
 
 import os
 import uuid
-from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import psycopg2
-from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -35,7 +34,6 @@ RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # Database Connection
-import sys
 from sshtunnel import SSHTunnelForwarder
 import paramiko
 
@@ -89,8 +87,8 @@ def get_db_connection():
             conn = psycopg2.connect(
                 host='127.0.0.1',
                 port=_tunnel.local_bind_port,
-                user=os.getenv("POSTGRES_USER", "lawuser"),
-                password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
+                user=os.getenv("POSTGRES_USER", "postgres"),
+                password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "Draftmate9989",
                 dbname=os.getenv("POSTGRES_DB", "postgres")
             )
             return conn
@@ -104,9 +102,9 @@ def get_db_connection():
             else:
                  conn = psycopg2.connect(
                     host=os.getenv("POSTGRES_HOST", "db"),
-                    dbname=os.getenv("POSTGRES_DB", "lex_bot_db"),
+                    dbname=os.getenv("POSTGRES_DB", "postgres"),
                     user=os.getenv("POSTGRES_USER", "postgres"),
-                    password=os.getenv("POSTGRES_PASSWORD", "password"),
+                    password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "Draftmate9989",
                     port=os.getenv("POSTGRES_PORT", "5432")
                 )
             return conn
@@ -334,7 +332,7 @@ def verify_payment(data: VerifyOrderModel):
         
         try:
             razorpay_client.utility.verify_payment_signature(params_dict)
-        except Exception as e:
+        except Exception:
             raise HTTPException(status_code=400, detail="Signature verification failed")
             
         conn = get_db_connection()

@@ -5,7 +5,7 @@ This is a placeholder for when you're ready to use Pinecone
 for persistent vector storage of case law and legal documents.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)

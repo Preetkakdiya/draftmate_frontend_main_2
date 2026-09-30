@@ -12,7 +12,7 @@ Features:
 
 import logging
 import functools
-from typing import Literal, Optional
+from typing import Literal
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_core.language_models.chat_models import BaseChatModel

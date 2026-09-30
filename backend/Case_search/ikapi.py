@@ -197,7 +197,7 @@ class IKApi:
             try:
                 obj = json.loads(results)
                 return obj 
-            except Exception as e:
+            except Exception:
                 time.sleep(10)
                 count += 1
                 continue
@@ -297,7 +297,7 @@ def mk_dir(datadir):
     if not os.path.exists(datadir):
         try:
             os.mkdir(datadir)
-        except FileExistsError as e:
+        except FileExistsError:
             pass
 
 class FileStorage:

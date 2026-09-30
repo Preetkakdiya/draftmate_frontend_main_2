@@ -2,7 +2,6 @@ import os
 import uuid
 import random
 import psycopg2
-from psycopg2.extras import Json
 import bcrypt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv

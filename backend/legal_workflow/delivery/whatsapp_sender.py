@@ -16,7 +16,6 @@ import httpx
 
 from backend.legal_workflow.config import settings
 from backend.legal_workflow.delivery.messages import (
-    Button,
     CTAMessage,
     CTAUrlMessage,
     Delay,

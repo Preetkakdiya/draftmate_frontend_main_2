@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from html import escape
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Sequence
 
 from backend.translator.extractors.models import Block
 

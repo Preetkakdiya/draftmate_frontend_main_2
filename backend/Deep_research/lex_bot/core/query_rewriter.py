@@ -13,7 +13,7 @@ Latency:
 
 import re
 import logging
-from typing import Tuple, Optional, List, Dict
+from typing import Optional, List, Dict
 
 logger = logging.getLogger(__name__)
 LEGAL_ABBREVIATIONS = {

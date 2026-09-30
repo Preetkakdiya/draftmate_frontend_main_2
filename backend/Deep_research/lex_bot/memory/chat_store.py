@@ -10,11 +10,10 @@ Stores full chat logs per user/session for:
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
-import json
 
 from sqlalchemy import create_engine, Column, String, Text, DateTime, Integer, JSON
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 from lex_bot.config import DATABASE_URL
 
@@ -74,6 +73,10 @@ class ChatStore:
             self._history_cache = None
         
         if self.db_url:
+            if self.db_url.startswith("postgres://"):
+                self.db_url = self.db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+            elif self.db_url.startswith("postgresql://"):
+                self.db_url = self.db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
             self._init_db()
     
     def _invalidate_session_cache(self, session_id: str):

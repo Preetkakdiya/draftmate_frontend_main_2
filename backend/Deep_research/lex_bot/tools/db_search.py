@@ -1,9 +1,7 @@
-import os
 import logging
-from typing import List, Dict, Optional, Tuple
-from ..config import DATABASE_URL, EMBEDDING_MODEL_NAME, DB_SEARCH_LIMIT_PRE
+from typing import List, Dict, Tuple
+from ..config import DB_SEARCH_LIMIT_PRE
 from .web_search import web_search_tool
-from ..core.embeddings import get_embedding_model
 
 # Configure logging
 logger = logging.getLogger(__name__)

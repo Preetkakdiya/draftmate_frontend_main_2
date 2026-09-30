@@ -4,8 +4,8 @@ Tool Registry - Dynamic tool assignment for agents
 Agents can request tools by capability (e.g., "case_search", "statute_lookup").
 """
 
-from typing import Dict, List, Any, Callable, Optional
-from dataclasses import dataclass, field
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
 
 
 @dataclass

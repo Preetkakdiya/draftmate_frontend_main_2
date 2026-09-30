@@ -16,8 +16,7 @@ from services import (
     IndianKanoonAPIError,
     AuthenticationError,
     RateLimitError,
-    NotFoundError,
-    NormalizedJudgment
+    NotFoundError
 )
 
 logger = logging.getLogger(__name__)

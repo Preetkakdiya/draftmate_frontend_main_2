@@ -18,14 +18,12 @@ from backend.translator.crud import (
     serialize_translation_job,
     TranslationJobNotFoundError,
 )
-from backend.translator.database import DATABASE_URL, SessionLocal, engine
+from backend.translator.database import SessionLocal, engine
 from backend.translator.models import Base
 from backend.translator.storage import delete_local_file, get_original_upload_path
 from backend.translator.security import (
-    VirusScanError,
     UploadValidationError,
     build_download_response,
-    scan_bytes_with_clamav,
     store_bytes_at_rest,
     validate_upload,
 )

@@ -8,7 +8,7 @@ import uuid
 import psycopg2
 from fastapi import FastAPI, HTTPException, Depends, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List, Dict
+from typing import Optional, List
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import bcrypt
@@ -79,8 +79,14 @@ class SQLitePooledConnectionProxy:
                 try:
                     return self.c.execute(q, params)
                 except sqlite3.OperationalError as oe:
-                    if 'no such table' in str(oe).lower():
-                        self.c.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, google_id TEXT, full_name TEXT)")
+                    oe_str = str(oe).lower()
+                    if 'no such column: ai_consent' in oe_str:
+                        try:
+                            self.c.execute("ALTER TABLE users ADD COLUMN ai_consent TEXT DEFAULT 'no'")
+                            return self.c.execute(q, params)
+                        except Exception: pass
+                    if 'no such table' in oe_str:
+                        self.c.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, google_id TEXT, full_name TEXT, ai_consent TEXT DEFAULT 'no')")
                         self.c.execute("CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, user_id TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
                         self.c.execute("CREATE TABLE IF NOT EXISTS profiles (profile_id TEXT PRIMARY KEY, user_id TEXT UNIQUE, first_name TEXT, last_name TEXT, role TEXT, workplace TEXT, bio TEXT, profile_image_url TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)")
                         return self.c.execute(q, params)
@@ -99,7 +105,6 @@ class SQLitePooledConnectionProxy:
     def close(self):
         self.conn.close()
 
-from psycopg2 import pool
 _db_pool = None
 
 def get_db_connection():
@@ -131,8 +136,8 @@ def get_db_connection():
                 _db_pool = psycopg2.pool.SimpleConnectionPool(1, 20,
                     host='127.0.0.1',
                     port=_tunnel.local_bind_port,
-                    user=os.getenv("POSTGRES_USER", "lawuser"),
-                    password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
+                    user=os.getenv("POSTGRES_USER", "postgres"),
+                    password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "Draftmate9989",
                     dbname=os.getenv("POSTGRES_DB", "postgres"),
                     connect_timeout=3,
                     keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5
@@ -337,25 +342,44 @@ class RedlineChangeStatusUpdate(BaseModel):
 
 def get_profile_internal(cur, user_id):
     try:
-        cur.execute("""
-            SELECT first_name, last_name, role, workplace, bio, profile_image_url 
-            FROM profiles 
-            WHERE user_id = %s
-        """, (user_id,))
-        result = cur.fetchone()
+        user_id_str = str(user_id).strip() if user_id else ""
         
-        if not result:
+        # 1. Fetch profile fields if profile exists
+        p = None
+        try:
+            cur.execute("""
+                SELECT first_name, last_name, role, workplace, bio, profile_image_url 
+                FROM profiles 
+                WHERE user_id = %s
+            """, (user_id_str,))
+            p = cur.fetchone()
+        except Exception as p_err:
+            print(f"profile fetch error: {p_err}")
+
+        # 2. Fetch ai_consent from users table
+        u = None
+        try:
+            cur.execute("SELECT COALESCE(ai_consent, 'no') FROM users WHERE id = %s OR LOWER(email) = LOWER(%s)", (user_id_str, user_id_str))
+            u = cur.fetchone()
+        except Exception as u_err:
+            print(f"user consent fetch error: {u_err}")
+
+        ai_consent = u[0] if (u and len(u) > 0 and u[0]) else 'no'
+
+        if not p and not u:
             return {}
-            
+
         return {
-            "firstName": result[0],
-            "lastName": result[1],
-            "role": result[2],
-            "workplace": result[3],
-            "bio": result[4],
-            "image": result[5]
+            "firstName": p[0] if (p and len(p) > 0) else "",
+            "lastName": p[1] if (p and len(p) > 1) else "",
+            "role": p[2] if (p and len(p) > 2) else "",
+            "workplace": p[3] if (p and len(p) > 3) else "",
+            "bio": p[4] if (p and len(p) > 4) else "",
+            "image": p[5] if (p and len(p) > 5) else "",
+            "ai_consent": ai_consent
         }
-    except Exception:
+    except Exception as e:
+        print(f"get_profile_internal error: {e}")
         return {}
 
 # Helper Functions
@@ -594,24 +618,7 @@ def get_profile(user_id: str):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT first_name, last_name, role, workplace, bio, profile_image_url 
-            FROM profiles 
-            WHERE user_id = %s
-        """, (user_id,))
-        result = cur.fetchone()
-        
-        if not result:
-            return {}
-            
-        return {
-            "firstName": result[0],
-            "lastName": result[1],
-            "role": result[2],
-            "workplace": result[3],
-            "bio": result[4],
-            "image": result[5]
-        }
+        return get_profile_internal(cur, user_id)
     except Exception as e:
         print(f"Get profile error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch profile")
@@ -1179,7 +1186,7 @@ def reset_password(request: ResetPasswordRequest):
         conn.close()
 
 
-from typing import List, Dict, Any
+from typing import List, Any
 
 class DraftRegister(BaseModel):
     draft_id: str
@@ -1356,7 +1363,6 @@ def get_draft_internal(draft_id: str):
         r = cur.fetchone()
         if not r:
             raise HTTPException(status_code=404, detail="Draft not found")
-        import json
         return {
             "id": str(r[0]),
             "name": r[1],

@@ -5,14 +5,12 @@ from pydantic import BaseModel
 from typing import Optional, List
 from main_file import s3_client
 import os
-import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import traceback
 from parse_s3_uri import parse_s3_uri
 load_dotenv()
 
-from QueryParsing import normalize_query
 from main_file import get_best_template, download_from_s3
 
 from contextlib import asynccontextmanager

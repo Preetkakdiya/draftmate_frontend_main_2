@@ -231,7 +231,7 @@ async def get_draft_pdf(draft_id: str):
                 "Content-Disposition": f'attachment; filename="draft_{draft_id}.pdf"'
             }
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to generate PDF")
         raise HTTPException(status_code=500, detail="Failed to generate PDF")
 

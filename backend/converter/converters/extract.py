@@ -3,7 +3,6 @@
 
 import fitz
 import html
-import base64
 import os
 
 def extract_content_metadata(file_path):

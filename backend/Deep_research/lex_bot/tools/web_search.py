@@ -2,8 +2,8 @@ import logging
 import requests
 import asyncio
 import httpx
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Tuple, Optional
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Dict, Tuple
 import trafilatura
 from tavily import TavilyClient
 from ddgs import DDGS

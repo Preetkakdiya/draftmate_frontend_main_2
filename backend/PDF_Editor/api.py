@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import io
 import os
@@ -7,10 +7,8 @@ import tempfile
 import zipfile
 import fitz  # PyMuPDF
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from PIL import Image, ImageDraw, ImageFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 import base64

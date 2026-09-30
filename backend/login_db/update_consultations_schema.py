@@ -1,4 +1,3 @@
-import psycopg2
 from init_advocate_db import get_db_connection
 
 def update():

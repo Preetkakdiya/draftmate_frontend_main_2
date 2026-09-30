@@ -1,9 +1,8 @@
 import os
-import re
 import json
 import logging
 import threading
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import httpx
 import fitz  # PyMuPDF
 from docx import Document as DocxDocument
@@ -245,7 +244,7 @@ def extract_events_from_page(page_text: str, page_num: int, doc_name: str) -> Li
                 payload = ast.literal_eval(raw_text)
                 if not isinstance(payload, dict):
                     raise ValueError("Parsed object is not a dictionary")
-            except Exception as ast_err:
+            except Exception:
                 logger.error(f"Both JSON and AST parsing failed on page {page_num}. Raw response: {raw_text}")
                 raise json_err
 

@@ -1,22 +1,16 @@
 import streamlit as st
-import PyPDF2
 from PyPDF2 import PdfReader, PdfWriter, PdfMerger
 import io
 import os
 import tempfile
 import fitz  # PyMuPDF
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from PIL import Image, ImageDraw, ImageFont
-import base64
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
 
 # Page configuration
 st.set_page_config(
@@ -669,7 +663,7 @@ def compress_pdf_advanced(pdf_file, target_size_kb=None, compression_level="medi
                     img_output.seek(0)
                     page.replace_image(xref, stream=img_bytes)
                     
-                except Exception as img_error:
+                except Exception:
                     continue
         
         output = io.BytesIO()

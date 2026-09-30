@@ -1,7 +1,6 @@
 import os
 import psycopg2
 from dotenv import load_dotenv
-import sys
 from sshtunnel import SSHTunnelForwarder
 import paramiko
 
@@ -42,8 +41,8 @@ def get_db_connection():
             conn = psycopg2.connect(
                 host='127.0.0.1',
                 port=server.local_bind_port,
-                user=os.getenv("POSTGRES_USER", "lawuser"),
-                password=os.getenv("POSTGRES_PASSWORD", "Siddchick2506"),
+                user=os.getenv("POSTGRES_USER", "postgres"),
+                password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "Draftmate9989",
                 dbname=os.getenv("POSTGRES_DB", "postgres")
             )
             return conn, server

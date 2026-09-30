@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import Optional, List, Literal
 from collections import defaultdict
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, status
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from pydantic import BaseModel, EmailStr, Field
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -503,8 +503,8 @@ def send_email_task(to_email: str, subject: str, body: str, html_body: Optional[
     """Background task to send email with optional PDF attachment"""
     smtp_server = (os.getenv("SMTP_SERVER") or "smtp.gmail.com").strip()
     smtp_port = int(str(os.getenv("SMTP_PORT") or "587").strip())
-    smtp_username = (os.getenv("SMTP_USERNAME") or "draftmate25@gmail.com").strip()
-    smtp_password = (os.getenv("SMTP_PASSWORD") or "qmfd rnio yxnc ssob").strip()
+    smtp_username = (os.getenv("SMTP_USERNAME").strip())
+    smtp_password = (os.getenv("SMTP_PASSWORD").strip())
 
     # Extract share URL from body if not explicitly passed
     if not share_url and body and "http" in body:

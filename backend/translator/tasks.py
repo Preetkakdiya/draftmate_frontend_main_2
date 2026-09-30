@@ -1,11 +1,7 @@
 """Celery tasks for translator jobs."""
 
 import os
-import time
-from pathlib import Path
 from celery import Celery
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 def _get_broker_url() -> str:
     return os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")

@@ -7,7 +7,6 @@ Supports:
 - Query enhancement for better search
 """
 
-import os
 import threading
 from typing import Literal
 from cachetools import LRUCache
@@ -15,7 +14,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from lex_bot.core.llm_factory import LLMFactory, get_llm
+from lex_bot.core.llm_factory import LLMFactory
 from lex_bot.config import LLM_PROVIDER
 
 # Cache enhanced queries: legal queries repeat heavily across users and sessions.
@@ -109,7 +108,7 @@ class BaseAgent:
             with _enhance_cache_lock:
                 _enhance_cache[cache_key] = result
             return result
-        except Exception as e:
+        except Exception:
             return query
 
     def _generate_followups(self, query: str, answer: str) -> list[str]:

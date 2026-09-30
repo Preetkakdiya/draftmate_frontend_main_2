@@ -346,7 +346,7 @@ def _ensure_users_table_columns(conn):
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_type VARCHAR(50) DEFAULT 'ADVOCATE';")
             conn.commit()
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
 
