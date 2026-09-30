@@ -27,7 +27,10 @@ const AdvocateDetails = () => {
     userProfile.bar_council = barCouncil;
     userProfile.practice_area = practiceArea;
     userProfile.experience = experience;
+    userProfile.role = "Advocate / Legal Pro";
+    userProfile.onboarding_completed = "yes";
     localStorage.setItem("user_profile", JSON.stringify(userProfile));
+    localStorage.setItem("draftmate_onboarded", "true");
 
     localStorage.removeItem("draftmate_ai_consent_accepted");
     window.dispatchEvent(new Event("draftmate_consent_updated"));

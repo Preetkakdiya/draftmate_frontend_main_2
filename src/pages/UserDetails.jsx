@@ -29,7 +29,10 @@ const UserDetails = () => {
     const userProfile = JSON.parse(localStorage.getItem("user_profile") || "{}");
     userProfile.use_case = useCase;
     userProfile.industry = industry;
+    userProfile.role = "Non-Legal User";
+    userProfile.onboarding_completed = "yes";
     localStorage.setItem("user_profile", JSON.stringify(userProfile));
+    localStorage.setItem("draftmate_onboarded", "true");
 
     await new Promise((res) => setTimeout(res, 500));
     toast.success("Profile saved!");

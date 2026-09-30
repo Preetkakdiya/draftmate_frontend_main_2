@@ -137,14 +137,17 @@ const Onboarding = () => {
         localStorage.getItem("user_profile") || "{}"
       );
       userProfile.professional_background = selectedRole;
+      userProfile.role = selectedRole;
+      userProfile.onboarding_completed = "yes";
       localStorage.setItem("user_profile", JSON.stringify(userProfile));
+      localStorage.setItem("draftmate_onboarded", "true");
 
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       toast.dismiss(loadingToast);
       toast.success("Profile updated!");
 
-      // Γ£à Route to the corresponding details page based on selected role
+      // Route to the corresponding details page based on selected role
       const nextRoute = ROLE_ROUTES[selectedRole] || "/dashboard/home";
       triggerExitAndNavigate(nextRoute);
     } catch (error) {
@@ -155,6 +158,11 @@ const Onboarding = () => {
   };
 
   const handleSkip = () => {
+    localStorage.setItem("draftmate_onboarded", "true");
+    const userProfile = JSON.parse(localStorage.getItem("user_profile") || "{}");
+    userProfile.onboarding_completed = "yes";
+    userProfile.role = userProfile.role || "User";
+    localStorage.setItem("user_profile", JSON.stringify(userProfile));
     triggerExitAndNavigate("/dashboard/home");
   };
 

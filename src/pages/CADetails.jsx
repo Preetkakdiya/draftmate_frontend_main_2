@@ -24,7 +24,10 @@ const CADetails = () => {
     userProfile.profession = profession;
     userProfile.membership_no = membershipNo;
     userProfile.specialization = specialization;
+    userProfile.role = profession || "CA / CS / Compliance";
+    userProfile.onboarding_completed = "yes";
     localStorage.setItem("user_profile", JSON.stringify(userProfile));
+    localStorage.setItem("draftmate_onboarded", "true");
 
     await new Promise((res) => setTimeout(res, 500));
     toast.success("Profile saved!");

@@ -24,7 +24,10 @@ const FirmDetails = () => {
     userProfile.firm_name = firmName;
     userProfile.position = position;
     userProfile.team_size = teamSize;
+    userProfile.role = "Law Firm Member";
+    userProfile.onboarding_completed = "yes";
     localStorage.setItem("user_profile", JSON.stringify(userProfile));
+    localStorage.setItem("draftmate_onboarded", "true");
 
     await new Promise((res) => setTimeout(res, 500));
     toast.success("Profile saved!");

@@ -58,11 +58,14 @@ const StudentDetails = () => {
         const loadingToast = toast.loading("Saving your details...");
 
         try {
-            // Γ£à Save to localStorage only
+            // Save to localStorage
             const userProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
             userProfile.college_name = college.trim();
             userProfile.study_year = selectedYear;
+            userProfile.role = "Law Student";
+            userProfile.onboarding_completed = "yes";
             localStorage.setItem('user_profile', JSON.stringify(userProfile));
+            localStorage.setItem('draftmate_onboarded', 'true');
 
             localStorage.removeItem('draftmate_ai_consent_accepted');
             window.dispatchEvent(new Event('draftmate_consent_updated'));
@@ -80,6 +83,10 @@ const StudentDetails = () => {
     };
 
     const handleSkip = () => {
+        localStorage.setItem('draftmate_onboarded', 'true');
+        const userProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+        userProfile.onboarding_completed = "yes";
+        localStorage.setItem('user_profile', JSON.stringify(userProfile));
         triggerExitAndNavigate('/dashboard/home');
     };
 

@@ -218,7 +218,9 @@ const Login = () => {
                     localStorage.setItem('user_profile', JSON.stringify(profileData));
 
                     // Check onboarding status
-                    const hasOnboarded = !!(profileData.professional_background || profileData.role || profileData.bar_council || profileData.college_name);
+                    const hasOnboarded = profileData.onboarding_completed === 'yes' ||
+                        localStorage.getItem('draftmate_onboarded') === 'true' ||
+                        !!(profileData.professional_background || profileData.role || profileData.bar_council || profileData.college_name);
 
                     // Restore consent state from backend if already accepted
                     if (profileData.ai_consent === 'yes') {
@@ -247,6 +249,10 @@ const Login = () => {
             const devSessionId = `google-session-${Date.now()}`;
             const devUserId = `google-user-${Date.now()}`;
 
+            const existingLocalProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+            const hasLocalOnboarded = localStorage.getItem('draftmate_onboarded') === 'true' ||
+                !!(existingLocalProfile.professional_background || existingLocalProfile.role || existingLocalProfile.bar_council || existingLocalProfile.college_name);
+
             localStorage.setItem('session_id', devSessionId);
             localStorage.setItem('user_id', devUserId);
             localStorage.setItem('user_profile', JSON.stringify({
@@ -256,14 +262,18 @@ const Login = () => {
                 image: userPicture,
                 firstName: userName.split(' ')[0] || '',
                 lastName: userName.split(' ').slice(1).join(' ') || '',
-                google: true
+                google: true,
+                ...existingLocalProfile
             }));
 
-
-
             toast.dismiss(loadingToast);
-            toast.success(`Welcome to DraftMate, ${userName}!`);
-            navigate('/onboarding');
+            if (!hasLocalOnboarded) {
+                toast.success(`Welcome to DraftMate, ${userName}!`);
+                navigate('/onboarding');
+            } else {
+                toast.success(`Welcome back, ${userName}!`);
+                navigate('/dashboard/home');
+            }
             setIsLoading(false);
         },
         onError: () => toast.error("Google Login Failed"),

@@ -369,14 +369,20 @@ def get_profile_internal(cur, user_id):
         if not p and not u:
             return {}
 
+        role = p[2] if (p and len(p) > 2 and p[2]) else ""
+        workplace = p[3] if (p and len(p) > 3 and p[3]) else ""
+        bio = p[4] if (p and len(p) > 4 and p[4]) else ""
+        has_onboarded = 'yes' if (role or workplace or bio) else 'no'
+
         return {
             "firstName": p[0] if (p and len(p) > 0) else "",
             "lastName": p[1] if (p and len(p) > 1) else "",
-            "role": p[2] if (p and len(p) > 2) else "",
-            "workplace": p[3] if (p and len(p) > 3) else "",
-            "bio": p[4] if (p and len(p) > 4) else "",
+            "role": role,
+            "workplace": workplace,
+            "bio": bio,
             "image": p[5] if (p and len(p) > 5) else "",
-            "ai_consent": ai_consent
+            "ai_consent": ai_consent,
+            "onboarding_completed": has_onboarded
         }
     except Exception as e:
         print(f"get_profile_internal error: {e}")
@@ -803,13 +809,13 @@ def login(user: UserLogin):
     
     try:
         email_lower = user.email.strip().lower() if user.email else ""
-        cur.execute("SELECT id, password_hash FROM users WHERE LOWER(email) = %s", (email_lower,))
+        cur.execute("SELECT id, password_hash, google_id FROM users WHERE LOWER(email) = %s", (email_lower,))
         result = cur.fetchone()
         
         if not result:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        user_id, stored_hash = result
+        user_id, stored_hash, google_id = result
         
         if not stored_hash:
             raise HTTPException(
@@ -818,6 +824,11 @@ def login(user: UserLogin):
             )
             
         if not verify_password(user.password, stored_hash):
+            if google_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This account was registered using Google Sign-In. Please sign in with Google, or reset your password to set a manual login password."
+                )
             raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # Create Session
