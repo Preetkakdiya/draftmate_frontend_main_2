@@ -66,8 +66,6 @@ const StudentDetails = () => {
             userProfile.onboarding_completed = "yes";
             localStorage.setItem('user_profile', JSON.stringify(userProfile));
             localStorage.setItem('draftmate_onboarded', 'true');
-
-            localStorage.removeItem('draftmate_ai_consent_accepted');
             window.dispatchEvent(new Event('draftmate_consent_updated'));
 
             await new Promise(resolve => setTimeout(resolve, 600));
