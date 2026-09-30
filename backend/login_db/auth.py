@@ -15,9 +15,6 @@ import bcrypt
 import jwt
 import requests
 from datetime import datetime, timedelta
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -92,7 +89,6 @@ class SQLitePooledConnectionProxy:
                         self.c.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, google_id TEXT, full_name TEXT, ai_consent TEXT DEFAULT 'no')")
                         self.c.execute("CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY, user_id TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
                         self.c.execute("CREATE TABLE IF NOT EXISTS profiles (profile_id TEXT PRIMARY KEY, user_id TEXT UNIQUE, first_name TEXT, last_name TEXT, role TEXT, workplace TEXT, bio TEXT, profile_image_url TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)")
-                        self.c.execute("CREATE TABLE IF NOT EXISTS password_reset_otps (email TEXT PRIMARY KEY, otp_code TEXT, expires_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
                         return self.c.execute(q, params)
                     raise oe
             def fetchone(self):
@@ -141,7 +137,7 @@ def get_db_connection():
                     host='127.0.0.1',
                     port=_tunnel.local_bind_port,
                     user=os.getenv("POSTGRES_USER", "postgres"),
-                    password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD") or "Draftmate9989",
+                    password=os.getenv("POSTGRES_PASSWORD") or os.getenv("PSQL_PASSWD"),
                     dbname=os.getenv("POSTGRES_DB", "postgres"),
                     connect_timeout=3,
                     keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5
@@ -373,7 +369,7 @@ def get_profile_internal(cur, user_id):
         if not p and not u:
             return {}
 
-        role = p[2] if (p and len(p) > 2 and p[2]) else ""
+        role = p[0] if (p and len(p) > 2 and p[2]) else ""
         workplace = p[3] if (p and len(p) > 3 and p[3]) else ""
         bio = p[4] if (p and len(p) > 4 and p[4]) else ""
         has_onboarded = 'yes' if (role or workplace or bio) else 'no'
@@ -1016,52 +1012,6 @@ def ensure_otp_table(cur, conn):
         conn.rollback()
         print(f"ensure_otp_table warning: {e}")
 
-def send_otp_email_direct(to_email: str, otp_code: str) -> bool:
-    """Fallback direct SMTP email sender when Notification service is unreachable"""
-    smtp_server = (os.getenv("SMTP_SERVER") or "smtp.gmail.com").strip()
-    smtp_port = int(str(os.getenv("SMTP_PORT") or "587").strip())
-    smtp_username = (os.getenv("SMTP_USERNAME") or "").strip()
-    smtp_password = (os.getenv("SMTP_PASSWORD") or "").strip()
-
-    if not smtp_username or not smtp_password:
-        print(f"[AUTH DIRECT SMTP] SMTP credentials not configured, skipping direct email to {to_email}")
-        return False
-
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['From'] = f"DraftMate AI Verification <{smtp_username}>"
-        msg['To'] = to_email
-        msg['Subject'] = "Reset Your DraftMate Password - Verification Code"
-
-        text_body = f"Your verification code to reset your password is: {otp_code}\n\nThis code will expire in 10 minutes."
-        html_body = f"""<!DOCTYPE html>
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b;">
-  <div style="max-width: 500px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Password Reset Request</h2>
-    <p style="color: #475569; font-size: 14px; line-height: 1.5;">Use the 6-digit verification code below to reset your password for account <strong>{to_email}</strong>:</p>
-    <div style="background: #eff6ff; border: 2px dashed #3b82f6; font-size: 34px; font-weight: 800; color: #1d4ed8; text-align: center; padding: 18px; border-radius: 10px; letter-spacing: 8px; margin: 24px 0; font-family: monospace;">
-      {otp_code}
-    </div>
-    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">⏱️ This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
-  </div>
-</body>
-</html>"""
-
-        msg.attach(MIMEText(text_body, 'plain'))
-        msg.attach(MIMEText(html_body, 'html'))
-
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.sendmail(smtp_username, to_email, msg.as_string())
-        server.quit()
-        print(f"[AUTH DIRECT SMTP] Successfully sent OTP email to {to_email}")
-        return True
-    except Exception as e:
-        print(f"[AUTH DIRECT SMTP ERROR] Failed to send email to {to_email}: {e}")
-        return False
-
 @app.post("/forgot-password")
 def forgot_password(request: ForgotPasswordRequest):
     import random
@@ -1070,12 +1020,8 @@ def forgot_password(request: ForgotPasswordRequest):
     
     try:
         ensure_otp_table(cur, conn)
-        email_lower = request.email.strip().lower() if request.email else ""
-        
-        if not email_lower:
-            raise HTTPException(status_code=400, detail="Please enter your email address.")
-
         # 1. Check if user exists (case-insensitive)
+        email_lower = request.email.strip().lower() if request.email else ""
         cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email_lower,))
         user = cur.fetchone()
         
@@ -1087,28 +1033,17 @@ def forgot_password(request: ForgotPasswordRequest):
         
         # 2. Generate 6-digit OTP code and save/update it
         otp_code = f"{random.randint(100000, 999999)}"
-        expires_at = datetime.utcnow() + timedelta(minutes=10)
+        expires_at = datetime.utcnow() + timedelta(minutes=10) # Expires in 10 minutes
         
-        try:
-            cur.execute("DELETE FROM password_reset_otps WHERE LOWER(email) = %s", (email_lower,))
-            cur.execute(
-                "INSERT INTO password_reset_otps (email, otp_code, expires_at) VALUES (%s, %s, %s)",
-                (email_lower, otp_code, expires_at)
-            )
-            conn.commit()
-        except Exception as db_err:
-            conn.rollback()
-            print(f"[AUTH FORGOT PASSWORD DB WARN]: {db_err}")
-            try:
-                cur.execute(
-                    "INSERT INTO password_reset_otps (email, otp_code, expires_at) VALUES (%s, %s, %s)",
-                    (email_lower, otp_code, expires_at)
-                )
-                conn.commit()
-            except Exception: pass
+        cur.execute("""
+            INSERT INTO password_reset_otps (email, otp_code, expires_at)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (email)
+            DO UPDATE SET otp_code = EXCLUDED.otp_code, expires_at = EXCLUDED.expires_at
+        """, (email_lower, otp_code, expires_at))
+        conn.commit()
         
-        # 3. Send Email via Notification Service (with direct SMTP fallback)
-        sent = False
+        # 3. Send Email via Notification Service
         try:
             notification_url = os.getenv("NOTIFICATION_SERVICE_URL", "http://127.0.0.1:8015").rstrip("/")
             notification_payload = {
@@ -1117,14 +1052,10 @@ def forgot_password(request: ForgotPasswordRequest):
                 "body": f"Your verification code to reset your password is: {otp_code}\n\nThis code will expire in 10 minutes.",
                 "doc_title": f"OTP Verification Code: {otp_code}"
             }
-            res = requests.post(f"{notification_url}/send-email", json=notification_payload, timeout=5)
-            if res.status_code == 200:
-                sent = True
+            requests.post(f"{notification_url}/send-email", json=notification_payload, timeout=10)
+            print(f"[AUTH FORGOT PASSWORD] Dispatched OTP email for {email_lower}")
         except Exception as e:
-            print(f"[AUTH FORGOT PASSWORD] Notification Service call notice: {e}")
-            
-        if not sent:
-            send_otp_email_direct(email_lower, otp_code)
+            print(f"[AUTH FORGOT PASSWORD] Failed to call Notification Service: {e}")
             
         response = {"message": "OTP verification code sent if the email is registered."}
         env = os.getenv("ENVIRONMENT", "development").strip().lower()
@@ -1133,9 +1064,6 @@ def forgot_password(request: ForgotPasswordRequest):
             
         return response
         
-    except HTTPException as he:
-        conn.rollback()
-        raise he
     except Exception as e:
         conn.rollback()
         print(f"Forgot password error: {e}")
@@ -1222,8 +1150,9 @@ def reset_password(request: ResetPasswordRequest):
     try:
         user_id = None
         if request.token:
+            token_clean = request.token.strip().strip('"').strip("'")
             try:
-                payload = jwt.decode(request.token, SECRET_KEY, algorithms=[ALGORITHM])
+                payload = jwt.decode(token_clean, SECRET_KEY, algorithms=[ALGORITHM])
                 user_id = payload.get("sub")
                 token_type = payload.get("type")
                 
@@ -1232,8 +1161,16 @@ def reset_password(request: ResetPasswordRequest):
                     
             except jwt.ExpiredSignatureError:
                 raise HTTPException(status_code=400, detail="Token has expired. Please request a new code.")
-            except jwt.InvalidTokenError:
-                raise HTTPException(status_code=400, detail="Invalid or corrupt reset token.")
+            except Exception:
+                jwt_secret_env = os.getenv("JWT_SECRET")
+                if jwt_secret_env:
+                    try:
+                        payload = jwt.decode(token_clean, jwt_secret_env, algorithms=[ALGORITHM])
+                        user_id = payload.get("sub")
+                    except Exception:
+                        raise HTTPException(status_code=400, detail="Invalid or corrupt reset token.")
+                else:
+                    raise HTTPException(status_code=400, detail="Invalid or corrupt reset token.")
         elif request.email:
             email_lower = request.email.strip().lower()
             cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email_lower,))
@@ -1246,25 +1183,35 @@ def reset_password(request: ResetPasswordRequest):
 
         # 2. Update Password
         hashed_pwd = hash_password(request.new_password)
+        user_id_str = str(user_id).strip()
         
+        updated = False
         try:
-            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed_pwd, user_id))
+            cur.execute("UPDATE users SET password_hash = %s WHERE id::text = %s OR id = %s", (hashed_pwd, user_id_str, user_id_str))
+            conn.commit()
+            updated = True
         except Exception:
             conn.rollback()
-            cur.execute("UPDATE users SET password = %s, password_hash = %s WHERE id = %s", (hashed_pwd, hashed_pwd, user_id))
-        
-        if cur.rowcount == 0:
+            try:
+                cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed_pwd, user_id_str))
+                conn.commit()
+                updated = True
+            except Exception as update_err:
+                conn.rollback()
+                print(f"[RESET PASSWORD UPDATE WARN]: {update_err}")
+
+        if not updated:
             raise HTTPException(status_code=404, detail="User account not found.")
             
-        conn.commit()
         return {"message": "Password updated successfully"}
         
     except HTTPException as he:
+        conn.rollback()
         raise he
     except Exception as e:
         conn.rollback()
         print(f"Reset password error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cur.close()
         conn.close()
