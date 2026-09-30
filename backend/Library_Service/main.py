@@ -8,14 +8,29 @@ import logging
 from dotenv import load_dotenv
 from database import engine, Base
 from sqlalchemy import text
-from routers import clients, cases, hearings, calendar, video_links, case_tracking, notes, bookmarks, indiankanoon, bareacts, ecourts
+from routers import (
+    clients,
+    cases,
+    hearings,
+    calendar,
+    video_links,
+    case_tracking,
+    notes,
+    bookmarks,
+    indiankanoon,
+    bareacts,
+    ecourts,
+    legal_dictionary,
+)
 
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env'))
+load_dotenv(
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -25,8 +40,16 @@ Base.metadata.create_all(bind=engine)
 # Ensure folders and documents columns exist in library_cases table for production DMS integration
 try:
     with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE library_cases ADD COLUMN IF NOT EXISTS folders JSONB DEFAULT '[]'::jsonb;"))
-        conn.execute(text("ALTER TABLE library_cases ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]'::jsonb;"))
+        conn.execute(
+            text(
+                "ALTER TABLE library_cases ADD COLUMN IF NOT EXISTS folders JSONB DEFAULT '[]'::jsonb;"
+            )
+        )
+        conn.execute(
+            text(
+                "ALTER TABLE library_cases ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]'::jsonb;"
+            )
+        )
         conn.commit()
         logger.info("Checked and updated library_cases schema for DMS compatibility.")
 except Exception as schema_err:
@@ -65,6 +88,7 @@ def health_check():
 from pydantic import BaseModel
 from typing import List, Optional
 
+
 class Provider(BaseModel):
     id: str
     name: Optional[str] = None
@@ -73,26 +97,32 @@ class Provider(BaseModel):
     configured: bool
     features: Optional[List[str]] = None
 
+
 class IntegrationStatusResponse(BaseModel):
     overall: str
     providers: List[Provider]
 
 
-@app.get("/api/v1/library/integrations/status", tags=["integrations"], response_model=IntegrationStatusResponse)
+@app.get(
+    "/api/v1/library/integrations/status",
+    tags=["integrations"],
+    response_model=IntegrationStatusResponse,
+)
 async def get_integration_status():
     # Check Indian Kanoon status
     ik_healthy = False
     try:
         from services.indiankanoon_service import IndianKanoonService
+
         ik_service = IndianKanoonService()
         if ik_service.api_key:
             ik_healthy = True
     except:
         pass
-    
+
     # For development mode, e-Courts is always healthy
     ec_healthy = True
-    
+
     providers = [
         Provider(
             id="indiankanoon",
@@ -100,7 +130,7 @@ async def get_integration_status():
             status="connected",
             health="healthy" if ik_healthy else "degraded",
             configured=True,
-            features=["Judgment Search", "Judgment Details", "AI Summary"]
+            features=["Judgment Search", "Judgment Details", "AI Summary"],
         ),
         Provider(
             id="ecourts",
@@ -108,16 +138,19 @@ async def get_integration_status():
             status="connected" if ec_healthy else "not_configured",
             health="healthy" if ec_healthy else "degraded",
             configured=ec_healthy,
-            features=["CNR Search", "Case Status Tracking", "Order Download", "Judgment Download", "Cause List"]
+            features=[
+                "CNR Search",
+                "Case Status Tracking",
+                "Order Download",
+                "Judgment Download",
+                "Cause List",
+            ],
         ),
         Provider(
-            id="surepass",
-            name="Surepass",
-            status="not_configured",
-            configured=False
-        )
+            id="surepass", name="Surepass", status="not_configured", configured=False
+        ),
     ]
-    
+
     overall = "healthy"
     for p in providers:
         if p.status == "not_configured":
@@ -125,7 +158,7 @@ async def get_integration_status():
         if p.health != "healthy":
             overall = "degraded"
             break
-    
+
     return IntegrationStatusResponse(overall=overall, providers=providers)
 
 
@@ -143,13 +176,18 @@ app.include_router(bookmarks.router, prefix="/api/v1/library")
 app.include_router(indiankanoon.router)
 # Include Bare Acts router (already has prefix)
 app.include_router(bareacts.router)
+# Include Legal Dictionary router
+app.include_router(legal_dictionary.router)
 # Include e-Courts router (already has prefix)
 app.include_router(ecourts.router)
 
+
 from routers import ecourts_settings
+
 app.include_router(ecourts_settings.router)
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8010)

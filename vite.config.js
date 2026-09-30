@@ -112,7 +112,11 @@ export default defineConfig(({ mode }) => {
         '/info': {
           target: onlyofficeTarget,
           changeOrigin: true,
-        }
+        },
+//         '/api': {
+//   target: env.DICTIONARY_API_URL || 'http://localhost:8000',
+//   changeOrigin: true,
+// },
       },
     },
     build: {

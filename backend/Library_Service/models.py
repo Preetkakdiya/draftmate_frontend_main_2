@@ -1,5 +1,17 @@
 import uuid
-from sqlalchemy import Column, String, Text, Date, Time, ForeignKey, Boolean, DateTime, func, text
+from sqlalchemy import (
+    Column,
+    String,
+    Text,
+    Date,
+    Time,
+    ForeignKey,
+    Boolean,
+    DateTime,
+    func,
+    text,
+    Integer,
+)
 from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from database import Base
 
@@ -18,7 +30,9 @@ class Client(Base):
     status = Column(String(50), nullable=False, default="Active")
     created_date = Column(Date, nullable=False, server_default=func.current_date())
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Case(Base):
@@ -26,7 +40,9 @@ class Case(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    client_id = Column(UUID(as_uuid=True), ForeignKey("library_clients.id", ondelete="SET NULL"))
+    client_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_clients.id", ondelete="SET NULL")
+    )
     case_number = Column(String(255), nullable=False)
     case_title = Column(String(255), nullable=False)
     case_type = Column(String(50), nullable=False)
@@ -41,7 +57,9 @@ class Case(Base):
     folders = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     documents = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Hearing(Base):
@@ -49,8 +67,12 @@ class Hearing(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL"))
-    client_id = Column(UUID(as_uuid=True), ForeignKey("library_clients.id", ondelete="SET NULL"))
+    case_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL")
+    )
+    client_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_clients.id", ondelete="SET NULL")
+    )
     case_number = Column(String(255))
     case_title = Column(String(255))
     court = Column(String(255))
@@ -62,7 +84,9 @@ class Hearing(Base):
     remarks = Column(Text)
     timeline = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class CalendarEvent(Base):
@@ -70,8 +94,12 @@ class CalendarEvent(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL"))
-    hearing_id = Column(UUID(as_uuid=True), ForeignKey("library_hearings.id", ondelete="SET NULL"))
+    case_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL")
+    )
+    hearing_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_hearings.id", ondelete="SET NULL")
+    )
     diary_entry_id = Column(String(255))
     title = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
@@ -80,7 +108,9 @@ class CalendarEvent(Base):
     notes = Column(Text)
     is_diary_event = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class VideoLink(Base):
@@ -88,8 +118,12 @@ class VideoLink(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL"))
-    hearing_id = Column(UUID(as_uuid=True), ForeignKey("library_hearings.id", ondelete="SET NULL"))
+    case_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL")
+    )
+    hearing_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_hearings.id", ondelete="SET NULL")
+    )
     case_number = Column(String(255))
     case_title = Column(String(255))
     court = Column(String(255))
@@ -101,7 +135,9 @@ class VideoLink(Base):
     start_time = Column(Time)
     notes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class CaseTracking(Base):
@@ -109,7 +145,9 @@ class CaseTracking(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL"))
+    case_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL")
+    )
     cnr_number = Column(String(255), unique=True)
     case_number = Column(String(255))
     case_title = Column(String(255))
@@ -121,7 +159,9 @@ class CaseTracking(Base):
     latest_order = Column(Text)
     latest_proceeding = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Note(Base):
@@ -129,7 +169,9 @@ class Note(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL"))
+    case_id = Column(
+        UUID(as_uuid=True), ForeignKey("library_cases.id", ondelete="SET NULL")
+    )
     title = Column(String(255), nullable=False)
     content = Column(Text)
     tags = Column(ARRAY(Text))
@@ -137,7 +179,9 @@ class Note(Base):
     linked_chapter_id = Column(String(255))
     linked_section_number = Column(String(255))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class BookmarkFolder(Base):
@@ -157,13 +201,17 @@ class Bookmark(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    folder_id = Column(UUID(as_uuid=True), ForeignKey("library_bookmark_folders.id", ondelete="SET NULL"))
+    folder_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("library_bookmark_folders.id", ondelete="SET NULL"),
+    )
     act_id = Column(String(255))
     act_name = Column(String(255))
     chapter_id = Column(String(255))
     section_number = Column(String(255))
     section_title = Column(String(255))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 
 class BareAct(Base):
     __tablename__ = "library_bare_acts"
@@ -182,4 +230,21 @@ class BareAct(Base):
     status = Column(String(50), default="Active")
     effective_date = Column(Date)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LegalTerm(Base):
+    __tablename__ = "legal_terms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    term = Column(String(255), nullable=False, index=True)
+    normalized_term = Column(String(255), nullable=False, unique=True, index=True)
+    explanation = Column(Text, nullable=False)
+    status = Column(String(50), nullable=False, default="active", index=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

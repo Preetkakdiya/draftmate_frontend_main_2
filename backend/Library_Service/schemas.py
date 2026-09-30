@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import date, time, datetime
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 class ClientBase(BaseModel):
@@ -342,3 +343,31 @@ class Bookmark(BookmarkBase):
 
     class Config:
         from_attributes = True
+
+
+# =========================
+# Legal Dictionary Schemas
+# =========================
+class TermSearchResponse(BaseModel):
+    id: int
+    term: str
+    matchType: str
+
+
+class TermSearchPaginatedResponse(BaseModel):
+    items: list[TermSearchResponse]
+    total: int
+    page: int
+    limit: int
+
+
+class TermDetailResponse(BaseModel):
+    id: int
+    term: str
+    normalized_term: str
+    explanation: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
