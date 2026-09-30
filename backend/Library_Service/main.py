@@ -37,6 +37,15 @@ logger = logging.getLogger(__name__)
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Enable pg_trgm extension required for legal dictionary similarity() search
+try:
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+        conn.commit()
+    logger.info("pg_trgm extension enabled successfully.")
+except Exception as trgm_err:
+    logger.warning(f"pg_trgm extension setup skipped (may not be needed for SQLite): {trgm_err}")
+
 # Ensure folders and documents columns exist in library_cases table for production DMS integration
 try:
     with engine.connect() as conn:
