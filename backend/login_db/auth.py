@@ -197,7 +197,15 @@ def get_db_connection():
     except Exception as pg_err:
         print(f"[WARN] PostgreSQL connection pool initialization failed: {pg_err}. Using local SQLite fallback database.")
         _db_pool = None
-        db_path = os.path.join(os.path.dirname(__file__), "auth_fallback.db")
+        custom_db_path = os.getenv("SQLITE_DB_PATH") or os.getenv("DB_PATH")
+        if custom_db_path:
+            db_path = custom_db_path
+        else:
+            persistent_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "persistent_data")
+            if not os.path.exists(persistent_dir):
+                try: os.makedirs(persistent_dir, exist_ok=True)
+                except Exception: persistent_dir = os.path.dirname(__file__)
+            db_path = os.path.join(persistent_dir, "auth_fallback.db")
         return SQLitePooledConnectionProxy(db_path)
 
 def resolve_uuid_from_identifier(identifier: str, cur) -> Optional[str]:
