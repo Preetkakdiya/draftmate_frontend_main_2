@@ -1009,6 +1009,30 @@ def logout(model: LogoutModel):
         cur.close()
         conn.close()
 
+class UserConsentModel(BaseModel):
+    user_id: Optional[str] = None
+    consent: Optional[str] = "yes"
+
+@app.post("/v2/user/consent")
+@app.post("/user/consent")
+def save_user_consent(model: UserConsentModel):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        user_id = model.user_id
+        consent_val = model.consent or "yes"
+        if user_id:
+            cur.execute("UPDATE users SET ai_consent = %s WHERE id::text = %s", (consent_val, str(user_id)))
+            conn.commit()
+        return {"message": "Consent updated successfully", "consent": consent_val}
+    except Exception as e:
+        conn.rollback()
+        print(f"Save user consent error: {e}")
+        return {"message": "Consent saved locally", "warning": str(e)}
+    finally:
+        cur.close()
+        conn.close()
+
 def ensure_otp_table(cur, conn):
     try:
         cur.execute("""

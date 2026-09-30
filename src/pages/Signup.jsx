@@ -185,6 +185,9 @@ const Signup = () => {
                 localStorage.setItem('user_profile', JSON.stringify({
                     email, id: loginData.user_id, isNewUser: true
                 }));
+                localStorage.removeItem('draftmate_ai_consent_accepted');
+                localStorage.removeItem('draftmate_ai_consent_value');
+                localStorage.removeItem('draftmate_ai_consent_details');
             }
             toast.dismiss(loadingToast);
             toast.success("Account created! Let's complete your profile.");
@@ -234,6 +237,13 @@ const Signup = () => {
                     };
                 }
                 localStorage.setItem('user_profile', JSON.stringify(profileData));
+                if (profileData.ai_consent === 'yes') {
+                    localStorage.setItem('draftmate_ai_consent_accepted', 'true');
+                } else {
+                    localStorage.removeItem('draftmate_ai_consent_accepted');
+                    localStorage.removeItem('draftmate_ai_consent_value');
+                    localStorage.removeItem('draftmate_ai_consent_details');
+                }
                 window.dispatchEvent(new Event('draftmate_consent_updated'));
 
                 toast.dismiss(loadingToast);

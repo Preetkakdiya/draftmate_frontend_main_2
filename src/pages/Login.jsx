@@ -146,9 +146,16 @@ const Login = () => {
                 if (data.profile.ai_consent === 'yes') {
                     localStorage.setItem('draftmate_ai_consent_accepted', 'true');
                     localStorage.setItem('draftmate_ai_consent_value', 'yes');
+                } else {
+                    localStorage.removeItem('draftmate_ai_consent_accepted');
+                    localStorage.removeItem('draftmate_ai_consent_value');
+                    localStorage.removeItem('draftmate_ai_consent_details');
                 }
             } else {
                 localStorage.setItem('user_profile', JSON.stringify({ email, id: data.user_id }));
+                localStorage.removeItem('draftmate_ai_consent_accepted');
+                localStorage.removeItem('draftmate_ai_consent_value');
+                localStorage.removeItem('draftmate_ai_consent_details');
             }
 
             toast.dismiss(loadingToast);
@@ -226,6 +233,10 @@ const Login = () => {
                     if (profileData.ai_consent === 'yes') {
                         localStorage.setItem('draftmate_ai_consent_accepted', 'true');
                         localStorage.setItem('draftmate_ai_consent_value', 'yes');
+                    } else {
+                        localStorage.removeItem('draftmate_ai_consent_accepted');
+                        localStorage.removeItem('draftmate_ai_consent_value');
+                        localStorage.removeItem('draftmate_ai_consent_details');
                     }
 
                     toast.dismiss(loadingToast);
@@ -252,6 +263,12 @@ const Login = () => {
             const existingLocalProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
             const hasLocalOnboarded = localStorage.getItem('draftmate_onboarded') === 'true' ||
                 !!(existingLocalProfile.professional_background || existingLocalProfile.role || existingLocalProfile.bar_council || existingLocalProfile.college_name);
+
+            if (existingLocalProfile.ai_consent !== 'yes') {
+                localStorage.removeItem('draftmate_ai_consent_accepted');
+                localStorage.removeItem('draftmate_ai_consent_value');
+                localStorage.removeItem('draftmate_ai_consent_details');
+            }
 
             localStorage.setItem('session_id', devSessionId);
             localStorage.setItem('user_id', devUserId);

@@ -42,6 +42,9 @@ export default function MainLayout() {
 
   const [isUtilitiesExpanded, setIsUtilitiesExpanded] = useState(false);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // Modal States
   const [isReferOpen, setIsReferOpen] = useState(false);
   const [isBugOpen, setIsBugOpen] = useState(false);
@@ -62,7 +65,7 @@ export default function MainLayout() {
     handleConsentCheck();
     window.addEventListener('draftmate_consent_updated', handleConsentCheck);
     return () => window.removeEventListener('draftmate_consent_updated', handleConsentCheck);
-  }, []);
+  }, [location.pathname]);
 
   const [userProfile, setUserProfile] = useState({
     firstName: '',
@@ -96,9 +99,6 @@ export default function MainLayout() {
     return "User";
   };
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
   const isDashboardRoute = location.pathname.includes('/dashboard/home');
 
   useEffect(() => {
@@ -121,6 +121,13 @@ export default function MainLayout() {
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
+      localStorage.removeItem('session_id');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_profile');
+      localStorage.removeItem('draftmate_onboarded');
+      localStorage.removeItem('draftmate_ai_consent_accepted');
+      localStorage.removeItem('draftmate_ai_consent_value');
+      localStorage.removeItem('draftmate_ai_consent_details');
       toast.success('Logged out successfully');
       navigate('/login');
     }
