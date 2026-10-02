@@ -1,0 +1,80 @@
+.aesthetic-hero-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 20px 40px;
+    background: transparent;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.aesthetic-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.badge-icon {
+    font-size: 16px !important;
+}
+
+.aesthetic-hero-title {
+    font-size: clamp(2.1rem, 3.5vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0 0 16px 0;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aesthetic-hero-highlight {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 45%, #9333ea 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+}
+
+.aesthetic-hero-subtitle {
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0;
+    min-height: 30px; /* Prevent layout shift during typing */
+}
+
+.aesthetic-hero-cursor {
+    display: inline-block;
+    font-weight: 700;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+    .aesthetic-hero-container {
+        padding: 10px 16px 32px;
+    }
+    
+    .aesthetic-hero-title {
+        font-size: 2.25rem;
+    }
+    
+    .aesthetic-hero-subtitle {
+        font-size: 1.1rem;
+    }
+}

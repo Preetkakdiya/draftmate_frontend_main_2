@@ -1,0 +1,126 @@
+### Variables
+@baseUrl = http://localhost:8020/api/esign
+@sessionId = YOUR_SESSION_ID_HERE
+
+# ==========================================
+# 1. Health check
+# ==========================================
+GET http://localhost:8020/health
+
+### 
+# ==========================================
+# 2. Create document (Note: You'll need Postman for file upload)
+# ==========================================
+# Use Swagger UI at http://localhost:8020/docs for this
+
+### 
+# ==========================================
+# 3. List documents
+# ==========================================
+GET {{baseUrl}}/documents
+Authorization: Bearer {{sessionId}}
+
+###
+# ==========================================
+# 4. Get document detail (replace {docId})
+# ==========================================
+@docId = PASTE_DOC_ID_HERE
+GET {{baseUrl}}/documents/{{docId}}
+Authorization: Bearer {{sessionId}}
+
+###
+# ==========================================
+# 5. Add signer (parallel signer #1)
+# ==========================================
+POST {{baseUrl}}/documents/{{docId}}/signers
+Authorization: Bearer {{sessionId}}
+Content-Type: application/json
+
+{
+  "email": "signer1@test.com",
+  "name": "Alice Kumar",
+  "role": "signer",
+  "signing_order": 1
+}
+
+###
+# 6. Add signer #2
+POST {{baseUrl}}/documents/{{docId}}/signers
+Authorization: Bearer {{sessionId}}
+Content-Type: application/json
+
+{
+  "email": "signer2@test.com",
+  "name": "Bob Sharma",
+  "role": "signer",
+  "signing_order": 2
+}
+
+###
+# ==========================================
+# 7. Bulk save fields (main editor save)
+# ==========================================
+@signer1Id = PASTE_SIGNER_1_ID_HERE
+@signer2Id = PASTE_SIGNER_2_ID_HERE
+
+POST {{baseUrl}}/documents/{{docId}}/fields/bulk
+Authorization: Bearer {{sessionId}}
+Content-Type: application/json
+
+{
+  "replace_existing": true,
+  "fields": [
+    {
+      "signer_id": "{{signer1Id}}",
+      "field_type": "signature",
+      "page_number": 1,
+      "x_position": 400,
+      "y_position": 100,
+      "width": 160,
+      "height": 60
+    },
+    {
+      "signer_id": "{{signer1Id}}",
+      "field_type": "date",
+      "page_number": 1,
+      "x_position": 400,
+      "y_position": 200,
+      "width": 120,
+      "height": 30
+    },
+    {
+      "signer_id": "{{signer2Id}}",
+      "field_type": "signature",
+      "page_number": 2,
+      "x_position": 300,
+      "y_position": 150,
+      "width": 160,
+      "height": 60
+    }
+  ]
+}
+
+###
+# 8. List all fields
+GET {{baseUrl}}/documents/{{docId}}/fields
+Authorization: Bearer {{sessionId}}
+
+###
+# 9. Update envelope to sequential
+PATCH {{baseUrl}}/documents/{{docId}}
+Authorization: Bearer {{sessionId}}
+Content-Type: application/json
+
+{
+  "signing_order": "sequential"
+}
+
+###
+# 10. Send envelope
+POST {{baseUrl}}/documents/{{docId}}/send
+Authorization: Bearer {{sessionId}}
+Content-Type: application/json
+
+{
+  "sender_name": "Devendra Gupta"
+}

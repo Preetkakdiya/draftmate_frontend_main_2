@@ -1,0 +1,53 @@
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
+.env.*.local
+.env.backup
+*.env
+!.env.example
+!.env.template
+
+# Backend service-specific env files
+backend/**/.env
+backend/**/.env.*
+!backend/**/.env.example
+
+# SSH keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets/
+credentials/
+bastion.key*
+
+# ────────────────────────────────
+# 🗄️ DATABASE FILES
+# ────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+auth_fallback.db
+backend/login_db/auth_fallback.db
+postgres_data/
+neon_backups/
+db_dumps/
+*.sql.gz
+*.dump
+
+backend/esign/storage/originals/*
+backend/esign/storage/signed/*
+!backend/esign/storage/originals/.gitkeep
+!backend/esign/storage/signed/.gitkeep
+
+# Other uploaded documents
+uploads/
+shared_drafts/
+downloaded_results/
+temp_uploads/
+downloaded_models/

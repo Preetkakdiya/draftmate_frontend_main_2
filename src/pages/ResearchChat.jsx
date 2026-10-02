@@ -16,7 +16,6 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 // keeping logo just in case, though mostly using icons now
 import lawJuristLogo from '../assets/draftmate_logo.png';
 import DraftingModal from '../components/DraftingModal';
-import ConfirmModal from '../components/ui/ConfirmModal';
 // Shared citation utilities
 import { processCitations, CitationLink } from '../utils/citationUtils';
 
@@ -41,149 +40,31 @@ const NODE_LABELS = {
     'memory_store': 'Committing insights to memory'
 };
 
-const ResearchProgressTimeline = ({ activeNodes, streamLength }) => {
-    const stages = [
-        { ids: ['router', 'memory_recall'], label: 'Analyzing Query' },
-        { ids: ['research_agent', 'law_agent', 'case_agent', 'document_agent'], label: 'Gathering Facts' },
-        { ids: ['citation_agent', 'strategy_agent', 'explainer_agent'], label: 'Verifying Citations' },
-        { ids: ['manager_aggregate', 'memory_store'], label: 'Compiling Research' }
+const GeminiStyleLoader = () => {
+    const legalPhrases = [
+        "Analyzing legal query...",
+        "Reviewing statutory provisions...",
+        "Gathering precedents...",
+        "Cross-referencing judgments...",
+        "Verifying citations...",
+        "Compiling research memo..."
     ];
-
-    let activeStageIndex = 0;
-    stages.forEach((stage, idx) => {
-        const hasNode = activeNodes.some(n => stage.ids.includes(n.node));
-        if (hasNode) {
-            activeStageIndex = Math.max(activeStageIndex, idx);
-        }
-    });
-
-    // Advance stages dynamically based on stream token length
-    if (streamLength > 50) activeStageIndex = Math.max(activeStageIndex, 1);
-    if (streamLength > 200) activeStageIndex = Math.max(activeStageIndex, 2);
-    if (streamLength > 500) activeStageIndex = Math.max(activeStageIndex, 3);
-
-    const [progress, setProgress] = useState(15);
+    const [phraseIndex, setPhraseIndex] = useState(0);
 
     useEffect(() => {
-        let targetProgress = 20;
-        if (streamLength > 0) {
-            targetProgress = Math.min(99, 35 + Math.floor(streamLength / 8));
-        } else if (activeStageIndex === 1) {
-            targetProgress = 45;
-        } else if (activeStageIndex === 2) {
-            targetProgress = 70;
-        } else if (activeStageIndex === 3) {
-            targetProgress = 90;
-        }
-
         const interval = setInterval(() => {
-            setProgress((prev) => {
-                if (prev < targetProgress) {
-                    const step = Math.max(1, (targetProgress - prev) * 0.2);
-                    return Math.min(targetProgress, prev + step);
-                }
-                return prev;
-            });
-        }, 30);
-
+            setPhraseIndex((prev) => Math.min(prev + 1, legalPhrases.length - 1));
+        }, 2000);
         return () => clearInterval(interval);
-    }, [activeStageIndex, streamLength]);
-
-    const displayPercent = Math.round(progress);
+    }, []);
 
     return (
-        <div className="bg-white border border-blue-100 rounded-2xl p-5 mb-6 shadow-[0_4px_25px_rgba(37,99,235,0.06)] relative overflow-hidden text-slate-800 backdrop-blur-md animate-fade-in">
-            <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-blue-50/50 to-transparent pointer-events-none" />
-
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                        Autonomous Research Pipeline
-                    </h3>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex items-end gap-1 h-3">
-                        <div className="w-1 bg-blue-600 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
-                        <div className="w-1 bg-indigo-600 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
-                        <div className="w-1 bg-purple-600 rounded-full animate-[bounce_1s_infinite_200ms] h-full" />
-                    </div>
-                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full shadow-sm border text-blue-700 bg-blue-50 border-blue-200">
-                        {displayPercent}%
-                    </span>
-                </div>
+        <div className="flex gap-4 items-center animate-fade-in-up w-full px-4 mb-6">
+            <div className="flex-none w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0 animate-pulse">
+                <img src={lawJuristLogo} alt="DraftMate" className="w-5 h-5 object-contain" />
             </div>
-
-            {/* VLC / Spotify Continuous Progress Bar Track */}
-            <div className="relative my-5 px-1">
-                <div className="h-2.5 bg-slate-100 rounded-full w-full relative overflow-hidden border border-slate-200/80 shadow-inner">
-                    <div
-                        className="h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(37,99,235,0.4)] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
-                <div
-                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)] transition-all duration-300 ease-out z-20 pointer-events-none"
-                    style={{ left: `calc(${progress}% - 8px)` }}
-                />
-            </div>
-
-            {/* Stage Nodes */}
-            <div className="grid grid-cols-4 gap-2 pt-1">
-                {stages.map((stage, idx) => {
-                    const stageThreshold = (idx + 1) * 25;
-                    const isPassed = progress >= stageThreshold - 10;
-                    const isCurrent = progress >= (idx * 25) && progress < stageThreshold;
-
-                    return (
-                        <div key={stage.label} className="flex flex-col items-center text-center">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 text-xs font-bold mb-1.5 transition-all duration-300 ${
-                                isPassed
-                                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                                    : isCurrent
-                                        ? 'bg-blue-50 border-blue-600 text-blue-600 animate-pulse font-extrabold'
-                                        : 'bg-slate-50 border-slate-200 text-slate-400'
-                            }`}>
-                                {isPassed ? <span className="material-symbols-outlined text-xs">check</span> : (idx + 1)}
-                            </div>
-                            <span className={`text-[10px] font-bold tracking-tight transition-colors duration-300 ${
-                                isPassed ? 'text-slate-800' : isCurrent ? 'text-blue-600' : 'text-slate-400'
-                            }`}>
-                                {stage.label}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-/* ── Enhancement 2: Simulated Sub-Queries ── */
-const SubQueryTasks = ({ isTyping, input }) => {
-    if (!isTyping || !input) return null;
-    const mockTasks = [
-        `Analyzing primary legal issues in: "${input.substring(0, 30)}..."`,
-        "Fetching relevant Section-wise statutory interpretations",
-        "Cross-referencing High Court vs Supreme Court precedents",
-        "Identifying procedural requirements and limitation periods"
-    ];
-
-    return (
-        <div className="space-y-2 mb-6">
-            <p className="text-[11px] font-bold text-slate-400 uppercase ml-1">Research Tasks Identified</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {mockTasks.map((task, i) => (
-                    <motion.div
-                        initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.2 }}
-                        key={i} className="bg-white border border-slate-200 p-3 rounded-xl flex items-center gap-3 shadow-sm"
-                    >
-                        <div className="w-5 h-5 bg-blue-50 text-blue-600 rounded flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-xs">search</span>
-                        </div>
-                        <span className="text-xs text-slate-600 font-medium truncate">{task}</span>
-                    </motion.div>
-                ))}
+            <div className="text-[15px] font-medium text-slate-500 animate-pulse flex items-center gap-2">
+                <span>{legalPhrases[phraseIndex]}</span>
             </div>
         </div>
     );
@@ -219,50 +100,6 @@ const ResearchChat = () => {
     const [isDraftingOpen, setIsDraftingOpen] = useState(false);
     const [draftingPrompt, setDraftingPrompt] = useState('');
     const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
-
-    // Per-message feedback (like / dislike) and share popover state
-    const [messageFeedback, setMessageFeedback] = useState({}); // { [msgId]: 'like' | 'dislike' | null }
-    const [shareOpenId, setShareOpenId] = useState(null);        // msgId whose share popover is open
-    const sharePopoverRef = useRef(null);
-
-    const handleFeedback = (msgId, type) => {
-        setMessageFeedback(prev => ({
-            ...prev,
-            [msgId]: prev[msgId] === type ? null : type   // toggle
-        }));
-        if (type === 'like') toast.success('Thanks for the positive feedback!');
-        else toast('Thanks for your feedback. We\'ll keep improving.');
-    };
-
-    const handleShareWhatsApp = (text) => {
-        const encoded = encodeURIComponent(text.substring(0, 600) + '\n\n— via DraftMate AI Research');
-        window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
-        setShareOpenId(null);
-    };
-
-    const handleShareEmail = (text) => {
-        const subject = encodeURIComponent('Legal Research from DraftMate AI');
-        const body = encodeURIComponent(text.substring(0, 1500) + '\n\n— Shared via DraftMate AI Research (www.draftmate.in)');
-        window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
-        setShareOpenId(null);
-    };
-
-    const handleCopyShareLink = (text, msgId) => {
-        navigator.clipboard.writeText(text);
-        toast.success('Research copied to clipboard!');
-        setShareOpenId(null);
-    };
-
-    // Close share popover on outside click
-    useEffect(() => {
-        const handleOutside = (e) => {
-            if (sharePopoverRef.current && !sharePopoverRef.current.contains(e.target)) {
-                setShareOpenId(null);
-            }
-        };
-        if (shareOpenId) document.addEventListener('mousedown', handleOutside);
-        return () => document.removeEventListener('mousedown', handleOutside);
-    }, [shareOpenId]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -322,12 +159,11 @@ const ResearchChat = () => {
         fetchLLMConfig();
         fetchSessions();
 
-        // Check for existing session in URL query param or localStorage
-        const urlParams = new URLSearchParams(window.location.search);
-        const querySessionId = urlParams.get('session');
-        const targetSessionId = querySessionId || localStorage.getItem('last_chat_session_id');
-        if (targetSessionId) {
-            loadSession(targetSessionId);
+        // Check for existing session in URL or localStorage
+        // For now, let's start fresh or load if ID is present
+        const storedSessionId = localStorage.getItem('last_chat_session_id');
+        if (storedSessionId) {
+            loadSession(storedSessionId);
         } else {
             startNewChat();
         }
@@ -383,7 +219,7 @@ const ResearchChat = () => {
     //     ]);
     //     localStorage.setItem('last_chat_session_id', newId);
     //     // Optionally clear URL param
-    //     window.history.replaceState({}, '', '/dashboard/research');
+    //     window.history.replaceState({}, '', '/research');
     // };
 
     const safeUUID = () => {
@@ -414,7 +250,7 @@ const ResearchChat = () => {
 
         localStorage.setItem('last_chat_session_id', newId);
         // Optionally clear URL param
-        window.history.replaceState({}, '', '/dashboard/research');
+        window.history.replaceState({}, '', '/research');
     };
 
     const loadSession = async (id) => {
@@ -454,42 +290,6 @@ const ResearchChat = () => {
             console.error("Failed to load session:", error);
             toast.error("Failed to load chat");
             if (!isStreamingRef.current) startNewChat();
-        }
-    };
-
-    const [deleteSessionModal, setDeleteSessionModal] = useState({ isOpen: false, sessionId: null });
-
-    const handleDeleteSession = (id) => {
-        setDeleteSessionModal({ isOpen: true, sessionId: id });
-    };
-
-    const confirmDeleteSession = async () => {
-        const id = deleteSessionModal.sessionId;
-        if (!id) return;
-
-        const userProfileStr = localStorage.getItem('user_profile');
-        let userId = 'default_user';
-        if (userProfileStr) {
-            try {
-                const profile = JSON.parse(userProfileStr);
-                userId = profile.user_id || profile.id || 'default_user';
-            } catch (e) {}
-        }
-
-        try {
-            await api.deleteSession(id, userId);
-            toast.success("Chat deleted successfully.");
-            
-            // If the active session was deleted, start a new chat
-            if (id === sessionId) {
-                startNewChat();
-            }
-            
-            // Refresh sidebar list
-            fetchSessions();
-        } catch (error) {
-            console.error("Failed to delete session:", error);
-            toast.error("Failed to delete chat history.");
         }
     };
 
@@ -846,36 +646,19 @@ const ResearchChat = () => {
                                     <h3 className="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">{group}</h3>
                                     <div className="space-y-1">
                                         {groupSessions.map(session => (
-                                            <div 
+                                            <button
                                                 key={session.session_id}
-                                                className="relative group w-full"
+                                                onClick={() => loadSession(session.session_id)}
+                                                className={`w-full text-left px-4 py-3 rounded-xl text-sm truncate transition-all flex items-center gap-3 border ${sessionId === session.session_id
+                                                    ? 'bg-blue-50 border-blue-100 text-blue-700 shadow-sm font-bold'
+                                                    : 'hover:bg-slate-100 border-transparent text-slate-600 hover:text-slate-900'
+                                                    }`}
                                             >
-                                                <button
-                                                    onClick={() => loadSession(session.session_id)}
-                                                    className={`w-full text-left pl-4 pr-10 py-3 rounded-xl text-sm truncate transition-all flex items-center gap-3 border ${sessionId === session.session_id
-                                                        ? 'bg-blue-50 border-blue-100 text-blue-700 shadow-sm font-bold'
-                                                        : 'hover:bg-slate-100 border-transparent text-slate-600 hover:text-slate-900'
-                                                        }`}
-                                                >
-                                                    <span className={`material-symbols-outlined text-lg shrink-0 ${sessionId === session.session_id ? 'text-blue-600' : 'text-slate-400'}`}>
-                                                        {sessionId === session.session_id ? 'chat_bubble' : 'history'}
-                                                    </span>
-                                                    <span className="truncate flex-1">
-                                                        {session.title || "New Research Chat"}
-                                                    </span>
-                                                </button>
-                                                
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteSession(session.session_id);
-                                                    }}
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-all z-10 flex items-center justify-center"
-                                                    title="Delete Chat"
-                                                >
-                                                    <span className="material-symbols-outlined text-base">delete</span>
-                                                </button>
-                                            </div>
+                                                <span className={`material-symbols-outlined text-lg ${sessionId === session.session_id ? 'text-blue-600' : 'text-slate-400'}`}>
+                                                    {sessionId === session.session_id ? 'chat_bubble' : 'history'}
+                                                </span>
+                                                {session.title || "New Research Chat"}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -899,7 +682,7 @@ const ResearchChat = () => {
             <div className="flex-1 flex flex-col h-full min-h-0 relative">
 
                 {/* Header */}
-                <header className="flex-none bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between shadow-sm z-10">
+                <header className="flex-none bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-indigo-50/80 border-b border-blue-100/80 dark:border-slate-700 px-4 py-3 flex items-center justify-between shadow-sm z-10">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -909,10 +692,10 @@ const ResearchChat = () => {
                         </button>
 
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
-                                <span className="material-symbols-outlined text-white text-lg">auto_awesome</span>
+                            <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                                <img src={lawJuristLogo} alt="DraftMate" className="w-5 h-5 object-contain" />
                             </div>
-                            <h1 className="text-base font-semibold text-slate-900 dark:text-white hidden sm:block">Lex Bot</h1>
+                            <h1 className="text-base font-semibold text-blue-950 dark:text-white hidden sm:block">Lex Bot</h1>
                         </div>
                     </div>
 
@@ -968,9 +751,9 @@ const ResearchChat = () => {
                                 <div key={msg.id} className={`flex gap-6 items-start ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in-up w-full`}>
 
                                     {/* Avatar */}
-                                    <div className={`flex-none w-8 h-8 rounded-full flex items-center justify-center shadow-sm shrink-0 overflow-hidden ${msg.role === 'ai' ? 'bg-blue-50 border border-blue-100' : 'bg-[#0F1C2E] text-white'}`}>
+                                    <div className={`flex-none w-8 h-8 rounded-full flex items-center justify-center shadow-sm shrink-0 overflow-hidden ${msg.role === 'ai' ? 'bg-white border border-slate-200' : 'bg-blue-600 text-white'}`}>
                                         {msg.role === 'ai' ? (
-                                            <img src="/logo.png" alt="DraftMate" className="w-5 h-5 object-contain" />
+                                            <img src={lawJuristLogo} alt="DraftMate" className="w-5 h-5 object-contain" />
                                         ) : (
                                             <span className="material-symbols-outlined text-[18px]">person</span>
                                         )}
@@ -978,7 +761,7 @@ const ResearchChat = () => {
 
                                     {/* Bubble / Content */}
                                     {msg.role === 'user' ? (
-                                        <div className="max-w-[80%] px-6 py-4 rounded-[24px] bg-[#0F1C2E] text-white rounded-tr-sm shadow-md text-[15px] leading-relaxed whitespace-pre-wrap">
+                                        <div className="max-w-[80%] px-6 py-4 rounded-[24px] bg-blue-600 text-white rounded-tr-sm shadow-md text-[15px] leading-relaxed whitespace-pre-wrap">
                                             {msg.content}
                                         </div>
                                     ) : (
@@ -1020,143 +803,19 @@ const ResearchChat = () => {
 
                                             {/* Completion Actions */}
                                             {!isTyping && msg.content && !msg.isIntro && (
-                                                <div className="mt-5 flex items-center gap-1 pt-2 relative" ref={shareOpenId === msg.id ? sharePopoverRef : null}>
-
-                                                    {/* 👍 Like */}
-                                                    <button
-                                                        onClick={() => handleFeedback(msg.id, 'like')}
-                                                        title="Helpful"
-                                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-[11px] font-bold uppercase ${
-                                                            messageFeedback[msg.id] === 'like'
-                                                                ? 'bg-blue-50 text-blue-600'
-                                                                : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
-                                                        }`}
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: messageFeedback[msg.id] === 'like' ? "'FILL' 1" : "'FILL' 0" }}>thumb_up</span>
+                                                <div className="mt-5 flex items-center gap-4 pt-2">
+                                                    <button className="flex items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors text-[11px] font-bold uppercase">
+                                                        <span className="material-symbols-outlined text-sm">thumb_up</span>
                                                     </button>
-
-                                                    {/* 👎 Dislike */}
-                                                    <button
-                                                        onClick={() => handleFeedback(msg.id, 'dislike')}
-                                                        title="Not helpful"
-                                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-[11px] font-bold uppercase ${
-                                                            messageFeedback[msg.id] === 'dislike'
-                                                                ? 'bg-rose-50 text-rose-500'
-                                                                : 'text-slate-400 hover:text-rose-500 hover:bg-rose-50'
-                                                        }`}
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: messageFeedback[msg.id] === 'dislike' ? "'FILL' 1" : "'FILL' 0" }}>thumb_down</span>
+                                                    <button className="flex items-center gap-1 text-slate-400 hover:text-rose-500 transition-colors text-[11px] font-bold uppercase">
+                                                        <span className="material-symbols-outlined text-sm">thumb_down</span>
                                                     </button>
-
-                                                    {/* 📋 Copy */}
                                                     <button
-                                                        onClick={() => { navigator.clipboard.writeText(msg.content); toast.success('Copied to clipboard'); }}
-                                                        title="Copy response"
-                                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all text-[11px] font-bold uppercase"
+                                                        onClick={() => { navigator.clipboard.writeText(msg.content); toast.success("Copied to clipboard") }}
+                                                        className="flex items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors text-[11px] font-bold uppercase"
                                                     >
-                                                        <span className="material-symbols-outlined text-sm">content_copy</span>
-                                                        <span>Copy</span>
+                                                        <span className="material-symbols-outlined text-sm">content_copy</span> Copy
                                                     </button>
-
-                                                    {/* 🔗 Share */}
-                                                    <div className="relative">
-                                                        <button
-                                                            onClick={() => setShareOpenId(shareOpenId === msg.id ? null : msg.id)}
-                                                            title="Share"
-                                                            className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-[11px] font-bold uppercase ${
-                                                                shareOpenId === msg.id
-                                                                    ? 'bg-indigo-50 text-indigo-600'
-                                                                    : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
-                                                            }`}
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">share</span>
-                                                            <span>Share</span>
-                                                        </button>
-
-                                                        {/* Share Popover */}
-                                                        {shareOpenId === msg.id && (
-                                                            <div
-                                                                ref={sharePopoverRef}
-                                                                className="absolute bottom-full left-0 mb-2 z-50 animate-fade-in"
-                                                                style={{
-                                                                    background: '#fff',
-                                                                    border: '1px solid #e2e8f0',
-                                                                    borderRadius: 14,
-                                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                                                    padding: '6px',
-                                                                    minWidth: 200,
-                                                                    display: 'flex',
-                                                                    flexDirection: 'column',
-                                                                    gap: 2
-                                                                }}
-                                                            >
-                                                                {/* WhatsApp */}
-                                                                <button
-                                                                    onClick={() => handleShareWhatsApp(msg.content)}
-                                                                    style={{
-                                                                        display: 'flex', alignItems: 'center', gap: 10,
-                                                                        padding: '9px 12px', borderRadius: 10,
-                                                                        border: 'none', background: 'transparent',
-                                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
-                                                                        fontSize: 13, fontWeight: 600, color: '#1a1a1a',
-                                                                        transition: 'background 0.15s'
-                                                                    }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
-                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                                >
-                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366">
-                                                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                                                                    </svg>
-                                                                    Share on WhatsApp
-                                                                </button>
-
-                                                                {/* Email */}
-                                                                <button
-                                                                    onClick={() => handleShareEmail(msg.content)}
-                                                                    style={{
-                                                                        display: 'flex', alignItems: 'center', gap: 10,
-                                                                        padding: '9px 12px', borderRadius: 10,
-                                                                        border: 'none', background: 'transparent',
-                                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
-                                                                        fontSize: 13, fontWeight: 600, color: '#1a1a1a',
-                                                                        transition: 'background 0.15s'
-                                                                    }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
-                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                                >
-                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
-                                                                        <rect x="2" y="4" width="20" height="16" rx="2"/>
-                                                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                                                                    </svg>
-                                                                    Share via Email
-                                                                </button>
-
-                                                                {/* Divider */}
-                                                                <div style={{ height: 1, background: '#f1f5f9', margin: '2px 8px' }} />
-
-                                                                {/* Copy Link */}
-                                                                <button
-                                                                    onClick={() => handleCopyShareLink(msg.content, msg.id)}
-                                                                    style={{
-                                                                        display: 'flex', alignItems: 'center', gap: 10,
-                                                                        padding: '9px 12px', borderRadius: 10,
-                                                                        border: 'none', background: 'transparent',
-                                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
-                                                                        fontSize: 13, fontWeight: 600, color: '#1a1a1a',
-                                                                        transition: 'background 0.15s'
-                                                                    }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                                >
-                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                                                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                                                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                                                                    </svg>
-                                                                    Copy to Clipboard
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
                                                 </div>
                                             )}
 
@@ -1183,19 +842,7 @@ const ResearchChat = () => {
 
                         
 
-                        {/* Typing / Pipeline Status */}
-                        {isTyping && activeNodes.length === 0 && (
-                            <div className="flex gap-4 items-start animate-fade-in-up w-full">
-                                <div className="flex-none w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
-                                    <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-                                </div>
-                                <div className="pt-1.5 flex gap-1.5 items-center">
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                                </div>
-                            </div>
-                        )}
+                        {/* Typing status is handled by GeminiStyleLoader in the footer */}
 
                         <div ref={messagesEndRef} />
                     </div>
@@ -1205,15 +852,10 @@ const ResearchChat = () => {
                 <footer className="flex-none bg-gradient-to-t from-[#F8FAFF] via-[#F8FAFF] to-transparent pb-6 pt-8 px-4 z-20 relative">
                     <div className="max-w-4xl mx-auto w-full">
 
-                        {/* Progress Timeline & Tasks UI */}
-                        {/* Progress Timeline & Tasks UI - auto-hides once reply arrives */}
+                        {/* Progress Timeline & Tasks UI - Gemini Style Loader */}
                         {isTyping && (
-                            <ResearchProgressTimeline
-                                activeNodes={activeNodes}
-                                streamLength={messages[messages.length - 1]?.role === 'ai' ? (messages[messages.length - 1]?.content?.length || 0) : 0}
-                            />
+                            <GeminiStyleLoader />
                         )}
-                        {isTyping && <SubQueryTasks isTyping={isTyping} input={input} />}
 
                         {/* File Preview */}
                         {selectedFiles.length > 0 && (
@@ -1264,11 +906,15 @@ const ResearchChat = () => {
                             <textarea
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
+                                onInput={(e) => {
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
+                                }}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Ask a legal question..."
                                 rows={1}
                                 className="flex-1 bg-transparent border-0 focus:ring-0 p-3 text-[#0F1C2E] placeholder-slate-400 resize-none max-h-48 overflow-y-auto outline-none text-base font-medium"
-                                style={{ minHeight: '48px' }}
+                                style={{ height: '48px' }}
                             />
 
                             {/* Dynamic Model & Thinking Selector */}
@@ -1365,17 +1011,7 @@ const ResearchChat = () => {
                 />
             )}
 
-            {/* Dedicated Custom Delete Chat Confirmation Modal */}
-            <ConfirmModal
-                isOpen={deleteSessionModal.isOpen}
-                onClose={() => setDeleteSessionModal({ isOpen: false, sessionId: null })}
-                onConfirm={confirmDeleteSession}
-                title="Delete Chat"
-                message="Are you sure you want to delete this chat history? This action cannot be undone."
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="danger"
-            />
+
         </div>
     );
 };
