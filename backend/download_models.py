@@ -86,19 +86,28 @@ def download_models():
 
     for filename, url in easyocr_urls.items():
         dest_zip = os.path.join(easyocr_path, filename)
+        pth_file = os.path.join(easyocr_path, filename.replace(".zip", ".pth"))
+        if os.path.exists(pth_file):
+            print(f"EasyOCR model {filename} already exists.")
+            continue
         try:
-            if not os.path.exists(dest_zip.replace(".zip", ".pth")):
-                print(f"Downloading {filename}...")
-                urllib.request.urlretrieve(url, dest_zip)
-                print(f"Extracting {filename}...")
-                with zipfile.ZipFile(dest_zip, 'r') as zip_ref:
-                    zip_ref.extractall(easyocr_path)
+            print(f"Downloading {filename}...")
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=20) as resp, open(dest_zip, 'wb') as f:
+                f.write(resp.read())
+            print(f"Extracting {filename}...")
+            with zipfile.ZipFile(dest_zip, 'r') as zip_ref:
+                zip_ref.extractall(easyocr_path)
+            if os.path.exists(dest_zip):
                 os.remove(dest_zip)
-                print(f"[OK] {filename} extracted.")
-            else:
-                print(f"EasyOCR model {filename} already exists.")
+            print(f"[OK] {filename} extracted.")
         except Exception as e:
             print(f"[WARN] Warning: failed to download/extract {filename}: {e}")
+            if os.path.exists(dest_zip):
+                try:
+                    os.remove(dest_zip)
+                except Exception:
+                    pass
             continue
 
     print("[OK] Model download step finished (some models may be missing).")

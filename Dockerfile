@@ -9,7 +9,9 @@ COPY src/ src/
 COPY public/ public/
 ARG VITE_CLIENT_ID=462761102428-dnm0f7tmt3dbv0l41aun71k4lj1c9hig.apps.googleusercontent.com
 ENV VITE_CLIENT_ID=$VITE_CLIENT_ID
-RUN VITE_BASE_PATH=/ VITE_API_BASE_URL=/ VITE_CLIENT_ID=$VITE_CLIENT_ID npm run build
+ARG VITE_ESIGN_URL=
+ENV VITE_ESIGN_URL=$VITE_ESIGN_URL
+RUN VITE_BASE_PATH=/ VITE_API_BASE_URL=/ VITE_CLIENT_ID=$VITE_CLIENT_ID VITE_ESIGN_URL=$VITE_ESIGN_URL npm run build
 
 
 # Stage 2: Backend & Runtime
@@ -66,7 +68,7 @@ COPY src/data/bareacts/ src/data/bareacts/
 
 
 # Pre-download models if they are missing (e.g. for local development builds)
-RUN if [ ! -f "backend/models/embedding/config.json" ] || [ ! -f "backend/models/rerank/config.json" ]; then python backend/download_models.py; fi
+RUN if [ ! -f "backend/models/embedding/config.json" ] || [ ! -f "backend/models/rerank/config.json" ]; then python backend/download_models.py || true; fi
 
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -81,9 +83,11 @@ RUN chmod +x /app/start-nginx.sh
 # Copy Frontend Build Artifacts from Stage 1
 COPY --from=frontend-builder /app/dist /var/www/html
 
-# Create directory for uploads (used by lex_bot) and shared draft storage
+# Create directory for uploads (used by lex_bot), shared draft storage, and esign file storage
 RUN mkdir -p backend/Deep_research/lex_bot/data/uploads && \
-    mkdir -p /app/shared_drafts
+    mkdir -p /app/shared_drafts && \
+    mkdir -p /app/backend/esign/storage/originals && \
+    mkdir -p /app/backend/esign/storage/signed
 
 # Expose Nginx port (Main Entrypoint)
 EXPOSE 8080

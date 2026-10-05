@@ -1,0 +1,37 @@
+{
+  "comment": "AWS ECS Task Definition Volume & Mount Configuration for DraftMate E-Sign EFS",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/draftmate-app:latest",
+      "environment": [
+        { "name": "ENVIRONMENT", "value": "production" },
+        { "name": "ESIGN_DEV_MODE", "value": "false" },
+        { "name": "STORAGE_BACKEND", "value": "efs" },
+        { "name": "EFS_MOUNT_PATH", "value": "/mnt/efs" },
+        { "name": "FRONTEND_URL", "value": "https://draftmate.in" },
+        { "name": "ESIGN_SERVICE_PORT", "value": "8025" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "esign-efs-storage",
+          "containerPath": "/mnt/efs",
+          "readOnly": false
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "esign-efs-storage",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-REPLACE_WITH_YOUR_EFS_ID",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

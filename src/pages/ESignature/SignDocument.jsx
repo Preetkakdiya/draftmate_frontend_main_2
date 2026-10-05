@@ -541,7 +541,7 @@ export default function SignDocument() {
                             </p>
                             {downloadUrl && (
                                 <a
-                                    href={`${import.meta.env.VITE_ESIGN_URL || 'http://localhost:8020'}${downloadUrl}`}
+                                    href={`${import.meta.env.VITE_ESIGN_URL || ''}${downloadUrl}`}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-2 px-6 py-3 bg-[#0F1C2E] hover:bg-blue-900 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-0.5"

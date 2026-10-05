@@ -261,7 +261,7 @@ export const API_CONFIG = {
     
     // Add this inside your API_CONFIG object
     ESIGN: {
-        BASE_URL: import.meta.env.VITE_ESIGN_URL || 'http://localhost:8020',
+        BASE_URL: import.meta.env.VITE_ESIGN_URL || '',
         ENDPOINTS: {
             // Sender endpoints (require auth)
             LIST_DOCUMENTS: '/api/esign/documents',

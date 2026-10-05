@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir --default-timeout=3000 --retries 10 -r requiremen
 
 COPY . ./
 
-EXPOSE 8020
+# Port 8025 — avoids conflict with converter (which runs on 8020)
+EXPOSE 8025
 
-CMD ["uvicorn", "main_file:app", "--host", "0.0.0.0", "--port", "8020"]
+CMD ["uvicorn", "main_file:app", "--host", "0.0.0.0", "--port", "8025"]

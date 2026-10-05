@@ -55,9 +55,10 @@ const SmoothVlcProgressBar = ({ statusMessage, isLoading }) => {
   );
 };
 
-const envBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+const rawEnvUrl = import.meta.env.VITE_API_BASE_URL;
+const envBaseUrl = (rawEnvUrl && rawEnvUrl !== '/') ? rawEnvUrl.replace(/\/$/, '') : window.location.origin;
 const ONLYOFFICE_API_SRC = `${envBaseUrl}/onlyoffice/web-apps/apps/api/documents/api.js`;
-const ONLYOFFICE_ORIGIN = new URL(ONLYOFFICE_API_SRC).origin;
+const ONLYOFFICE_ORIGIN = new URL(ONLYOFFICE_API_SRC, window.location.origin).origin;
 
 const OnlyOfficeWorkspace = () => {
   const location = useLocation();

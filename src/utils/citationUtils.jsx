@@ -88,7 +88,7 @@ export const CitationLink = ({ href, children, sources, compact = false }) => {
 
     if (isCustomCitation) {
         try {
-            const url = new URL(href);
+            const url = new URL(href, window.location.origin);
             citationType = url.hostname;
 
             if (citationType === 'numeric') {

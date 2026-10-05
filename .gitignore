@@ -27,6 +27,7 @@ env/
 .env
 apprunner_config.json
 new-task-def.json
+new-task-raw.json
 setup.md
 
 LEXBOT_LATENCY_ANALYSIS.md
